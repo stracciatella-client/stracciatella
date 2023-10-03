@@ -1,0 +1,43 @@
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "**" ]
+    tags-ignore: [ "**" ]
+  pull_request:
+  workflow_dispatch:
+  merge_group:
+
+concurrency:
+  cancel-in-progress: true
+  group: build-${{ github.event.pull_request.number || github.ref }}
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      - name: Setup Loom cache
+        uses: actions/cache@v3
+        with:
+          path: '.gradle/loom-cache'
+          restore-keys: ${{ runner.os }}-gradle-loom-
+          key: ${{ runner.os }}-gradle-loom-${{ hashFiles('gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+      - run: chmod +x ./gradlew
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@bd5760595778326ba7f1441bcf7e88b49de61a25 # v2.6.0
+        with:
+          arguments: build

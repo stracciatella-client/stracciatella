@@ -7,6 +7,10 @@ repositories {
     gradlePluginPortal()
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 gradlePlugin {
     plugins {
         register("tokenReplacement") {
