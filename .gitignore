@@ -11,6 +11,8 @@ classes/
 
 # idea
 
+/logs/latest.log
+
 /.idea/*
 !/.idea/checkstyle-idea.xml
 *.iml

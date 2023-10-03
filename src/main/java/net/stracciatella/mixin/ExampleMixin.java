@@ -5,8 +5,4 @@ import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(MinecraftServer.class)
 public class ExampleMixin {
-    public void test(){
-        MinecraftServer s = null;
-        s.acceptsFailure();
-    }
 }

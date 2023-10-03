@@ -1,31 +1,33 @@
-import net.fabricmc.loom.task.RunGameTask
-import org.gradle.api.internal.artifacts.dependencies.DefaultExternalModuleDependency
-
 plugins {
     id("fabric-loom") version "1.4-SNAPSHOT"
     id("token-replacement")
+    checkstyle
 }
 
 version = providers.gradleProperty("version").get()
 group = providers.gradleProperty("group").get()
-val modid = providers.gradleProperty("modid").get()
+val modid: String = providers.gradleProperty("modid").get()
 
-base {
-    archivesName = providers.gradleProperty("archives_base_name")
+dependencies {
+    // To change the versions see the gradle.properties file
+    minecraft(libs.minecraft)
+    mappings(loom.officialMojangMappings())
+    modImplementation(libs.fabric.loader)
+
+    // Fabric API. This is technically optional, but you probably want it anyway.
+    modImplementation(libs.fabric.api)
+
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+repositories {
 }
 
 tokens {
     replace("\$project.modid", modid)
     replace("\$project.version", version)
     excludeFileRegex(".*\\.png")
-}
-
-repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
 }
 
 loom {
@@ -36,44 +38,38 @@ loom {
         }
     }
 }
-tasks.named<RunGameTask>("runClient") {
-    this.javaLauncher = javaToolchains.launcherFor(java.toolchain)
-}
-
-dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft(libs.minecraft)
-    mappings(loom.officialMojangMappings())
-    modImplementation(libs.fabric.loader)
-
-    // Fabric API. This is technically optional, but you probably want it anyway.
-    modImplementation(libs.fabric.api)
-}
 
 java {
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
     withSourcesJar()
 }
 
 allprojects {
-    extensions.getByType<JavaPluginExtension>().apply {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
-            vendor = JvmVendorSpec.ORACLE
+    extensions.apply {
+        findByType<JavaPluginExtension>()?.apply {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+                vendor = JvmVendorSpec.ORACLE
+            }
+        }
+        findByType<CheckstyleExtension>()?.apply {
+            toolVersion = libs.versions.checkstyle.get()
+        }
+    }
+    tasks {
+        withType<Test> {
+            useJUnitPlatform()
+        }
+        withType<JavaCompile> {
+            options.encoding = "UTF-8"
+        }
+        withType<JavaExec> {
+            javaLauncher = project.javaToolchains.launcherFor(project.java.toolchain)
+        }
+        withType<Checkstyle> {
+            javaLauncher = project.javaToolchains.launcherFor(project.java.toolchain)
+            maxErrors = 0
+            maxWarnings = 0
+            configFile = rootProject.file("stracciatella_checks.xml")
         }
     }
 }
-
-tasks {
-    withType<JavaCompile> {
-        options.encoding = "UTF-8"
-    }
-}
-
-//jar {
-//	from("LICENSE") {
-//		rename { "${it}_${project.base.archivesName.get()}"}
-//	}
-//}
