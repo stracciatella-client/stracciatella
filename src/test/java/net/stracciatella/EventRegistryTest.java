@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
 import net.fabricmc.fabric.api.event.EventFactory;
+import net.stracciatella.event.EventRegistry;
 import org.junit.jupiter.api.Test;
 
 public class EventRegistryTest {
