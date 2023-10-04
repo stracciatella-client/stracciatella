@@ -1,4 +1,4 @@
-package net.stracciatella;
+package net.stracciatella.event;
 
 import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.Type.*;

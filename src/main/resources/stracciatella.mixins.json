@@ -2,10 +2,5 @@
 	"required": true,
 	"package": "net.stracciatella.mixin",
 	"compatibilityLevel": "JAVA_17",
-	"mixins": [
-		"ExampleMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	}
+	"plugin": "net.stracciatella.init.StracciatellaMixinPlugin"
 }

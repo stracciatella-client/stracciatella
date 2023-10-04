@@ -1,8 +1,13 @@
 package net.stracciatella;
 
+import java.io.IOException;
+
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.spongepowered.asm.launch.MixinBootstrap;
 
 public class Stracciatella implements ModInitializer {
     // This logger is used to write text to the console and the log file.
@@ -16,6 +21,12 @@ public class Stracciatella implements ModInitializer {
         // However, some things (like resources) may still be uninitialized.
         // Proceed with mild caution.
 
+        try {
+            var bytes = FabricLauncherBase.getLauncher().getClassByteArray("net.stracciatella.init.ClassLoadingTest", true);
+            System.out.println(bytes.length); // 319
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         LOGGER.warn("Hello Fabric world!");
     }
 }
