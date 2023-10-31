@@ -3,16 +3,17 @@
   <component name="CheckStyle-IDEA" serialisationVersion="2">
     <checkstyleVersion>10.12.3</checkstyleVersion>
     <scanScope>Everything</scanScope>
+    <scanBeforeCheckin>true</scanBeforeCheckin>
     <option name="thirdPartyClasspath" />
     <option name="activeLocationIds">
-      <option value="43c7ad32-b1d2-416d-a881-2e55f9806061" />
+      <option value="04c359e0-e544-4d3a-bdfe-6a4391ccf982" />
     </option>
     <option name="locations">
       <list>
         <ConfigurationLocation id="bundled-sun-checks" type="BUNDLED" scope="All" description="Sun Checks">(bundled)</ConfigurationLocation>
         <ConfigurationLocation id="bundled-google-checks" type="BUNDLED" scope="All" description="Google Checks">(bundled)</ConfigurationLocation>
-        <ConfigurationLocation id="43c7ad32-b1d2-416d-a881-2e55f9806061" type="PROJECT_RELATIVE" scope="All" description="Stracciatella Checks">
-          $PROJECT_DIR$/stracciatella_checks.xml
+        <ConfigurationLocation id="04c359e0-e544-4d3a-bdfe-6a4391ccf982" type="HTTP_URL" scope="All" description="Stracciatella Checks">
+          https://github.com/stracciatella-client/data/raw/master/checkstyle.xml
           <option name="properties">
             <map>
               <entry key="org.checkstyle.google.suppressionfilter.config" value="" />

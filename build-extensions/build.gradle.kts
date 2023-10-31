@@ -5,6 +5,12 @@ plugins {
 
 repositories {
     gradlePluginPortal()
+    maven("https://maven.fabricmc.net/") { name = "Fabric" }
+}
+
+dependencies {
+    api("net.fabricmc:fabric-loom:1.4.1")
+    api("com.google.code.gson:gson:2.10.1")
 }
 
 kotlin {
@@ -13,9 +19,9 @@ kotlin {
 
 gradlePlugin {
     plugins {
-        register("tokenReplacement") {
-            id = "token-replacement"
-            implementationClass = "TokenReplacementPlugin"
+        register("stracciatella-root") {
+            id = "stracciatella-root"
+            implementationClass = "stracciatella.root.StracciatellaRootPlugin"
         }
     }
 }

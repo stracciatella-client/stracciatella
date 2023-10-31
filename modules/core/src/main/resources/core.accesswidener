@@ -1,0 +1,4 @@
+accessWidener v2 named
+accessible field net/minecraft/client/Minecraft resourcePackDirectory Ljava/nio/file/Path;
+accessible field net/minecraft/client/Minecraft profileFuture Ljava/util/concurrent/CompletableFuture;
+accessible field net/minecraft/client/Minecraft virtualScreen Lnet/minecraft/client/renderer/VirtualScreen;

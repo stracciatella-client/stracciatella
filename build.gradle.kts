@@ -1,75 +1,48 @@
+import net.fabricmc.loom.api.LoomGradleExtensionAPI
+import net.fabricmc.loom.task.RunGameTask
+
 plugins {
-    id("fabric-loom") version "1.4-SNAPSHOT"
-    id("token-replacement")
-    checkstyle
+    alias(libs.plugins.stracciatella.fabric)
+    alias(libs.plugins.stracciatella) apply false
+    alias(libs.plugins.stracciatella.base)
+    id("stracciatella-root")
 }
 
 version = providers.gradleProperty("version").get()
 group = providers.gradleProperty("group").get()
-val modid: String = providers.gradleProperty("modid").get()
 
 dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft(libs.minecraft)
-    mappings(loom.officialMojangMappings())
-    modImplementation(libs.fabric.loader)
-
-    // Fabric API. This is technically optional, but you probably want it anyway.
-    modImplementation(libs.fabric.api)
-
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-repositories {
-}
-
-tokens {
-    replace("\$project.modid", modid)
-    replace("\$project.version", version)
-    excludeFileRegex(".*\\.png")
-}
-
-loom {
-    accessWidenerPath = file("src/main/resources/stracciatella.accesswidener")
-    mods {
-        register(modid) {
-            sourceSet(sourceSets.getByName("main"))
-        }
-    }
-}
-
-java {
-    withSourcesJar()
+    modRuntimeOnly(libs.bundles.mods)
+    implementation(projects.loader) { targetConfiguration = "namedElements" }
+    "stracciatellaModule"(projects.modules)
 }
 
 allprojects {
-    extensions.apply {
-        findByType<JavaPluginExtension>()?.apply {
-            toolchain {
-                languageVersion = JavaLanguageVersion.of(21)
-                vendor = JvmVendorSpec.ORACLE
-            }
-        }
-        findByType<CheckstyleExtension>()?.apply {
-            toolVersion = libs.versions.checkstyle.get()
+    tasks {
+        withType<RunGameTask>().configureEach {
+            workingDir(rootProject.projectDir)
         }
     }
-    tasks {
-        withType<Test> {
-            useJUnitPlatform()
+    pluginManager.apply {
+        withPlugin("fabric-loom") {
+            extensions.findByType<LoomGradleExtensionAPI>()?.apply {
+                dependencies {
+                    "minecraft"(rootProject.libs.minecraft)
+                    "mappings"(officialMojangMappings())
+                    "modImplementation"(rootProject.libs.fabric.loader)
+
+                    // Fabric API. This is technically optional, but you probably want it anyway.
+                    "modImplementation"(rootProject.libs.fabric.api)
+
+                    "testImplementation"(rootProject.libs.junit.jupiter)
+                    "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
+                }
+            }
         }
-        withType<JavaCompile> {
-            options.encoding = "UTF-8"
-        }
-        withType<JavaExec> {
-            javaLauncher = project.javaToolchains.launcherFor(project.java.toolchain)
-        }
-        withType<Checkstyle> {
-            javaLauncher = project.javaToolchains.launcherFor(project.java.toolchain)
-            maxErrors = 0
-            maxWarnings = 0
-            configFile = rootProject.file("stracciatella_checks.xml")
+        withPlugin("checkstyle") {
+            extensions.findByType<CheckstyleExtension>()?.apply {
+                toolVersion = rootProject.libs.versions.checkstyle.get()
+            }
         }
     }
 }

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "stracciatella",
+  "version": "$project.version",
+  "name": "Stracciatella",
+  "description": "Ein Eis für mich. Noch ein Eis für mich. Und noch mehr Eis für mich!",
+  "authors": [
+    "DasBabyPixel",
+    "Gogolinolett (Das Brett)"
+  ],
+  "contact": {
+    "homepage": "https://github.com/DasBabyPixel/stracciatella/",
+    "sources": "https://github.com/DasBabyPixel/stracciatella"
+  },
+  "license": "All rights reserved.",
+  "icon": "assets/stracciatella/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "net.stracciatella.init.StracciatellaInitializer"
+    ],
+    "preLaunch": [
+      "net.stracciatella.init.StracciatellaPreLaunch"
+    ]
+  },
+  "languageAdapters": {
+    "stracciatella": "net.stracciatella.init.StracciatellaLanguageAdapter"
+  },
+  "accessWidener": "stracciatella.accesswidener",
+  "mixins": [
+    "stracciatella.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}
