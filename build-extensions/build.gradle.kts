@@ -1,15 +1,17 @@
 plugins {
+    `version-catalog`
     `kotlin-dsl`
     id("java-gradle-plugin")
 }
 
 repositories {
     gradlePluginPortal()
+    maven("https://nexus.darkcube.eu/repository/stracciatella") { name = "Stracciatella" }
     maven("https://maven.fabricmc.net/") { name = "Fabric" }
 }
 
 dependencies {
-    api("net.fabricmc:fabric-loom:1.4.1")
+    api(libs.stracciatella)
     api("com.google.code.gson:gson:2.10.1")
 }
 

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.stracciatella.fabric)
     alias(libs.plugins.stracciatella) apply false
     alias(libs.plugins.stracciatella.base)
+    `version-catalog`
     id("stracciatella-root")
 }
 
@@ -12,7 +13,7 @@ version = providers.gradleProperty("version").get()
 group = providers.gradleProperty("group").get()
 
 dependencies {
-    modRuntimeOnly(libs.bundles.mods)
+    modRuntimeOnly(mods.bundles.mods) { isTransitive = false }
     implementation(projects.loader) { targetConfiguration = "namedElements" }
     "stracciatellaModule"(projects.modules)
 }

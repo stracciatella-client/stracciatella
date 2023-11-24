@@ -37,6 +37,17 @@ class StracciatellaRootPlugin : Plugin<Project> {
                 maven("https://nexus.darkcube.eu/repository/stracciatella") {
                     name = "Stracciatella"
                 }
+                maven("https://maven.flashyreese.me/releases") // CaffeineConfig
+                exclusiveContent {
+                    forRepository {
+                        maven("https://maven.shedaniel.me") {
+                            name = "Shedaniel"
+                        }
+                    }
+                    filter {
+                        includeGroup("me.shedaniel.cloth")
+                    }
+                }
                 exclusiveContent {
                     forRepository {
                         maven("https://api.modrinth.com/maven") {
@@ -45,6 +56,46 @@ class StracciatellaRootPlugin : Plugin<Project> {
                     }
                     filter {
                         includeGroup("maven.modrinth")
+                    }
+                }
+                exclusiveContent {
+                    forRepository {
+                        maven("https://cursemaven.com") {
+                            name = "Cursemaven"
+                        }
+                    }
+                    filter {
+                        includeGroup("curse.maven")
+                    }
+                }
+                exclusiveContent {
+                    forRepository {
+                        maven("https://ueaj.dev/maven") {
+                            name = "arrp"
+                        }
+                    }
+                    filter {
+                        includeGroup("net.devtech")
+                    }
+                }
+                exclusiveContent {
+                    forRepository {
+                        maven("https://maven.gegy.dev") {
+                            name = "spruceui"
+                        }
+                    }
+                    filter {
+                        includeGroup("dev.lambdaurora")
+                    }
+                }
+                exclusiveContent {
+                    forRepository {
+                        maven("https://maven.meteordev.org/snapshots") {
+                            name = "meteor"
+                        }
+                    }
+                    filter {
+                        includeGroup("meteordevelopment")
                     }
                 }
             }
