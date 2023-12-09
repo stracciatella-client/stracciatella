@@ -70,16 +70,6 @@ class StracciatellaRootPlugin : Plugin<Project> {
                 }
                 exclusiveContent {
                     forRepository {
-                        maven("https://ueaj.dev/maven") {
-                            name = "arrp"
-                        }
-                    }
-                    filter {
-                        includeGroup("net.devtech")
-                    }
-                }
-                exclusiveContent {
-                    forRepository {
                         maven("https://maven.gegy.dev") {
                             name = "spruceui"
                         }
