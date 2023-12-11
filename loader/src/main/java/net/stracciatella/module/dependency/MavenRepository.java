@@ -1,4 +1,4 @@
-package net.stracciatella.module;
+package net.stracciatella.module.dependency;
 
 import java.net.MalformedURLException;
 import java.net.URI;

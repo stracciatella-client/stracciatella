@@ -1,6 +1,9 @@
 {
 	"required": true,
-	"package": "net.stracciatella.mixin",
+	"package": "net.stracciatella.init.mixin",
 	"compatibilityLevel": "JAVA_17",
-	"plugin": "net.stracciatella.init.StracciatellaMixinPlugin"
+	"plugin": "net.stracciatella.init.StracciatellaMixinPlugin",
+	"mixins": [
+		"TestMixin"
+	]
 }

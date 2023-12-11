@@ -1,4 +1,3 @@
-import net.stracciatella.gradle.plugin.GenerateModuleJson
 import org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME
 
 plugins {

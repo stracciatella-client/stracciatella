@@ -1,8 +1,9 @@
-package net.stracciatella.module;
+package net.stracciatella.module.dependency;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import net.stracciatella.module.Module;
 import org.jetbrains.annotations.NotNull;
 
 /**

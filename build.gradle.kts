@@ -14,7 +14,7 @@ group = providers.gradleProperty("group").get()
 
 dependencies {
     modRuntimeOnly(mods.bundles.mods) { isTransitive = false }
-    implementation(projects.loader) { targetConfiguration = "namedElements" }
+    implementation(projects.loader) { targetConfiguration = "mergedJar" }
     "stracciatellaModule"(projects.modules)
 }
 
@@ -45,5 +45,11 @@ allprojects {
                 toolVersion = rootProject.libs.versions.checkstyle.get()
             }
         }
+    }
+}
+
+gradle.taskGraph.whenReady {
+    allTasks.filterIsInstance<JavaExec>().forEach {
+        it.executable(it.javaLauncher.get().executablePath.asFile.absolutePath)
     }
 }

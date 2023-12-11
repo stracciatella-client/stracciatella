@@ -3,7 +3,6 @@ package net.stracciatella.test.test2module;
 import de.dasbabypixel.annotations.Api;
 import de.dasbabypixel.util.Graph;
 import net.stracciatella.module.Module;
-import net.stracciatella.test.test3module.TestModule3;
 
 public class TestModule2 implements Module {
     public TestModule2() {
@@ -19,7 +18,5 @@ public class TestModule2 implements Module {
         var test2 = graph.newNode("test2");
         graph.newConnection(test, test2, 100);
         graph.newConnection(test2, test, 50);
-        graph.writeAdjacencyMatrix(System.out);
-        System.out.println(TestModule3.class.getSimpleName());
     }
 }

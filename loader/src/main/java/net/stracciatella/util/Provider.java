@@ -1,26 +1,22 @@
 package net.stracciatella.util;
 
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-public interface Provider<T> {
-    static <T> Provider<T> of(Supplier<T> supplier) {
-        return new Provider<>() {
-            private final AtomicReference<T> object = new AtomicReference<>();
+import net.stracciatella.internal.util.LazyProvider;
 
-            @Override
-            public T get() {
-                var current = object.getPlain();
-                if (current != null) return current;
-                synchronized (object) {
-                    current = object.get();
-                    if (current != null) return current;
-                    current = supplier.get();
-                    object.set(current);
-                }
-                return current;
-            }
-        };
+public interface Provider<T> {
+    /**
+     * Creates a Provider for a Supplier. The supplier is executed once, when the Provider first needs the value.<br>
+     * After that the Supplier is not executed again.<br>
+     * The Provider is thread-safe.<br>
+     * The supplier will be eligible for garbage-collection after the value has bene set.
+     *
+     * @param supplier a supplier for the value
+     * @param <T>      the type
+     * @return a threadsafe provider for the supplier
+     */
+    static <T> Provider<T> of(Supplier<T> supplier) {
+        return new LazyProvider<>(supplier);
     }
 
     T get();

@@ -17,7 +17,6 @@ public class CoreModule implements Module {
         // var resourcePackDirectory = Minecraft.getInstance().resourcePackDirectory;
         // var profileFuture = Minecraft.getInstance().profileFuture;
         // var virtualScreen = Minecraft.getInstance().virtualScreen;
-
         new CoreModuleMixins();
     }
 

@@ -11,6 +11,9 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 
 import net.stracciatella.Stracciatella;
+import net.stracciatella.module.dependency.MavenModuleDependency;
+import net.stracciatella.module.dependency.ModuleDependencyNotFoundException;
+import net.stracciatella.module.dependency.ModuleModuleDependency;
 
 class ModuleUtils {
 

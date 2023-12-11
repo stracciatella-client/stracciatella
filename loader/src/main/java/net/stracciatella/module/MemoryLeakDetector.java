@@ -29,7 +29,7 @@ class MemoryLeakDetector {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
+                        throw StracciatellaThrowables.propagate(e);
                     }
                 }
                 LOGGER.error("Probable Memory leak in module " + name);

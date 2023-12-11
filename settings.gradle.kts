@@ -24,6 +24,7 @@ plugins {
 }
 
 include("loader")
+include("loader:injected")
 include("loader:test3module")
 includeModule("core")
 

@@ -1,4 +1,4 @@
-package net.stracciatella.init;
+package net.stracciatella.init.accesswidener;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
+import net.stracciatella.module.classloader.SimpleModuleClassLoader;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;

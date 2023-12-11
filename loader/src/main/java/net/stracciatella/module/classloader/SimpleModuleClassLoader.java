@@ -1,4 +1,4 @@
-package net.stracciatella.module;
+package net.stracciatella.module.classloader;
 
 import java.io.IOException;
 import java.lang.ref.Reference;
@@ -27,9 +27,9 @@ public class SimpleModuleClassLoader extends ClassLoader implements ModuleClassL
     private final Collection<ModuleClassLoader> dependencyLoaders = new CopyOnWriteArraySet<>();
     private final Collection<FileSystem> fileSystems = new CopyOnWriteArraySet<>();
     private final Queue<Reference<Class<?>>> loadedClasses = new ConcurrentLinkedQueue<>();
-    private final ModulesClassLoader parent;
+    private final StracciatellaClassLoader parent;
 
-    SimpleModuleClassLoader(ModulesClassLoader parent) {
+    public SimpleModuleClassLoader(StracciatellaClassLoader parent) {
         super(parent);
         this.parent = parent;
     }
@@ -74,7 +74,7 @@ public class SimpleModuleClassLoader extends ClassLoader implements ModuleClassL
     private @Nullable Class<?> findClassSafe(String name) throws IOException {
         var fileName = name.replace('.', '/').concat(".class");
 
-        var url = getResource(fileName);
+        var url = findResource(fileName);
         if (url != null) return defineClass(name, url);
         return null;
     }
@@ -98,17 +98,16 @@ public class SimpleModuleClassLoader extends ClassLoader implements ModuleClassL
 
     private @Nullable Class<?> loadClass(String name, boolean resolve, boolean parent) {
         synchronized (getClassLoadingLock(name)) {
-            Class<?> cls = findLoadedClass(name);
+            var cls = findLoadedClass(name);
             if (cls == null) {
                 if (parent) {
                     // We do not resolve in the parent because we resolve here
-                    cls = this.parent.loadClassFromChild(name, false);
+                    cls = this.parent.loadClassFromChild(name, resolve);
+                    if (cls != null) return cls;
                 }
-                if (cls == null) {
-                    for (var dependency : dependencyLoaders) {
-                        cls = dependency.loadClassFromParent(name);
-                        if (cls != null) break;
-                    }
+                for (var dependency : dependencyLoaders) {
+                    cls = dependency.loadClassFromParent(name);
+                    if (cls != null) break;
                 }
                 if (cls == null) {
                     try {
@@ -135,5 +134,14 @@ public class SimpleModuleClassLoader extends ClassLoader implements ModuleClassL
     @Override
     public @Nullable Class<?> loadClassFromParent(String name) {
         return loadClass(name, false, false);
+    }
+
+    @Override
+    public @Nullable URL getResourceFromParent(String name) {
+        for (var dependencyLoader : dependencyLoaders) {
+            var url = dependencyLoader.getResourceFromParent(name);
+            if (url != null) return url;
+        }
+        return findResource(name);
     }
 }

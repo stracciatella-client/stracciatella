@@ -3,12 +3,11 @@ package net.stracciatella.init;
 import java.util.List;
 import java.util.Set;
 
-import net.fabricmc.accesswidener.AccessWidenerReader;
-import net.fabricmc.loader.impl.FabricLoaderImpl;
 import net.stracciatella.Stracciatella;
 import net.stracciatella.module.Module;
 import net.stracciatella.module.ModuleManager;
 import net.stracciatella.module.SimpleModuleManager;
+import net.stracciatella.module.StracciatellaThrowables;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
@@ -19,11 +18,11 @@ public class StracciatellaMixinPlugin implements IMixinConfigPlugin {
     public void onLoad(String mixinPackage) {
         try {
             var stracciatella = Stracciatella.instance();
-            stracciatella.register("mixinPlugin", StracciatellaMixinPlugin.class, this);
-            ((SimpleModuleManager) stracciatella.service(ModuleManager.class)).changeLifeCycle(Module.LifeCycle.MIXINS);
-            var reader = new AccessWidenerReader(FabricLoaderImpl.INSTANCE.getAccessWidener());
+            stracciatella.register("mixin_plugin", StracciatellaMixinPlugin.class, this);
+            var moduleManager = (SimpleModuleManager) stracciatella.service(ModuleManager.class);
+            moduleManager.changeLifeCycle(Module.LifeCycle.MIXINS);
         } catch (Throwable e) {
-            throw new AssertionError(e);
+            throw StracciatellaThrowables.propagate(e, AssertionError.class, AssertionError::new);
         }
     }
 
@@ -34,12 +33,11 @@ public class StracciatellaMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
-        return false;
+        return true;
     }
 
     @Override
     public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {
-
     }
 
     @Override
@@ -49,11 +47,9 @@ public class StracciatellaMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-
     }
 
     @Override
     public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
-
     }
 }

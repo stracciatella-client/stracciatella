@@ -5,20 +5,35 @@ import java.nio.file.Path;
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.LanguageAdapterException;
 import net.fabricmc.loader.api.ModContainer;
-import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import net.stracciatella.Stracciatella;
+import net.stracciatella.init.accesswidener.AccessWidenerConfig;
+import net.stracciatella.init.hack.KnotClassLoaderHack;
+import net.stracciatella.init.hack.classloader.ClassLoaderAccessorImpl;
+import net.stracciatella.init.mixin.TestMixin;
+import net.stracciatella.injected.ClassLoaderWrapper;
+import net.stracciatella.injected.StracciatellaInjections;
 import net.stracciatella.module.CommandLineModuleClasspath;
 import net.stracciatella.module.Module;
 import net.stracciatella.module.ModuleManager;
-import net.stracciatella.module.ModulesClassLoader;
 import net.stracciatella.module.SimpleModuleManager;
+import net.stracciatella.module.StracciatellaThrowables;
+import net.stracciatella.module.classloader.StracciatellaClassLoader;
 import net.stracciatella.util.Provider;
+import org.spongepowered.asm.mixin.Mixins;
+import org.spongepowered.asm.mixin.transformer.Config;
 
 public class StracciatellaLanguageAdapter implements LanguageAdapter {
 
     static {
+        try {
+            KnotClassLoaderHack.hack();
+        } catch (Throwable t) {
+            throw StracciatellaThrowables.propagate(t);
+        }
         var stracciatella = Stracciatella.instance();
         stracciatella.logger().info("Initializing Stracciatella");
+        LazyInitAccessors.init(stracciatella);
         stracciatella.registerProvider("access_widener_config", AccessWidenerConfig.class, Provider.of(AccessWidenerConfig::new));
         var moduleManager = (SimpleModuleManager) stracciatella.service(ModuleManager.class);
 
@@ -29,18 +44,14 @@ public class StracciatellaLanguageAdapter implements LanguageAdapter {
                 moduleManager.load(path);
             }
         } catch (Throwable e) {
-            throw new AssertionError(e);
+            throw StracciatellaThrowables.propagate(e);
         }
-
-        Thread.currentThread().setContextClassLoader(stracciatella.service(ModulesClassLoader.class));
 
         try {
             moduleManager.constructRegisteredModules();
             moduleManager.changeLifeCycle(Module.LifeCycle.INITIALIZED);
         } catch (Throwable e) {
-            if (e instanceof RuntimeException runtimeException) throw runtimeException;
-            if (e instanceof Error error) throw error;
-            throw new AssertionError(e);
+            throw StracciatellaThrowables.propagate(e);
         }
         var accessWidenerConfig = stracciatella.service(AccessWidenerConfig.class);
         accessWidenerConfig.freeze();
@@ -48,7 +59,15 @@ public class StracciatellaLanguageAdapter implements LanguageAdapter {
 
     @Override
     public <T> T create(ModContainer mod, String value, Class<T> type) throws LanguageAdapterException {
-        System.out.println("Language adapter create");
         return null;
+    }
+
+    private static class LazyInitAccessors {
+        public static void init(Stracciatella stracciatella) {
+            var classLoader = stracciatella.service(StracciatellaClassLoader.class);
+            var moduleManager = stracciatella.service(ModuleManager.class);
+            ClassLoaderWrapper.accessor = new ClassLoaderAccessorImpl(classLoader);
+            StracciatellaInjections.Holder.injections = new StracciatellaInjectionsImpl(moduleManager);
+        }
     }
 }

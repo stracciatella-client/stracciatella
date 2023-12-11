@@ -21,8 +21,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import net.fabricmc.accesswidener.AccessWidenerReader;
 import net.stracciatella.Stracciatella;
-import net.stracciatella.init.AccessWidenerConfig;
+import net.stracciatella.init.accesswidener.AccessWidenerConfig;
 import net.stracciatella.module.Module.LifeCycle;
+import net.stracciatella.module.classloader.SimpleModuleClassLoader;
+import net.stracciatella.module.classloader.StracciatellaClassLoader;
+import net.stracciatella.module.dependency.MavenModuleDependency;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -49,10 +52,12 @@ public class SimpleModuleManager implements ModuleManager {
     }
 
     @Override
-    public synchronized @NotNull SimpleModuleEntry module(@NotNull Module module) {
-        var entry = modules.get(module);
-        if (entry == null) throw new IllegalStateException("Module not registered in ModuleManager: " + module.getClass().getName() + ". Probably not correctly shut down.");
-        return entry;
+    public @NotNull SimpleModuleEntry module(@NotNull Module module) {
+        synchronized (modules) {
+            var entry = modules.get(module);
+            if (entry == null) throw new IllegalStateException("Module not registered in ModuleManager: " + module.getClass().getName() + ". Probably not correctly shut down.");
+            return entry;
+        }
     }
 
     @Override
@@ -134,7 +139,7 @@ public class SimpleModuleManager implements ModuleManager {
             entry.classLoader().dependencyLoaders().remove(dependency.classLoader());
         }
         var classLoader = entry.classLoader();
-        Stracciatella.instance().service(ModulesClassLoader.class).moduleLoaders().remove(classLoader);
+        Stracciatella.instance().service(StracciatellaClassLoader.class).moduleLoaders().remove(classLoader);
         entry.dependencies().clear();
         if (!entry.dependants().isEmpty()) {
             LOGGER.error("There are still dependant modules when unloading module " + entry.moduleConfiguration().name() + ": " + entry.dependants().size());
@@ -161,6 +166,7 @@ public class SimpleModuleManager implements ModuleManager {
 
     public synchronized void changeLifeCycle(@NotNull LifeCycle lifeCycle) {
         if (!globalLifeCycle.canChangeTo(lifeCycle)) throw new IllegalStateException("Can't change global LifeCycle from " + globalLifeCycle + " to " + lifeCycle);
+        LOGGER.info("Changing global LifeCycle from " + this.globalLifeCycle + " to " + lifeCycle);
         for (var entry : registeredModules.values()) {
             if (!entry.lifeCycle().canChangeTo(lifeCycle)) continue;
             changeLifeCycle(entry, lifeCycle);
@@ -174,7 +180,7 @@ public class SimpleModuleManager implements ModuleManager {
 
     private void setupClassLoader(SimpleModuleEntry entry) throws Throwable {
         if (entry.lifeCycle() != REGISTERED) throw new IllegalStateException();
-        var parentLoader = Stracciatella.instance().service(ModulesClassLoader.class);
+        var parentLoader = Stracciatella.instance().service(StracciatellaClassLoader.class);
         var classLoader = new SimpleModuleClassLoader(parentLoader);
         classLoader.fileSystems().add(entry.fileSystem());
         var libraryStorage = Stracciatella.instance().service(LibraryStorage.class);
@@ -195,7 +201,7 @@ public class SimpleModuleManager implements ModuleManager {
         if (entry.lifeCycle() != REGISTERED) throw new IllegalStateException();
         LOGGER.info("Loading module " + entry.moduleConfiguration().name());
 
-        var parentLoader = Stracciatella.instance().service(ModulesClassLoader.class);
+        var parentLoader = Stracciatella.instance().service(StracciatellaClassLoader.class);
         parentLoader.moduleLoaders().add(entry.classLoader());
 
         { // load access widener
@@ -216,7 +222,9 @@ public class SimpleModuleManager implements ModuleManager {
                 var constructor = cls.getConstructor();
                 var instance = constructor.newInstance();
                 entry.module(instance);
-                modules.put(instance, entry);
+                synchronized (modules) {
+                    modules.put(instance, entry);
+                }
             } catch (NoSuchMethodException exception) {
                 throw new ModuleException("Main class " + cls.getName() + " must have a public empty constructor");
             }
