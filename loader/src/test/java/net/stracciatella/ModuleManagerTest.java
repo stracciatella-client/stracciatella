@@ -5,13 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.nio.file.Path;
 
-import net.stracciatella.module.CommandLineModuleClasspath;
+import net.stracciatella.internal.module.CommandLineModuleClasspath;
 import net.stracciatella.module.Module;
 import net.stracciatella.module.ModuleEntry;
 import net.stracciatella.module.ModuleManager;
-import net.stracciatella.module.ModulesClassLoader;
-import net.stracciatella.module.SimpleModuleManager;
-import net.stracciatella.util.Provider;
+import net.stracciatella.internal.module.SimpleModuleManager;
+import net.stracciatella.internal.module.classloader.StracciatellaClassLoader;
 import org.junit.jupiter.api.Test;
 
 public class ModuleManagerTest {
@@ -24,7 +23,7 @@ public class ModuleManagerTest {
     @Test
     void test() throws Throwable {
         var moduleManager = (SimpleModuleManager) Stracciatella.instance().service(ModuleManager.class);
-        var classLoader = Stracciatella.instance().service(ModulesClassLoader.class);
+        var classLoader = Stracciatella.instance().service(StracciatellaClassLoader.class);
         Thread.currentThread().setContextClassLoader(classLoader);
         var classpath = CommandLineModuleClasspath.fromClasspath(System.getProperty("stracciatellaClasspath"));
         for (var pathString : classpath.paths()) {

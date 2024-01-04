@@ -5,6 +5,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.google.gson.JsonObject;
+import net.stracciatella.module.dependency.MavenModuleDependency;
+import net.stracciatella.module.dependency.MavenRepository;
+import net.stracciatella.module.dependency.ModuleDependency;
+import net.stracciatella.module.dependency.ModuleModuleDependency;
+import net.stracciatella.module.dependency.Repository;
+import net.stracciatella.util.GsonProvider;
 
 public record ModuleConfiguration(String name, String id, String main, Set<String> mixins, Set<String> accessWideners, Set<ModuleDependency> dependencies) {
 
@@ -67,6 +73,11 @@ public record ModuleConfiguration(String name, String id, String main, Set<Strin
         var id = json.get("id").getAsString();
         var main = json.get("main").getAsString();
         return new ModuleConfiguration(name, id, main, mixins, accessWideners, dependencies);
+    }
+
+    @Override
+    public String toString() {
+        return GsonProvider.gson().toJson(this);
     }
 
     private static String read(JsonObject json, String key, String defaultValue) {

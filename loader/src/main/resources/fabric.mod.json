@@ -17,14 +17,14 @@
   "environment": "client",
   "entrypoints": {
     "main": [
-      "net.stracciatella.init.StracciatellaInitializer"
+      "net.stracciatella.internal.init.StracciatellaInitializer"
     ],
     "preLaunch": [
-      "net.stracciatella.init.StracciatellaPreLaunch"
+      "net.stracciatella.internal.init.StracciatellaPreLaunch"
     ]
   },
   "languageAdapters": {
-    "stracciatella": "net.stracciatella.init.StracciatellaLanguageAdapter"
+    "stracciatella": "net.stracciatella.internal.init.StracciatellaLanguageAdapter"
   },
   "accessWidener": "stracciatella.accesswidener",
   "mixins": [

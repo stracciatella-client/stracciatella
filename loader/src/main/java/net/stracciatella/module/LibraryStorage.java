@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import net.stracciatella.module.dependency.MavenModuleDependency;
+
 public class LibraryStorage {
 
     private final Path directory;

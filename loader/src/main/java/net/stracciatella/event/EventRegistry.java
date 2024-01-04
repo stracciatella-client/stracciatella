@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import net.fabricmc.fabric.api.event.Event;
+import net.stracciatella.internal.module.StracciatellaThrowables;
 import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.ClassNode;
@@ -51,7 +52,7 @@ public class EventRegistry {
             event.register(listener);
             return new ListenerEntry<>(componentType, (Regeneratable<T>) listener);
         } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
+            throw StracciatellaThrowables.propagate(e);
         }
     }
 
@@ -146,8 +147,6 @@ public class EventRegistry {
         var byteBuffer = ByteBuffer.wrap(cw.toByteArray());
         var generatedClass = LOADER.define(className.replace('/', '.'), byteBuffer);
         var constructor = generatedClass.getConstructor(Function.class);
-        for (int i = 0; i < 10; i++) {
-        }
         return (T) constructor.newInstance(invokerFactory);
     }
 

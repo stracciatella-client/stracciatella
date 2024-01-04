@@ -1,2 +1,7 @@
 {
+  "required": true,
+  "package": "net.stracciatella.core.mixin",
+  "mixins": [
+    "TestMixin"
+  ]
 }
