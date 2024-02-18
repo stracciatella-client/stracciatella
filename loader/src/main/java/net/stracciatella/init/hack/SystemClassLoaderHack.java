@@ -17,7 +17,7 @@ import net.stracciatella.module.StracciatellaThrowables;
 @SuppressWarnings({"unchecked", "deprecation"})
 public class SystemClassLoaderHack {
     private static final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
-    private static final ConcurrentHashMap<String, Certificate[]> systemClassLoaderPackag2certs;
+    private static final ConcurrentHashMap<String, Certificate[]> systemClassLoaderPackage2certs;
     private static final Path systemClassLoaderInjectionsDirectory;
     private static final Set<Path> knotValidParentCodeSources;
     private static final long builtinClassLoaderUcpOffset;
@@ -47,7 +47,7 @@ public class SystemClassLoaderHack {
             reflectionFieldFilterMapOffset = unsafe.staticFieldOffset(StaticFieldTest.class.getDeclaredField("m1"));
             var handle = disableReflectionFieldFilters();
             var package2certsOffset = unsafe.objectFieldOffset(ClassLoader.class.getDeclaredField("package2certs"));
-            systemClassLoaderPackag2certs = (ConcurrentHashMap<String, Certificate[]>) unsafe.getObject(systemClassLoader, package2certsOffset);
+            systemClassLoaderPackage2certs = (ConcurrentHashMap<String, Certificate[]>) unsafe.getObject(systemClassLoader, package2certsOffset);
             restoreReflectionFieldFilters(handle);
         } catch (Throwable t) {
             throw StracciatellaThrowables.propagate(t);
@@ -61,9 +61,9 @@ public class SystemClassLoaderHack {
     public static Class<?> safeInitializeClass(String name) throws ClassNotFoundException {
         var i = name.lastIndexOf('.');
         var packageName = i == -1 ? "" : name.substring(0, i);
-        var old = systemClassLoaderPackag2certs.remove(packageName);
+        var old = systemClassLoaderPackage2certs.remove(packageName);
         var cls = Class.forName(name, true, systemClassLoader);
-        if (old != null) systemClassLoaderPackag2certs.put(packageName, old);
+        if (old != null) systemClassLoaderPackage2certs.put(packageName, old);
         return cls;
     }
 

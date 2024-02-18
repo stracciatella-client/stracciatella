@@ -75,7 +75,7 @@ enhanced-block-entities = { group = "maven.modrinth", name = "ebe", version.ref 
 exordium = { group = "maven.modrinth", name = "exordium", version.ref = "exordium" }
 farsight = { group = "curse.maven", name = "farsight-fabric-579192", version.ref = "farsight" }
 cupboard = { group = "curse.maven", name = "cupboard-326652", version.ref = "cupboard" }
-mixinextras = { group = "io.github.llamalad7", name = "mixinextras-fabric", version.ref = "mixinextras" }
+#mixinextras = { group = "io.github.llamalad7", name = "mixinextras-fabric", version.ref = "mixinextras" }
 arrp = { group = "maven.modrinth", name = "arrp", version.ref = "arrp" }
 jctools-core = { group = "org.jctools", name = "jctools-core", version.ref = "jctools-core" }
 spruceui = { group = "dev.lambdaurora", name = "spruceui", version.ref = "spruceui" }
@@ -129,7 +129,7 @@ mods = [
     "exordium",
     "farsight",
     "cupboard",
-    "mixinextras",
+#    "mixinextras",
     "arrp",
     "jctools-core",
     "spruceui",

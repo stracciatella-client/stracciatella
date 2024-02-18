@@ -3,7 +3,7 @@ import net.stracciatella.gradle.plugin.StracciatellaExtension
 
 plugins {
     id(libs.plugins.stracciatella.fabric.get().pluginId)
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    alias(libs.plugins.shadow)
 }
 
 val testModuleNames = listOf("test1module", "test2module")

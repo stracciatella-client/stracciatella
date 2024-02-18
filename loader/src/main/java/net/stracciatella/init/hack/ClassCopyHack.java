@@ -13,6 +13,7 @@ public class ClassCopyHack {
 
     public static ClassReader createCopy(String className) throws IOException {
         try (var in = ClassCopyHack.class.getClassLoader().getResourceAsStream(className.replace('.', '/') + ".class")) {
+            if (in == null) throw new NoClassDefFoundError("Class " + className + " not found!");
             var data = in.readAllBytes();
             return new ClassReader(data);
         }

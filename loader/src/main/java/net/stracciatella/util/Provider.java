@@ -13,7 +13,7 @@ public interface Provider<T> {
      *
      * @param supplier a supplier for the value
      * @param <T>      the type
-     * @return a threadsafe provider for the supplier
+     * @return a thread safe provider for the supplier
      */
     static <T> Provider<T> of(Supplier<T> supplier) {
         return new LazyProvider<>(supplier);

@@ -2,8 +2,6 @@ package net.stracciatella;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.function.Function;
-
 import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
 import net.fabricmc.fabric.api.event.EventFactory;
 import net.stracciatella.event.EventRegistry;

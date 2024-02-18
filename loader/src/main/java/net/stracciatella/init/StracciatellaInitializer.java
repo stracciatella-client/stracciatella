@@ -8,7 +8,6 @@ import net.stracciatella.Stracciatella;
 import net.stracciatella.module.Module;
 import net.stracciatella.module.ModuleManager;
 import net.stracciatella.module.SimpleModuleManager;
-import org.spongepowered.asm.mixin.MixinEnvironment;
 
 public class StracciatellaInitializer implements ModInitializer {
 

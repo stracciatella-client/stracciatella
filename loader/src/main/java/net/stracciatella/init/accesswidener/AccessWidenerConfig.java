@@ -3,10 +3,10 @@ package net.stracciatella.init.accesswidener;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.fabricmc.accesswidener.AccessWidener;
-import net.fabricmc.accesswidener.AccessWidenerReader;
-import net.fabricmc.accesswidener.AccessWidenerVisitor;
 import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.lib.accesswidener.AccessWidener;
+import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerReader;
+import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerVisitor;
 
 public class AccessWidenerConfig implements AccessWidenerVisitor {
 

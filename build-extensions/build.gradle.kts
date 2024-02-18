@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.utils.extendsFrom
+
 plugins {
     `version-catalog`
     `kotlin-dsl`
@@ -10,13 +12,25 @@ repositories {
     maven("https://maven.fabricmc.net/") { name = "Fabric" }
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
+val curseApi = configurations.register("curseApi") {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+configurations.compileClasspath.extendsFrom(curseApi)
 dependencies {
+    curseApi(project("curse-api-generator", "curseApi"))
+
     api(libs.stracciatella)
+    api("dev.masecla:Modrinth4J:2.0.0")
     api("com.google.code.gson:gson:2.10.1")
 }
 
-kotlin {
-    jvmToolchain(17)
+sourceSets.main {
+    java.srcDir(curseApi.get().singleFile)
 }
 
 gradlePlugin {

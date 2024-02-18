@@ -73,7 +73,7 @@ public class ClassLoaderTransformer implements Transformer {
         while (it.hasNext()) {
             var c = it.next();
             if (c.getOpcode() != ARETURN) continue;
-            c = it.previous();
+            it.previous();
             c = it.previous();
             var instructions = new InsnList();
 

@@ -4,7 +4,6 @@ import java.nio.file.Path;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.chat.ChatListener;
-import net.stracciatella.Stracciatella;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -29,6 +28,7 @@ public abstract class TestMixin {
         System.out.println("TEST MIXIN APPLIED-----------");
 
         try {
+            System.out.println(resourcePackDirectory);
             System.out.println(Class.forName("net.stracciatella.FindMe"));
         } catch (ClassNotFoundException e) {
             e.printStackTrace();

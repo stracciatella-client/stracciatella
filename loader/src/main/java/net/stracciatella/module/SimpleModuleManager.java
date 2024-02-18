@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
-import net.fabricmc.accesswidener.AccessWidenerReader;
+import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerReader;
 import net.stracciatella.Stracciatella;
 import net.stracciatella.init.accesswidener.AccessWidenerConfig;
 import net.stracciatella.module.Module.LifeCycle;
@@ -209,7 +209,7 @@ public class SimpleModuleManager implements ModuleManager {
             for (var accessWidenerPath : entry.moduleConfiguration().accessWideners()) {
                 var in = entry.classLoader().getResourceAsStream(accessWidenerPath);
                 if (in == null) throw new IllegalStateException("Access widener " + accessWidenerPath + " in module " + entry.moduleConfiguration().name() + " not found.");
-                reader.read(in.readAllBytes());
+                reader.read(in.readAllBytes(), null);
                 in.close();
             }
         }

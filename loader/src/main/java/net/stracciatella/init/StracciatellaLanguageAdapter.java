@@ -3,14 +3,11 @@ package net.stracciatella.init;
 import java.nio.file.Path;
 
 import net.fabricmc.loader.api.LanguageAdapter;
-import net.fabricmc.loader.api.LanguageAdapterException;
 import net.fabricmc.loader.api.ModContainer;
-import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import net.stracciatella.Stracciatella;
 import net.stracciatella.init.accesswidener.AccessWidenerConfig;
 import net.stracciatella.init.hack.KnotClassLoaderHack;
 import net.stracciatella.init.hack.classloader.ClassLoaderAccessorImpl;
-import net.stracciatella.init.mixin.TestMixin;
 import net.stracciatella.injected.ClassLoaderWrapper;
 import net.stracciatella.injected.StracciatellaInjections;
 import net.stracciatella.module.CommandLineModuleClasspath;
@@ -20,9 +17,8 @@ import net.stracciatella.module.SimpleModuleManager;
 import net.stracciatella.module.StracciatellaThrowables;
 import net.stracciatella.module.classloader.StracciatellaClassLoader;
 import net.stracciatella.util.Provider;
-import org.spongepowered.asm.mixin.Mixins;
-import org.spongepowered.asm.mixin.transformer.Config;
 
+@SuppressWarnings("unused")
 public class StracciatellaLanguageAdapter implements LanguageAdapter {
 
     static {
@@ -58,7 +54,7 @@ public class StracciatellaLanguageAdapter implements LanguageAdapter {
     }
 
     @Override
-    public <T> T create(ModContainer mod, String value, Class<T> type) throws LanguageAdapterException {
+    public <T> T create(ModContainer mod, String value, Class<T> type) {
         return null;
     }
 

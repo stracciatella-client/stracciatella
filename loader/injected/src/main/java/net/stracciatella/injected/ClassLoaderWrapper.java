@@ -11,9 +11,8 @@ public class ClassLoaderWrapper {
     public static InputStream getResourceAsStream(String name) {
         // System.out.println("Get as stream " + name + " " + accessor);
         if (accessor == null) return null;
-        var ret = accessor.accessorGetResourceAsStream(name);
         // System.out.println("RET: " + ret);
-        return ret;
+        return accessor.accessorGetResourceAsStream(name);
     }
 
     @SuppressWarnings("unused") // Used in ClassLoaderTransformer

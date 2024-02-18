@@ -1,5 +1,6 @@
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RunGameTask
+import stracciatella.modlist.ModListGenerator
 
 plugins {
     alias(libs.plugins.stracciatella.fabric)
@@ -16,6 +17,12 @@ dependencies {
     modRuntimeOnly(mods.bundles.mods) { isTransitive = false }
     implementation(projects.loader) { targetConfiguration = "mergedJar" }
     "stracciatellaModule"(projects.modules)
+}
+
+tasks {
+    register<ModListGenerator>("generateModList") {
+        version = "1.20.4"
+    }
 }
 
 allprojects {

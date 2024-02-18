@@ -7,3 +7,5 @@ dependencyResolutionManagement {
         }
     }
 }
+
+include("curse-api-generator")
