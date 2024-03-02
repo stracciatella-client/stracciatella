@@ -3,7 +3,8 @@ import net.fabricmc.loom.task.RunGameTask
 import stracciatella.modlist.ModListGenerator
 
 plugins {
-    alias(libs.plugins.stracciatella.fabric)
+    id("fabric-loom") version "1.6.local"
+    alias(libs.plugins.stracciatella.fabric) apply false
     alias(libs.plugins.stracciatella) apply false
     alias(libs.plugins.stracciatella.base)
     `version-catalog`
@@ -19,9 +20,13 @@ dependencies {
     "stracciatellaModule"(projects.modules)
 }
 
+loom {
+
+}
+
 tasks {
     register<ModListGenerator>("generateModList") {
-        version = "1.20.4"
+        setup("generateModList.toml")
     }
 }
 

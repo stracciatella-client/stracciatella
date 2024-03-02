@@ -1,0 +1,45 @@
+version = "1.20.4"
+
+curse = [
+    256717, # clumps
+#    846196, # boosted-brightness-fabric
+    308892, # litematica
+    244260, # minihud
+    297344, # tweakeroo
+    579192, # farsight
+]
+
+modrinth = [
+    "sodium",
+    "indium",
+    "sodium-extra",
+    "continuity",
+    "modmenu",
+    "cull-less-leaves",
+    "reeses-sodium-options",
+    "auth-me",
+    "entityculling",
+    "advanced-chat",
+    "appleskin",
+    "carpet",
+    "carpet-extra",
+    "dynamic-fps",
+    "ebe",
+    "exordium",
+    "iris",
+    "jade",
+    "forcecloseworldloadingscreen",
+    "lambdynamiclights",
+    "light-overlay",
+    "modernfix",
+    "mouse-tweaks",
+    "rrls",
+    "rei",
+    "roughly-enough-professions-rep",
+    "simple-voice-chat",
+    "threadtweak",
+    "tooltipfix",
+    "viafabricplus",
+    "xaeros-minimap",
+    "xaeros-world-map"
+]

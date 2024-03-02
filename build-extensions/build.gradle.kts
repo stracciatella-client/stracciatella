@@ -10,6 +10,7 @@ repositories {
     gradlePluginPortal()
     maven("https://nexus.darkcube.eu/repository/stracciatella") { name = "Stracciatella" }
     maven("https://maven.fabricmc.net/") { name = "Fabric" }
+    maven("https://nexus.darkcube.eu/repository/jitpack/") { name = "Jitpack-Mirror" }
 }
 
 kotlin {
@@ -25,7 +26,8 @@ dependencies {
     curseApi(project("curse-api-generator", "curseApi"))
 
     api(libs.stracciatella)
-    api("dev.masecla:Modrinth4J:2.0.0")
+    api("org.tomlj:tomlj:1.1.1")
+    api("com.github.DasBabyPixel:Modrinth4J:bc79cbed95")
     api("com.google.code.gson:gson:2.10.1")
 }
 

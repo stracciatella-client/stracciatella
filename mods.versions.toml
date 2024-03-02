@@ -1,159 +1,85 @@
-[versions]
-sodium = "mc1.20.2-0.5.3"
-indium = "1.0.27+mc1.20.1"
-continuity = "3.0.0-beta.4+1.20.2"
-cull-less-leaves = "1.3.0"
-modmenu = "8.0.0"
-boosted-brightness = "2.2.0"
-reeses-sodium-options = "mc1.20.2-1.6.5"
-sodium-extra = "mc1.20.2-0.5.3"
-caffeine-config = "1.3.0+1.17"
-yacl = "3.2.1+1.20-fabric"
-auth-me = "8.0.0+1.20.2"
-borderless-mining = "1.1.9+1.20.2"
-entity-culling = "BDwHAdWc"
-advanced-chat = "bLHDrebO"
-cloth-config = "12.0.111"
-appleskin = "2.5.1+mc1.20.2"
-carpet = "1.4.121"
-carpet-extra = "1.4.118"
-dynamic-fps = "MJxmQ042"
-enhanced-block-entities = "0.9.1+1.20.2"
-exordium = "SotsZlJ6"
-farsight = "4836498"
-cupboard = "4795344"
-mixinextras = "0.2.0-rc.5"
-arrp = "0.8.0"
-jctools-core = "4.0.1"
-spruceui = "5.0.3+1.20.2"
-basic-math = "0.6.1"
-iris = "1.6.10+1.20.2"
-jade = "12.2.1"
-forcecloseworldloadingscreen = "2.2.0"
-lambdynamiclights = "2.3.3+1.20.2"
-light-overlay = "8.0.0"
-litematica = "4789765"
-malilib = "4788432"
-architectury = "10.0.15+fabric"
-meteor = "0.5.5-SNAPSHOT"
-minihud = "4793994"
-modernfix = "5.9.3+mc1.20.2"
-mouse-tweaks = "1.20-2.25-fabric"
-rrls = "3.2.2+mc1.20.2-fabric"
-rei = "13.0.678+fabric"
-rep = "2.1.0"
-simple-voice-chat = "fabric-1.20.2-2.4.28"
-threadtweak = "0.1.1+mc1.20.2"
-tooltipfix = "1.1.1-1.20"
-tweakeroo = "4788437"
-viafabricplus = "2.9.5"
-xaeros-minimap = "23.9.3_Fabric_1.20.2"
-xaeros-world-map = "1.36.0_Fabric_1.20.2"
-reflect = "1.2.4"
-
 [libraries]
-sodium = { group = "maven.modrinth", name = "sodium", version.ref = "sodium" }
-indium = { group = "maven.modrinth", name = "indium", version.ref = "indium" }
-continuity = { group = "maven.modrinth", name = "continuity", version.ref = "continuity" }
-cull-less-leaves = { group = "maven.modrinth", name = "cull-less-leaves", version.ref = "cull-less-leaves" }
-modmenu = { group = "maven.modrinth", name = "modmenu", version.ref = "modmenu" }
-boosted-brightness = { group = "maven.modrinth", name = "boosted-brightness", version.ref = "boosted-brightness" }
-reeses-sodium-options = { group = "maven.modrinth", name = "reeses-sodium-options", version.ref = "reeses-sodium-options" }
-sodium-extra = { group = "maven.modrinth", name = "sodium-extra", version.ref = "sodium-extra" }
-caffeine-config = { group = "net.caffeinemc", name = "CaffeineConfig", version.ref = "caffeine-config" }
-yacl = { group = "maven.modrinth", name = "yacl", version.ref = "yacl" }
-auth-me = { group = "maven.modrinth", name = "auth-me", version.ref = "auth-me" }
-borderless-mining = { group = "maven.modrinth", name = "borderless-mining", version.ref = "borderless-mining" }
-entity-culling = { group = "maven.modrinth", name = "entityculling", version.ref = "entity-culling" }
-advanced-chat = { group = "maven.modrinth", name = "advanced-chat", version.ref = "advanced-chat" }
-cloth-config = { group = "me.shedaniel.cloth", name = "cloth-config-fabric", version.ref = "cloth-config" }
-appleskin = { group = "maven.modrinth", name = "appleskin", version.ref = "appleskin" }
-carpet = { group = "maven.modrinth", name = "carpet", version.ref = "carpet" }
-carpet-extra = { group = "maven.modrinth", name = "carpet-extra", version.ref = "carpet-extra" }
-dynamic-fps = { group = "maven.modrinth", name = "dynamic-fps", version.ref = "dynamic-fps" }
-enhanced-block-entities = { group = "maven.modrinth", name = "ebe", version.ref = "enhanced-block-entities" }
-exordium = { group = "maven.modrinth", name = "exordium", version.ref = "exordium" }
-farsight = { group = "curse.maven", name = "farsight-fabric-579192", version.ref = "farsight" }
-cupboard = { group = "curse.maven", name = "cupboard-326652", version.ref = "cupboard" }
-#mixinextras = { group = "io.github.llamalad7", name = "mixinextras-fabric", version.ref = "mixinextras" }
-arrp = { group = "maven.modrinth", name = "arrp", version.ref = "arrp" }
-jctools-core = { group = "org.jctools", name = "jctools-core", version.ref = "jctools-core" }
-spruceui = { group = "dev.lambdaurora", name = "spruceui", version.ref = "spruceui" }
-basic-math = { group = "me.shedaniel.cloth", name = "basic-math", version.ref = "basic-math" }
-iris = { group = "maven.modrinth", name = "iris", version.ref = "iris" }
-jade = { group = "maven.modrinth", name = "jade", version.ref = "jade" }
-forcecloseworldloadingscreen = { group = "maven.modrinth", name = "forcecloseworldloadingscreen", version.ref = "forcecloseworldloadingscreen" }
-lambdynamiclights = { group = "maven.modrinth", name = "lambdynamiclights", version.ref = "lambdynamiclights" }
-light-overlay = { group = "maven.modrinth", name = "light-overlay", version.ref = "light-overlay" }
-litematica = { group = "curse.maven", name = "litematica-308892", version.ref = "litematica" }
-malilib = { group = "curse.maven", name = "malilib-303119", version.ref = "malilib" }
-architectury = { group = "maven.modrinth", name = "architectury-api", version.ref = "architectury" }
-meteor = { group = "meteordevelopment", name = "meteor-client", version.ref = "meteor" }
-minihud = { group = "curse.maven", name = "minihud-244260", version.ref = "minihud" }
-modernfix = { group = "maven.modrinth", name = "modernfix", version.ref = "modernfix" }
-mouse-tweaks = { group = "maven.modrinth", name = "mouse-tweaks", version.ref = "mouse-tweaks" }
-rrls = { group = "maven.modrinth", name = "rrls", version.ref = "rrls" }
-rei = { group = "maven.modrinth", name = "rei", version.ref = "rei" }
-rep = { group = "maven.modrinth", name = "roughly-enough-professions-rep", version.ref = "rep" }
-simple-voice-chat = { group = "maven.modrinth", name = "simple-voice-chat", version.ref = "simple-voice-chat" }
-threadtweak = { group = "maven.modrinth", name = "threadtweak", version.ref = "threadtweak" }
-tooltipfix = { group = "maven.modrinth", name = "tooltipfix", version.ref = "tooltipfix" }
-tweakeroo = { group = "curse.maven", name = "tweakeroo-297344", version.ref = "tweakeroo" }
-viafabricplus = { group = "maven.modrinth", name = "viafabricplus", version.ref = "viafabricplus" }
-xaeros-minimap = { group = "maven.modrinth", name = "xaeros-minimap", version.ref = "xaeros-minimap" }
-xaeros-world-map = { group = "maven.modrinth", name = "xaeros-world-map", version.ref = "xaeros-world-map" }
-reflect = { group = "net.lenni0451", name = "Reflect", version.ref = "reflect" }
+xaeros-world-map = { group = "maven.modrinth", name = "xaeros-world-map", version = "1.37.8_Fabric_1.20.4" }
+fabric-api = { group = "maven.modrinth", name = "fabric-api", version = "0.96.3+1.20.4" }
+xaeros-minimap = { group = "maven.modrinth", name = "xaeros-minimap", version = "23.9.7_Fabric_1.20.4" }
+viafabricplus = { group = "maven.modrinth", name = "viafabricplus", version = "3.0.6" }
+tooltipfix = { group = "maven.modrinth", name = "tooltipfix", version = "1.1.1-1.20" }
+threadtweak = { group = "maven.modrinth", name = "threadtweak", version = "0.1.2+mc1.20.4" }
+simple-voice-chat = { group = "maven.modrinth", name = "simple-voice-chat", version = "fabric-1.20.4-2.5.4" }
+roughly-enough-professions-rep = { group = "maven.modrinth", name = "roughly-enough-professions-rep", version = "2.2.0" }
+rei = { group = "maven.modrinth", name = "rei", version = "14.0.688+fabric" }
+architectury-api = { group = "maven.modrinth", name = "architectury-api", version = "11.0.12+fabric" }
+cloth-config = { group = "maven.modrinth", name = "cloth-config", version = "13.0.121+fabric" }
+rrls = { group = "maven.modrinth", name = "rrls", version = "4.0.1+mc1.20.4-fabric" }
+mouse-tweaks = { group = "maven.modrinth", name = "mouse-tweaks", version = "1.20-2.25-fabric" }
+modernfix = { group = "maven.modrinth", name = "modernfix", version = "5.13.0+mc1.20.4" }
+light-overlay = { group = "maven.modrinth", name = "light-overlay", version = "8.0.0" }
+lambdynamiclights = { group = "maven.modrinth", name = "lambdynamiclights", version = "2.3.4+1.20.4" }
+forcecloseworldloadingscreen = { group = "maven.modrinth", name = "forcecloseworldloadingscreen", version = "2.2.0" }
+jade = { group = "maven.modrinth", name = "jade", version = "13.3.1" }
+iris = { group = "maven.modrinth", name = "iris", version = "1.6.17+1.20.4" }
+sodium = { group = "maven.modrinth", name = "sodium", version = "mc1.20.4-0.5.8" }
+exordium = { group = "maven.modrinth", name = "exordium", version = "1.2.1-1.20.4" }
+ebe = { group = "maven.modrinth", name = "ebe", version = "0.9.1+1.20.2" }
+carpet-extra = { group = "maven.modrinth", name = "carpet-extra", version = "1.4.128" }
+carpet = { group = "maven.modrinth", name = "carpet", version = "1.4.128" }
+appleskin = { group = "maven.modrinth", name = "appleskin", version = "2.5.1+mc1.20.3" }
+advanced-chat = { group = "maven.modrinth", name = "advanced-chat", version = "1.4-1.20.3" }
+entityculling = { group = "maven.modrinth", name = "entityculling", version = "1.6.3.1-1.20.4" }
+auth-me = { group = "maven.modrinth", name = "auth-me", version = "8.0.0+1.20.4" }
+reeses-sodium-options = { group = "maven.modrinth", name = "reeses-sodium-options", version = "mc1.20.4-1.7.2" }
+cull-less-leaves = { group = "maven.modrinth", name = "cull-less-leaves", version = "1.3.0" }
+yacl = { group = "maven.modrinth", name = "yacl", version = "3.3.2+1.20.4-fabric" }
+modmenu = { group = "maven.modrinth", name = "modmenu", version = "9.0.0" }
+continuity = { group = "maven.modrinth", name = "continuity", version = "3.0.0-beta.4+1.20.2" }
+sodium-extra = { group = "maven.modrinth", name = "sodium-extra", version = "mc1.20.4-0.5.4" }
+indium = { group = "maven.modrinth", name = "indium", version = "1.0.30+mc1.20.4" }
+tweakeroo = { group = "curse.maven", name = "tweakeroo-297344", version = "5096820" }
+malilib = { group = "curse.maven", name = "malilib-303119", version = "5096807" }
+minihud = { group = "curse.maven", name = "minihud-244260", version = "5096818" }
+litematica = { group = "curse.maven", name = "litematica-308892", version = "4946471" }
+clumps = { group = "curse.maven", name = "clumps-256717", version = "5025925" }
 
 [bundles]
 mods = [
-    "sodium",
-    "indium",
-    "modmenu",
-    "reeses-sodium-options",
-    "caffeine-config",
-    "sodium-extra",
-    "yacl",
-    "auth-me",
-    "entity-culling",
-    "advanced-chat",
-    "cloth-config",
-    "appleskin",
-    "boosted-brightness",
-    "borderless-mining",
-    "carpet",
-    "carpet-extra",
-    "continuity",
-    "cull-less-leaves",
-    "dynamic-fps",
-    "enhanced-block-entities",
-    "exordium",
-    "farsight",
-    "cupboard",
-#    "mixinextras",
-    "arrp",
-    "jctools-core",
-    "spruceui",
-    "basic-math",
-    "iris",
-    "jade",
-    "forcecloseworldloadingscreen",
-    "lambdynamiclights",
-    "light-overlay",
-    "litematica",
-    "malilib",
-    "architectury",
-    "meteor",
-    "minihud",
-    "modernfix",
-    "mouse-tweaks",
-    "rrls",
-    "rei",
-    "rep",
-    "simple-voice-chat",
-    "threadtweak",
-    "tweakeroo",
-    "viafabricplus",
-    "xaeros-minimap",
     "xaeros-world-map",
-    "reflect"
+    "fabric-api",
+    "xaeros-minimap",
+    "viafabricplus",
+    "tooltipfix",
+    "threadtweak",
+    "simple-voice-chat",
+    "roughly-enough-professions-rep",
+    "rei",
+    "architectury-api",
+    "cloth-config",
+    "rrls",
+    "mouse-tweaks",
+    "modernfix",
+    "light-overlay",
+    "lambdynamiclights",
+    "forcecloseworldloadingscreen",
+    "jade",
+    "iris",
+    "sodium",
+    "exordium",
+    "ebe",
+    "carpet-extra",
+    "carpet",
+    "appleskin",
+    "advanced-chat",
+    "entityculling",
+    "auth-me",
+    "reeses-sodium-options",
+    "cull-less-leaves",
+    "yacl",
+    "modmenu",
+    "continuity",
+    "sodium-extra",
+    "indium",
+    "tweakeroo",
+    "malilib",
+    "minihud",
+    "litematica",
+    "clumps",
 ]

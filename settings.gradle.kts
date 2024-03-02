@@ -3,6 +3,12 @@ includeBuild("build-extensions")
 rootProject.name = "stracciatella"
 pluginManagement {
     repositories {
+        mavenLocal()
+        mavenLocal {
+            content {
+                includeGroup("net.fabricmc")
+            }
+        }
         maven("https://nexus.darkcube.eu/repository/stracciatella/") { name = "Stracciatella" }
         maven {
             name = "Fabric"
@@ -10,6 +16,7 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven("https://nexus.darkcube.eu/repository/jitpack/") { name = "Jitpack-Mirror" }
     }
 }
 dependencyResolutionManagement {
