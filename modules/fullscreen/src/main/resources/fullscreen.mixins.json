@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "package": "net.stracciatella.fullscreen.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+
+  ],
+  "client": [
+    "FullScreenOptionMixin",
+    "VideoModeFixMixin",
+    "WindowMixin",
+    "SodiumOptionsMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1,
+    "maxShiftBy": 1
+  }
+}

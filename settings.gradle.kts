@@ -34,6 +34,7 @@ include("loader")
 include("loader:injected")
 include("loader:test3module")
 includeModule("core")
+includeModule("fullscreen")
 
 fun includeModule(path: String) {
     include("modules:$path")
