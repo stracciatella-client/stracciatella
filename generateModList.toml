@@ -7,6 +7,7 @@ curse = [
     244260, # minihud
     297344, # tweakeroo
     579192, # farsight
+    274816, # nbt-tooltip
 ]
 
 modrinth = [
