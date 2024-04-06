@@ -186,7 +186,7 @@ class ModrinthCollector(val agent: UserAgent) : ModCollector {
             }
             val latestVersion = projectVersions.first()
 
-            entries.add(MavenModEntry("maven.modrinth", mod.slug, latestVersion.versionNumber, mod.slug))
+            entries.add(MavenModEntry("maven.modrinth", mod.slug, latestVersion.id, mod.slug))
 
             val dependencies = latestVersion.dependencies
             dependencies.forEach {
