@@ -19,7 +19,7 @@ public class CommandLineModuleClasspath {
     }
 
     public static CommandLineModuleClasspath fromClasspath(String classpath) {
-        return new CommandLineModuleClasspath(classpath == null ? Collections.emptyList() : Arrays.asList(classpath.split(Pattern.quote(File.pathSeparator))));
+        return new CommandLineModuleClasspath(classpath == null || classpath.isEmpty() ? Collections.emptyList() : Arrays.asList(classpath.split(Pattern.quote(File.pathSeparator))));
     }
 
     public static CommandLineModuleClasspath fromClasspathFile(String file) throws IOException {

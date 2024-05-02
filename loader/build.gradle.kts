@@ -39,6 +39,7 @@ dependencies {
     for (testModuleName in testModuleNames) {
         "${testModuleName}Implementation"(project)
     }
+    modApi(libs.fabric.api)
     include(libs.jol.core)
     implementation(libs.jol.core)
     "injected"(project("injected"))
@@ -71,7 +72,7 @@ tasks {
     val mergeJar = register<Jar>("mergeJar") {
         destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
         archiveClassifier.convention("merged")
-        from(shadowJar.map { it.outputs.files.map(::zipTree) })
+        from(shadowJar.map { it.outputs.files.map { it2 -> zipTree(it2) } })
         from(configurations.named("injected")) {
             rename { "injected.jar" }
         }

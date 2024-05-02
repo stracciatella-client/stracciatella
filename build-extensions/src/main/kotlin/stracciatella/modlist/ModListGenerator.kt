@@ -174,13 +174,14 @@ class ModrinthCollector(val agent: UserAgent) : ModCollector {
             registeredMods.add(slug)
             registered[slug] = mod
 
-            val request = GetProjectVersionsRequest.builder().featured(true).loaders(listOf("fabric")).gameVersions(listOf(task.version.get())).build()
+            val request = GetProjectVersionsRequest.builder().loaders(listOf("fabric")).gameVersions(listOf(task.version.get())).build()
             val projectVersions = ArrayList(api.versions().getProjectVersions(slug, request).join())
-            request.featured = false
-            projectVersions.addAll(api.versions().getProjectVersions(slug, request).join())
+
+            println(projectVersions.map { it.name })
             if (projectVersions.isEmpty()) {
                 System.err.println("No version found for modrinth project ${mod.slug}. Trying next best version")
                 request.gameVersions = listOf()
+                
                 projectVersions.addAll(api.versions().getProjectVersions(slug, request).join())
                 projectVersions.add(api.versions().getVersion(mod.versions.last()).join())
             }

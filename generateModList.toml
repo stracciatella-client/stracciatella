@@ -1,4 +1,4 @@
-version = "1.20.4"
+version = "1.20.6"
 
 curse = [
     256717, # clumps
@@ -42,5 +42,6 @@ modrinth = [
     "tooltipfix",
     "viafabricplus",
     "xaeros-minimap",
-    "xaeros-world-map"
+    "xaeros-world-map",
+    "gadget"
 ]
