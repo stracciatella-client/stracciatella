@@ -4,7 +4,7 @@ owo-lib = { group = "maven.modrinth", name = "owo-lib", version = "5qH0boef" }
 fabric-api = { group = "maven.modrinth", name = "fabric-api", version = "kAQqRNrK" }
 xaeros-world-map = { group = "maven.modrinth", name = "xaeros-world-map", version = "aWXGiFVe" }
 xaeros-minimap = { group = "maven.modrinth", name = "xaeros-minimap", version = "YtAGhx5I" }
-viafabricplus = { group = "maven.modrinth", name = "viafabricplus", version = "bZqiwUTV" }
+viafabricplus = { group = "maven.modrinth", name = "viafabricplus", version = "8y7ndLGS" }
 tooltipfix = { group = "maven.modrinth", name = "tooltipfix", version = "B2L4LeMV" }
 threadtweak = { group = "maven.modrinth", name = "threadtweak", version = "pc1QuN32" }
 simple-voice-chat = { group = "maven.modrinth", name = "simple-voice-chat", version = "iR3YuKHo" }
