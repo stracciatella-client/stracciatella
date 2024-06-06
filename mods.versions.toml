@@ -59,7 +59,7 @@ mods = [
     "modernfix",
     "light-overlay",
 #    "lambdynamiclights",
-    "forcecloseworldloadingscreen",
+#    "forcecloseworldloadingscreen",
     "jade",
     "iris",
 #    "exordium",
