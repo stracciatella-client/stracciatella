@@ -20,10 +20,6 @@ dependencies {
     "stracciatellaModule"(projects.modules)
 }
 
-loom {
-
-}
-
 tasks {
     register<ModListGenerator>("generateModList") {
         setup("generateModList.toml")
