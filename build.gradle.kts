@@ -29,6 +29,7 @@ tasks {
 allprojects {
     tasks {
         withType<RunGameTask>().configureEach {
+            maxHeapSize = "8G"
             workingDir(rootProject.projectDir)
         }
     }
