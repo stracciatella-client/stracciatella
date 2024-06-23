@@ -1,9 +1,9 @@
 package net.stracciatella.fullscreen.mixin;
 
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.screens.OptionsSubScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.VideoSettingsScreen;
+import net.minecraft.client.gui.screens.options.OptionsSubScreen;
+import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,6 +18,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class VideoModeFixMixin extends OptionsSubScreen {
     private VideoModeFixMixin(Screen parent, Options gameOptions, Component title) {
         super(parent, gameOptions, title);
+    }
+
+    @Override
+    protected void addOptions() {
+
     }
 
     @Inject(at = @At("HEAD"), method = "removed()V")

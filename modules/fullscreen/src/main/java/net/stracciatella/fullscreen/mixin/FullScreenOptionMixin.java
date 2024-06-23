@@ -3,7 +3,7 @@ package net.stracciatella.fullscreen.mixin;
 import java.util.function.Consumer;
 
 import net.minecraft.client.OptionInstance;
-import net.minecraft.client.gui.screens.VideoSettingsScreen;
+import net.minecraft.client.gui.screens.options.VideoSettingsScreen;
 import net.minecraft.network.chat.Component;
 import net.stracciatella.fullscreen.config.ConfigHandler;
 import org.spongepowered.asm.mixin.Mixin;
