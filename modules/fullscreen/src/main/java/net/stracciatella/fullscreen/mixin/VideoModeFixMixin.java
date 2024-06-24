@@ -15,14 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * See: https://bugs.mojang.com/browse/MC-175437
  */
 @Mixin(VideoSettingsScreen.class)
-public class VideoModeFixMixin extends OptionsSubScreen {
+public abstract class VideoModeFixMixin extends OptionsSubScreen {
     private VideoModeFixMixin(Screen parent, Options gameOptions, Component title) {
         super(parent, gameOptions, title);
-    }
-
-    @Override
-    protected void addOptions() {
-
     }
 
     @Inject(at = @At("HEAD"), method = "removed()V")
