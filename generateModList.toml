@@ -12,7 +12,6 @@ curse = [
 ]
 
 modrinth = [
-    "auth-me",
     "sodium",
     "indium",
     "sodium-extra",
@@ -30,6 +29,7 @@ modrinth = [
     #    "exordium", seems to not be maintained anymore,
     "gadget",
     "gamma-utils",
+    "in-game-account-switcher",
     "iris",
     "jade",
     "forcecloseworldloadingscreen",
