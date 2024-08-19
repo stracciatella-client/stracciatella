@@ -1,16 +1,9 @@
 package stracciatella.modlist
 
-import com.google.gson.FieldNamingPolicy
-import com.google.gson.GsonBuilder
 import masecla.modrinth4j.client.agent.UserAgent
-import masecla.modrinth4j.client.instances.RatelimitedHttpClient
-import masecla.modrinth4j.endpoints.generic.empty.EmptyRequest
 import masecla.modrinth4j.endpoints.version.GetProjectVersions.GetProjectVersionsRequest
 import masecla.modrinth4j.main.ModrinthAPI
-import masecla.modrinth4j.model.adapters.ISOTimeAdapter
 import masecla.modrinth4j.model.project.Project
-import masecla.modrinth4j.model.search.FacetCollection
-import masecla.modrinth4j.model.team.ModrinthPermissionMask
 import masecla.modrinth4j.model.version.ProjectVersion
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileSystemOperations
@@ -23,7 +16,6 @@ import org.gradle.kotlin.dsl.property
 import org.gradle.kotlin.dsl.setProperty
 import org.tomlj.Toml
 import stracciatella.curse.*
-import java.time.Instant
 import java.util.*
 import javax.inject.Inject
 
@@ -181,11 +173,19 @@ class ModrinthCollector(val agent: UserAgent) : ModCollector {
             if (projectVersions.isEmpty()) {
                 System.err.println("No version found for modrinth project ${mod.slug}. Trying next best version")
                 request.gameVersions = listOf()
-                
+
                 projectVersions.addAll(api.versions().getProjectVersions(slug, request).join())
-                projectVersions.add(api.versions().getVersion(mod.versions.last()).join())
+                val versions = ArrayList(mod.versions)
+                while (true) {
+                    val version = api.versions().getVersion(versions.removeLast()).join()
+                    if (version.loaders.contains("fabric")) {
+                        projectVersions.add(version)
+                        break
+                    }
+                }
+                println(projectVersions.map { v -> v.gameVersions + " " + v.id })
             }
-            val latestVersion = projectVersions.first()
+            val latestVersion = projectVersions.filter { v -> v.loaders.contains("fabric") }.first()
 
             entries.add(MavenModEntry("maven.modrinth", mod.slug, latestVersion.id, mod.slug))
 

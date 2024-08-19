@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.utils.extendsFrom
 
 plugins {

@@ -1,9 +1,9 @@
 [versions]
-stracciatella-gradle = "0.2.37"
+stracciatella-gradle = "0.2.38"
 shadow = "8.1.7"
-minecraft = "1.21"
-fabric-loader = "0.15.11"
-fabric-api = "0.100.3+1.21"
+minecraft = "1.21.1"
+fabric-loader = "0.16.2"
+fabric-api = "0.102.1+1.21.1"
 junit-jupiter = "5.9.2"
 junit-platform-launcher = "1.9.2"
 checkstyle = "10.12.4"

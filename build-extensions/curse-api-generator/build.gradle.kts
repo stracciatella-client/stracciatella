@@ -7,9 +7,13 @@ repositories {
     mavenCentral()
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 dependencies {
-    implementation("org.jsoup:jsoup:1.17.2")
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.jsoup:jsoup:1.18.1")
+    implementation("com.google.code.gson:gson:2.11.0")
 }
 
 val generateCurseAPI = tasks.register<JavaExec>("generateCurseAPI") {

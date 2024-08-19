@@ -29,10 +29,10 @@ configurations {
     compileOnly.configure {
         extendsFrom(injected.get())
     }
-    register("mergedJar") {
-        isCanBeResolved = false
-        isCanBeConsumed = true
+    resolvable("includeInJar") {
+        extendsFrom(include.get())
     }
+    consumable("mergedJar")
 }
 
 dependencies {
@@ -66,7 +66,7 @@ tasks {
     }
     shadowJar.configure {
         archiveClassifier.convention("shadow")
-        configurations = listOf(project.configurations.include.get())
+        configurations = listOf(project.configurations["includeInJar"])
         destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
     }
     val mergeJar = register<Jar>("mergeJar") {

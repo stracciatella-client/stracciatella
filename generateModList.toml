@@ -1,47 +1,52 @@
-version = "1.21"
+version = "1.21.1"
 
 curse = [
-    256717, # clumps
-#    846196, # boosted-brightness-fabric
-    308892, # litematica
-    244260, # minihud
-    297344, # tweakeroo
+#    256717, # clumps
+    #    846196, # boosted-brightness-fabric
+    1068882, # malilib
+    1068908, # litematica
+    1068914, # minihud
+    1068922, # tweakeroo
     579192, # farsight
-    274816, # nbt-tooltip
+    #    274816, # nbt-tooltip
 ]
 
 modrinth = [
+    "auth-me",
     "sodium",
     "indium",
     "sodium-extra",
     "continuity",
     "modmenu",
-    "cull-less-leaves",
+    "cull-leaves",
     "reeses-sodium-options",
-    "in-game-account-switcher",
     "entityculling",
     "advanced-chat",
     "appleskin",
-    "carpet",
-    "carpet-extra",
+#    "carpet", maintained, but not updated in modrinth
+#    "carpet-extra",
     "dynamic-fps",
     "ebe",
-    "exordium",
+    #    "exordium", seems to not be maintained anymore,
+    "gadget",
+    "gamma-utils",
     "iris",
     "jade",
     "forcecloseworldloadingscreen",
-    "lambdynamiclights",
-    "light-overlay",
+    "lighty",
     "modernfix",
     "mouse-tweaks",
+    "nbttooltip",
+    "obsidianui",
     "rrls",
     "rei",
     "roughly-enough-professions-rep",
+    "ryoamiclights",
     "simple-voice-chat",
     "threadtweak",
     "tooltipfix",
     "viafabricplus",
     "xaeros-minimap",
     "xaeros-world-map",
-    "gadget"
+    "yacl"
 ]

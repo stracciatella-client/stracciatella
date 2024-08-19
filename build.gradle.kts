@@ -3,8 +3,8 @@ import net.fabricmc.loom.task.RunGameTask
 import stracciatella.modlist.ModListGenerator
 
 plugins {
-    id("fabric-loom") version "1.6.stracciatella-1"
     alias(libs.plugins.stracciatella.fabric) apply false
+    id("fabric-loom") version "1.8.0-alpha.50001"
     alias(libs.plugins.stracciatella) apply false
     alias(libs.plugins.stracciatella.base)
     `version-catalog`
