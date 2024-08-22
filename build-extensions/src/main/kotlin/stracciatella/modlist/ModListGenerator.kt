@@ -127,10 +127,15 @@ class CurseCollector(val agent: UserAgent) : ModCollector {
             registered[slug] = mod
 
             val response = curseAPI.files.getModFiles(mod.id, task.version.get(), ModLoaderType.Fabric).join()
-            val files = response.data
+            var files = response.data
             if (files.isEmpty()) {
-                System.err.println("No version found for curse project ${mod.id}")
-                continue
+                files = mod.latestFiles
+                if (files.isEmpty()) {
+                    System.err.println("No version found for curse project ${mod.slug}-${mod.id}")
+                    continue
+                }
+                files = listOf(files.last())
+                println("Used latest files for project ${mod.slug}-${mod.id}")
             }
             val file = files.first()
 

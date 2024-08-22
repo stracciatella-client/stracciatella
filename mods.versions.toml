@@ -16,10 +16,10 @@ cloth-config = { group = "maven.modrinth", name = "cloth-config", version = "7jt
 rrls = { group = "maven.modrinth", name = "rrls", version = "ALXVhZOT" }
 nbttooltip = { group = "maven.modrinth", name = "nbttooltip", version = "w0reHqvu" }
 mouse-tweaks = { group = "maven.modrinth", name = "mouse-tweaks", version = "ylmBQ38A" }
-modernfix = { group = "maven.modrinth", name = "modernfix", version = "KCOwQkKi" }
+modernfix = { group = "maven.modrinth", name = "modernfix", version = "wq4G8eI8" }
 lighty = { group = "maven.modrinth", name = "lighty", version = "fk7e7Iej" }
 forcecloseworldloadingscreen = { group = "maven.modrinth", name = "forcecloseworldloadingscreen", version = "UwDrIjNb" }
-jade = { group = "maven.modrinth", name = "jade", version = "2PamFbp4" }
+jade = { group = "maven.modrinth", name = "jade", version = "m4JY8Ioc" }
 iris = { group = "maven.modrinth", name = "iris", version = "kuOV4Ece" }
 sodium = { group = "maven.modrinth", name = "sodium", version = "RncWhTxD" }
 in-game-account-switcher = { group = "maven.modrinth", name = "in-game-account-switcher", version = "RQG6VufY" }
@@ -30,7 +30,7 @@ ebe = { group = "maven.modrinth", name = "ebe", version = "8OuTJDGd" }
 dynamic-fps = { group = "maven.modrinth", name = "dynamic-fps", version = "RZDYy0mt" }
 appleskin = { group = "maven.modrinth", name = "appleskin", version = "fG1xJao0" }
 advanced-chat = { group = "maven.modrinth", name = "advanced-chat", version = "5ddOPqgR" }
-entityculling = { group = "maven.modrinth", name = "entityculling", version = "Bu3hSiJb" }
+entityculling = { group = "maven.modrinth", name = "entityculling", version = "uh3DtMnM" }
 reeses-sodium-options = { group = "maven.modrinth", name = "reeses-sodium-options", version = "6gZ19wc6" }
 cull-leaves = { group = "maven.modrinth", name = "cull-leaves", version = "JnCn3KSm" }
 modmenu = { group = "maven.modrinth", name = "modmenu", version = "xhN1IvHi" }
@@ -40,6 +40,10 @@ sodium-extra = { group = "maven.modrinth", name = "sodium-extra", version = "uuh
 indium = { group = "maven.modrinth", name = "indium", version = "Z8VpxxGh" }
 farsight-fabric = { group = "curse.maven", name = "farsight-fabric-579192", version = "5531413" }
 cupboard = { group = "curse.maven", name = "cupboard-326652", version = "5477517" }
+tweakeroo-community = { group = "curse.maven", name = "tweakeroo-community-1068922", version = "5559281" }
+malilib-community = { group = "curse.maven", name = "malilib-community-1068882", version = "5559277" }
+minihud-community = { group = "curse.maven", name = "minihud-community-1068914", version = "5559279" }
+litematica-community = { group = "curse.maven", name = "litematica-community-1068908", version = "5559275" }
 
 [bundles]
 mods = [
@@ -84,4 +88,8 @@ mods = [
     "indium",
     "farsight-fabric",
     "cupboard",
+    "tweakeroo-community",
+    "malilib-community",
+    "minihud-community",
+    "litematica-community",
 ]
