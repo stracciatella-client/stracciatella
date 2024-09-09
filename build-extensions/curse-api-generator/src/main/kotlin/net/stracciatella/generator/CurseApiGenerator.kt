@@ -6,7 +6,7 @@ import org.jsoup.nodes.Element
 import kotlin.io.path.Path
 import kotlin.io.path.bufferedWriter
 
-const val CURSEFORGE_DOCS_URL = "https://docs.curseforge.com/"
+const val CURSEFORGE_DOCS_URL = "https://docs.curseforge.com/rest-api/"
 const val CURSEFORGE_API_URL = "https://api.curseforge.com" // NO SLASH AT END
 
 private const val CURSEFORGE_CORE_API_PREFIX = "curseforge-core-api-"
