@@ -1,6 +1,6 @@
 [versions]
 stracciatella-gradle = "0.2.38"
-shadow = "8.1.7"
+shadow = "8.1.8"
 minecraft = "1.21.1"
 fabric-loader = "0.16.2"
 fabric-api = "0.102.1+1.21.1"
