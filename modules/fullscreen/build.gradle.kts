@@ -10,12 +10,16 @@ loom {
             sourceSet(sourceSets.getByName(MAIN_SOURCE_SET_NAME))
         }
     }
+    this.mixin {
+        this.useLegacyMixinAp
+    }
 }
 
 stracciatella {
     main = "net.stracciatella.fullscreen.FullscreenModule"
-    id = "core"
+    id = "borderless-fullscreen"
     name = "Borderless Fullscreen"
+    group = "net.stracciatella"
     mixin("fullscreen.mixins.json")
     accessWidener("fullscreen.accesswidener")
 }

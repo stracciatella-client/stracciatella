@@ -10,7 +10,8 @@ public interface ModuleEntry {
 
     @NotNull ModuleConfiguration moduleConfiguration();
 
-    @UnknownNullability Module module();
+    @UnknownNullability
+    Module module();
 
     @NotNull Module.LifeCycle lifeCycle();
 

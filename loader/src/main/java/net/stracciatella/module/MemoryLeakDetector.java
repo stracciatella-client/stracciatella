@@ -32,11 +32,11 @@ class MemoryLeakDetector {
                         throw StracciatellaThrowables.propagate(e);
                     }
                 }
-                LOGGER.error("Probable Memory leak in module " + name);
+                LOGGER.error("Probable Memory leak in module {}", name);
                 while ((reference = loaded.poll()) != null) {
                     var cls = reference.get();
                     if (cls == null) continue;
-                    LOGGER.error(" - " + cls.getName() + " (" + Integer.toHexString(cls.hashCode()) + ")");
+                    LOGGER.error(" - {} ({})", cls.getName(), Integer.toHexString(cls.hashCode()));
                 }
             } finally {
                 manager.workers().remove(Thread.currentThread());

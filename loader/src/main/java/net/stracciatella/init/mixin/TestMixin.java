@@ -23,9 +23,6 @@ public abstract class TestMixin {
     @Inject(method = "run", at = @At("HEAD"))
     public void test(CallbackInfo ci) {
         System.out.println("TEST MIXIN APPLIED-----------");
-        System.out.println("TEST MIXIN APPLIED-----------");
-        System.out.println("TEST MIXIN APPLIED-----------");
-        System.out.println("TEST MIXIN APPLIED-----------");
 
         try {
             System.out.println(resourcePackDirectory);

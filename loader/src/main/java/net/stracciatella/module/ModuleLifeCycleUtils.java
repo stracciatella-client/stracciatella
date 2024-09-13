@@ -127,7 +127,7 @@ class ModuleLifeCycleUtils {
             try {
                 method.invoke(module);
             } catch (Throwable e) {
-                LOGGER.error("Failed to execute module task " + method.getName(), e);
+                LOGGER.error("Failed to execute module task {}", method.getName(), e);
             }
         }
     }
@@ -149,8 +149,8 @@ class ModuleLifeCycleUtils {
             if (!Set.of(task.lifeCycleFrom()).contains(fromLifeCycle)) continue;
             if (method.getParameterCount() != 0) {
                 LOGGER.error("Module task must not have any parameters!");
-                LOGGER.error("Parameters: " + String.join(", ", Arrays.stream(method.getParameters()).map(p -> p.getType().getSimpleName()).toList()));
-                LOGGER.error("In class " + cls.getName());
+                LOGGER.error("Parameters: {}", String.join(", ", Arrays.stream(method.getParameters()).map(p -> p.getType().getSimpleName()).toList()));
+                LOGGER.error("In class {}", cls.getName());
                 continue;
             }
             method.setAccessible(true);

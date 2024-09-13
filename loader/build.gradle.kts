@@ -14,12 +14,13 @@ sourceSets {
             java.srcDir("src/${testModuleName}/java")
             resources.srcDir("src/${testModuleName}/java")
         }.run {
-            StracciatellaExtension.registerGenerator(project, this@run) {
-                name = "TestModule${
-                    testModuleName.replace("test", "").replace("module", "")
-                }"
-                main = "net.stracciatella.test.${testModuleName}.$name"
-            }
+            // TODO
+//            StracciatellaExtension.registerGenerator(project, this@run) {
+//                name = "TestModule${
+//                    testModuleName.replace("test", "").replace("module", "")
+//                }"
+//                main = "net.stracciatella.test.${testModuleName}.$name"
+//            }
         }
     }
 }
@@ -43,10 +44,11 @@ dependencies {
     include(libs.jol.core)
     implementation(libs.jol.core)
     "injected"(project("injected"))
-    "test1moduleStracciatellaDependency"(project("test3module"))
-    "test2moduleStracciatellaDependency"(sourceSets.named("test1module").map { SourceSetDependency(it) })
-    "test1moduleStracciatellaLibrary"("de.dasbabypixel:annotations:0.1")
-    "test1moduleStracciatellaLibrary"("de.dasbabypixel:utils:1.0")
+    // TODO
+//    "test1moduleStracciatellaDependency"(project("test3module"))
+//    "test2moduleStracciatellaDependency"(sourceSets.named("test1module").map { SourceSetDependency(it) })
+//    "test1moduleStracciatellaLibrary"("de.dasbabypixel:annotations:0.1")
+//    "test1moduleStracciatellaLibrary"("de.dasbabypixel:utils:1.0")
 }
 
 tasks {
@@ -58,6 +60,12 @@ tasks {
             destinationDirectory = project.layout.buildDirectory.dir("test")
             archiveFileName = "${testModuleName}.jar"
         })
+    }
+    processResources.configure {
+        inputs.property("version", project.version.toString())
+        filesMatching("fabric.mod.json") {
+            expand(mapOf("version" to project.version.toString()))
+        }
     }
     jar.configure {
         from(configurations.named("injected")) {

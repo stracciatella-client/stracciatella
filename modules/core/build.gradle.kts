@@ -20,6 +20,7 @@ stracciatella {
     main = "net.stracciatella.core.CoreModule"
     id = "core"
     name = "Core Module"
+    group = "net.stracciatella"
     mixin("core.mixins.json")
     accessWidener("core.accesswidener")
 }

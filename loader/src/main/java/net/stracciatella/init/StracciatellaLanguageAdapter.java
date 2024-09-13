@@ -1,5 +1,6 @@
 package net.stracciatella.init;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import net.fabricmc.loader.api.LanguageAdapter;
@@ -38,6 +39,19 @@ public class StracciatellaLanguageAdapter implements LanguageAdapter {
             for (var pathString : commandLineModuleClasspath.paths()) {
                 var path = Path.of(pathString);
                 moduleManager.load(path);
+            }
+            var directory = stracciatella.service(Path.class, Stracciatella.WORKING_DIRECTORY);
+            var modulesDirectory = directory.resolve("modules");
+            Files.createDirectories(modulesDirectory);
+            try (var stream = Files.newDirectoryStream(modulesDirectory)) {
+                for (var file : stream) {
+                    if (Files.isDirectory(file)) continue;
+                    if (!file.getFileName().toString().endsWith(".jar")) {
+                        stracciatella.logger().info("Skipping module file {}", file.getFileName().toString());
+                        continue;
+                    }
+                    moduleManager.load(file);
+                }
             }
         } catch (Throwable e) {
             throw StracciatellaThrowables.propagate(e);

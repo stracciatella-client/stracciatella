@@ -37,13 +37,13 @@ class ModuleUtils {
                 downloadTasks.add(() -> {
                     try {
                         var url = maven.resolve();
-                        LOGGER.info("Download " + url);
+                        LOGGER.info("Downloading dependency {} for {}", url, entry.moduleConfiguration().name());
                         var connection = url.openConnection();
                         connection.connect();
                         var in = connection.getInputStream();
                         libraryStorage.store(maven, in);
                     } catch (Throwable e) {
-                        LOGGER.error("Failed to download maven dependency " + maven, e);
+                        LOGGER.error("Failed to download maven dependency {}", maven, e);
                     }
                 });
             }

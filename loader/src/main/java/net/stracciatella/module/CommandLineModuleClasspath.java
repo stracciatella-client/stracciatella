@@ -23,6 +23,7 @@ public class CommandLineModuleClasspath {
     }
 
     public static CommandLineModuleClasspath fromClasspathFile(String file) throws IOException {
+        if (file == null) return fromClasspath(null);
         var path = Path.of(file);
         if (!Files.exists(path)) return fromClasspath(null);
         var data = Files.readString(path);

@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerReader;
 import net.stracciatella.Stracciatella;
 import net.stracciatella.init.accesswidener.AccessWidenerConfig;
@@ -89,6 +90,7 @@ public class SimpleModuleManager implements ModuleManager {
         }
 
         var moduleConfiguration = loadConfiguration(moduleJsonPath);
+        LOGGER.info("Loading module {}({})", moduleConfiguration.name(), moduleConfiguration.id());
 
         var entry = new SimpleModuleEntry(moduleConfiguration, fileSystem, file);
         entry.lifeCycle(REGISTERED);
@@ -142,10 +144,10 @@ public class SimpleModuleManager implements ModuleManager {
         Stracciatella.instance().service(StracciatellaClassLoader.class).moduleLoaders().remove(classLoader);
         entry.dependencies().clear();
         if (!entry.dependants().isEmpty()) {
-            LOGGER.error("There are still dependant modules when unloading module " + entry.moduleConfiguration().name() + ": " + entry.dependants().size());
-            for (var dependant : entry.dependants()) LOGGER.error(" - " + dependant.moduleConfiguration().name());
+            LOGGER.error("There are still dependant modules when unloading module {}: {}", entry.moduleConfiguration().name(), entry.dependants().size());
+            for (var dependant : entry.dependants()) LOGGER.error(" - {}", dependant.moduleConfiguration().name());
         }
-        if (!registeredModules.remove(entry.moduleConfiguration().id(), entry)) LOGGER.error("Failed to remove module " + entry.moduleConfiguration().name() + " from registered modules");
+        if (!registeredModules.remove(entry.moduleConfiguration().id(), entry)) LOGGER.error("Failed to remove module {} from registered modules", entry.moduleConfiguration().name());
         entry.module(null);
         entry.classLoader(null);
         for (var fileSystem : classLoader.fileSystems()) fileSystem.close();
@@ -166,7 +168,7 @@ public class SimpleModuleManager implements ModuleManager {
 
     public synchronized void changeLifeCycle(@NotNull LifeCycle lifeCycle) {
         if (!globalLifeCycle.canChangeTo(lifeCycle)) throw new IllegalStateException("Can't change global LifeCycle from " + globalLifeCycle + " to " + lifeCycle);
-        LOGGER.info("Changing global LifeCycle from " + this.globalLifeCycle + " to " + lifeCycle);
+        LOGGER.info("Changing global LifeCycle from {} to {}", this.globalLifeCycle, lifeCycle);
         for (var entry : registeredModules.values()) {
             if (!entry.lifeCycle().canChangeTo(lifeCycle)) continue;
             changeLifeCycle(entry, lifeCycle);
@@ -199,7 +201,7 @@ public class SimpleModuleManager implements ModuleManager {
 
     private void constructModule(SimpleModuleEntry entry) throws Throwable {
         if (entry.lifeCycle() != REGISTERED) throw new IllegalStateException();
-        LOGGER.info("Loading module " + entry.moduleConfiguration().name());
+        LOGGER.info("Loading module {}", entry.moduleConfiguration().name());
 
         var parentLoader = Stracciatella.instance().service(StracciatellaClassLoader.class);
         parentLoader.moduleLoaders().add(entry.classLoader());
@@ -209,7 +211,7 @@ public class SimpleModuleManager implements ModuleManager {
             for (var accessWidenerPath : entry.moduleConfiguration().accessWideners()) {
                 var in = entry.classLoader().getResourceAsStream(accessWidenerPath);
                 if (in == null) throw new IllegalStateException("Access widener " + accessWidenerPath + " in module " + entry.moduleConfiguration().name() + " not found.");
-                reader.read(in.readAllBytes(), null);
+                reader.read(in.readAllBytes(), FabricLauncherBase.getLauncher().getTargetNamespace());
                 in.close();
             }
         }

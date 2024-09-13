@@ -1,5 +1,5 @@
 [versions]
-stracciatella-gradle = "0.2.38"
+stracciatella-gradle = "0.2.76"
 shadow = "8.1.7"
 minecraft = "1.21.1"
 fabric-loader = "0.16.2"

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "stracciatella",
-  "version": "$project.version",
+  "version": "$version",
   "name": "Stracciatella",
   "description": "Ein Eis für mich. Noch ein Eis für mich. Und noch mehr Eis für mich!",
   "authors": [

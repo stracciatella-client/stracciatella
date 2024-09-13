@@ -50,7 +50,7 @@ public class SimpleModuleEntry implements ModuleEntry {
     }
 
     Module.LifeCycle lifeCycle(Module.LifeCycle lifeCycle) {
-        logger.debug("Changed LifeCycle to " + lifeCycle);
+        logger.debug("Changed LifeCycle to {}", lifeCycle);
         var lastLifeCycle = this.lifeCycle;
         this.lifeCycle = lifeCycle;
         return lastLifeCycle;
