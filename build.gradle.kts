@@ -1,5 +1,6 @@
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RunGameTask
+import stracciatella.modlist.ModListCreator
 import stracciatella.modlist.ModListGenerator
 
 plugins {
@@ -14,8 +15,13 @@ plugins {
 version = providers.gradleProperty("version").get()
 group = providers.gradleProperty("group").get()
 
+val modList = configurations.register("modlist")
+configurations.modRuntimeOnly.configure { extendsFrom(modList.get()) }
+val includeInCreator = configurations.register("modlist2")
+
 dependencies {
-    modRuntimeOnly(mods.bundles.mods) { isTransitive = false }
+    modList(mods.bundles.mods) { isTransitive = false }
+    includeInCreator(projects.loader) { targetConfiguration = "finalJar" }
     implementation(projects.loader) { targetConfiguration = "mergedJar" }
     "stracciatellaModule"(projects.modules)
 }
@@ -23,6 +29,10 @@ dependencies {
 tasks {
     register<ModListGenerator>("generateModList") {
         setup("generateModList.toml")
+    }
+    register<ModListCreator>("createModList") {
+        modFiles.from(modList)
+        modFiles.from(includeInCreator)
     }
 }
 

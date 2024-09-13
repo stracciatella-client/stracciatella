@@ -1,6 +1,3 @@
-import net.stracciatella.gradle.plugin.SourceSetDependency
-import net.stracciatella.gradle.plugin.StracciatellaExtension
-
 plugins {
     id(libs.plugins.stracciatella.fabric.get().pluginId)
     alias(libs.plugins.shadow)
@@ -86,10 +83,6 @@ tasks {
         }
     }
     artifacts.add("mergedJar", mergeJar)
-    remapJar.configure {
-//        inputFile = jar.flatMap { it.archiveFile }
-//        setDependsOn(emptyList<Task>())
-    }
     project("test3module").afterEvaluate {
         val test3moduleJar = this.tasks.named<Jar>("jar")
         val classpath = ArrayList<String>()
@@ -103,6 +96,12 @@ tasks {
                 classpath.joinToString(separator = File.pathSeparator)
             )
         }
+    }
+}
+
+configurations.consumable("finalJar") {
+    outgoing.artifact(tasks.remapJar) {
+        name = "stracciatella-loader"
     }
 }
 
