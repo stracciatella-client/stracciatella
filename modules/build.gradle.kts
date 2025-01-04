@@ -5,7 +5,7 @@ configurations.register("default") {
 
 fun module(path: String) {
     dependencies {
-        "default"(project(path, "namedElements"))
+        "default"(project(path, "stracciatellaNamed"))
     }
 }
 // declare all modules here

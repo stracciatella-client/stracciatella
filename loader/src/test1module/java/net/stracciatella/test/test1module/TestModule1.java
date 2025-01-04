@@ -18,6 +18,5 @@ public class TestModule1 implements Module {
     @Task(lifeCycle = LifeCycle.INITIALIZED)
     private void init() {
         id = 2;
-
     }
 }

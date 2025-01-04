@@ -1,71 +1,68 @@
 [libraries]
-yacl = { group = "maven.modrinth", name = "yacl", version = "Y8Wa10Re" }
-fabric-api = { group = "maven.modrinth", name = "fabric-api", version = "WTaAx4ah" }
-xaeros-world-map = { group = "maven.modrinth", name = "xaeros-world-map", version = "373K4YJh" }
-xaeros-minimap = { group = "maven.modrinth", name = "xaeros-minimap", version = "ronrQ1g2" }
-viafabricplus = { group = "maven.modrinth", name = "viafabricplus", version = "qcLQw86s" }
-tooltipfix = { group = "maven.modrinth", name = "tooltipfix", version = "B2L4LeMV" }
-threadtweak = { group = "maven.modrinth", name = "threadtweak", version = "F4sjmsi3" }
-simple-voice-chat = { group = "maven.modrinth", name = "simple-voice-chat", version = "FvsJfBJ0" }
-ryoamiclights = { group = "maven.modrinth", name = "ryoamiclights", version = "eFFsHtIr" }
-obsidianui = { group = "maven.modrinth", name = "obsidianui", version = "Yt9IWzuL" }
-roughly-enough-professions-rep = { group = "maven.modrinth", name = "roughly-enough-professions-rep", version = "wsD62QuU" }
-rei = { group = "maven.modrinth", name = "rei", version = "nJkymL31" }
-architectury-api = { group = "maven.modrinth", name = "architectury-api", version = "afBcyXjI" }
-cloth-config = { group = "maven.modrinth", name = "cloth-config", version = "HpMb5wGb" }
-rrls = { group = "maven.modrinth", name = "rrls", version = "J4n3Uh3Y" }
+litematica = { group = "maven.modrinth", name = "litematica", version = "Oe5VpyXq" }
+malilib = { group = "maven.modrinth", name = "malilib", version = "GBA3Tz2i" }
+minihud = { group = "maven.modrinth", name = "minihud", version = "JcxonEnA" }
+tweakeroo = { group = "maven.modrinth", name = "tweakeroo", version = "THLZzg7y" }
+fabric-language-kotlin = { group = "maven.modrinth", name = "fabric-language-kotlin", version = "csX9r2wS" }
+zoomify = { group = "maven.modrinth", name = "zoomify", version = "RKRjd2h1" }
+fabric-api = { group = "maven.modrinth", name = "fabric-api", version = "bQzqZbjS" }
+yacl = { group = "maven.modrinth", name = "yacl", version = "HlJ8azv1" }
+xaeros-world-map = { group = "maven.modrinth", name = "xaeros-world-map", version = "c1X0YcPG" }
+xaeros-minimap = { group = "maven.modrinth", name = "xaeros-minimap", version = "Xin6IcCV" }
+viafabricplus = { group = "maven.modrinth", name = "viafabricplus", version = "m0y4obBS" }
+threadtweak = { group = "maven.modrinth", name = "threadtweak", version = "HV6EY0h3" }
+simple-voice-chat = { group = "maven.modrinth", name = "simple-voice-chat", version = "Uov7kAax" }
+roughly-enough-professions-rep = { group = "maven.modrinth", name = "roughly-enough-professions-rep", version = "3PZRWH2m" }
+rei = { group = "maven.modrinth", name = "rei", version = "jcTNGJeS" }
+architectury-api = { group = "maven.modrinth", name = "architectury-api", version = "i3y5Sm14" }
+cloth-config = { group = "maven.modrinth", name = "cloth-config", version = "JbVSQUVw" }
+rrls = { group = "maven.modrinth", name = "rrls", version = "4kb30Vsy" }
+forge-config-api-port = { group = "maven.modrinth", name = "forge-config-api-port", version = "rfzwvtf5" }
+obsidianui = { group = "maven.modrinth", name = "obsidianui", version = "kOGFM47J" }
 nbttooltip = { group = "maven.modrinth", name = "nbttooltip", version = "w0reHqvu" }
-mouse-tweaks = { group = "maven.modrinth", name = "mouse-tweaks", version = "ylmBQ38A" }
-modernfix = { group = "maven.modrinth", name = "modernfix", version = "T1ftCUJv" }
-lighty = { group = "maven.modrinth", name = "lighty", version = "fk7e7Iej" }
+mouse-tweaks = { group = "maven.modrinth", name = "mouse-tweaks", version = "m8rwZENW" }
+lighty = { group = "maven.modrinth", name = "lighty", version = "rpjz7mUs" }
 forcecloseworldloadingscreen = { group = "maven.modrinth", name = "forcecloseworldloadingscreen", version = "UwDrIjNb" }
-jade = { group = "maven.modrinth", name = "jade", version = "ycbZawVK" }
-iris = { group = "maven.modrinth", name = "iris", version = "u9KvDA4s" }
-sodium = { group = "maven.modrinth", name = "sodium", version = "CcIWi5Av" }
-in-game-account-switcher = { group = "maven.modrinth", name = "in-game-account-switcher", version = "RQG6VufY" }
-gamma-utils = { group = "maven.modrinth", name = "gamma-utils", version = "w5DT7jTj" }
-gadget = { group = "maven.modrinth", name = "gadget", version = "SAo88rbs" }
-owo-lib = { group = "maven.modrinth", name = "owo-lib", version = "HegQGu0K" }
-exordium = { group = "maven.modrinth", name = "exordium", version = "VrgThn48" }
-ebe = { group = "maven.modrinth", name = "ebe", version = "HBZAPs3u" }
-dynamic-fps = { group = "maven.modrinth", name = "dynamic-fps", version = "mGzNZtjf" }
-appleskin = { group = "maven.modrinth", name = "appleskin", version = "fG1xJao0" }
-advanced-chat = { group = "maven.modrinth", name = "advanced-chat", version = "5ddOPqgR" }
-entityculling = { group = "maven.modrinth", name = "entityculling", version = "kPbJu8eF" }
-reeses-sodium-options = { group = "maven.modrinth", name = "reeses-sodium-options", version = "DSxKPh7H" }
+jade = { group = "maven.modrinth", name = "jade", version = "pGE7hUKk" }
+iris = { group = "maven.modrinth", name = "iris", version = "xQYJAYTI" }
+sodium = { group = "maven.modrinth", name = "sodium", version = "xy8qdzcb" }
+in-game-account-switcher = { group = "maven.modrinth", name = "in-game-account-switcher", version = "fOJ5Nf2x" }
+gamma-utils = { group = "maven.modrinth", name = "gamma-utils", version = "lwiszLIz" }
+dynamic-fps = { group = "maven.modrinth", name = "dynamic-fps", version = "lCPnAoak" }
+appleskin = { group = "maven.modrinth", name = "appleskin", version = "cHQjeYVS" }
+advanced-chat = { group = "maven.modrinth", name = "advanced-chat", version = "SNA4dye5" }
+entityculling = { group = "maven.modrinth", name = "entityculling", version = "8RrU4f3Q" }
+reeses-sodium-options = { group = "maven.modrinth", name = "reeses-sodium-options", version = "4sugrjBi" }
 cull-leaves = { group = "maven.modrinth", name = "cull-leaves", version = "JnCn3KSm" }
-modmenu = { group = "maven.modrinth", name = "modmenu", version = "3ib3Uvvv" }
-placeholder-api = { group = "maven.modrinth", name = "placeholder-api", version = "cE5TczQr" }
-continuity = { group = "maven.modrinth", name = "continuity", version = "NksUpFjf" }
-sodium-extra = { group = "maven.modrinth", name = "sodium-extra", version = "CEAENzuT" }
-indium = { group = "maven.modrinth", name = "indium", version = "Z8VpxxGh" }
-cupboard = { group = "curse.maven", name = "cupboard-326652", version = "5477517" }
-farsight-fabric = { group = "curse.maven", name = "farsight-fabric-579192", version = "5664473" }
-tweakeroo-community = { group = "curse.maven", name = "tweakeroo-community-1068922", version = "5559281" }
-malilib-community = { group = "curse.maven", name = "malilib-community-1068882", version = "5559277" }
-minihud-community = { group = "curse.maven", name = "minihud-community-1068914", version = "5559279" }
-litematica-community = { group = "curse.maven", name = "litematica-community-1068908", version = "5559275" }
+modmenu = { group = "maven.modrinth", name = "modmenu", version = "4xPSbh0l" }
+placeholder-api = { group = "maven.modrinth", name = "placeholder-api", version = "GtmqzyeE" }
+continuity = { group = "maven.modrinth", name = "continuity", version = "kwuHTVHC" }
+sodium-extra = { group = "maven.modrinth", name = "sodium-extra", version = "ZQ3k4KzW" }
 
 [bundles]
 mods = [
-    "yacl",
+    "litematica",
+    "malilib",
+    "minihud",
+    "tweakeroo",
+    "fabric-language-kotlin",
+    "zoomify",
     "fabric-api",
+    "yacl",
     "xaeros-world-map",
     "xaeros-minimap",
     "viafabricplus",
-    "tooltipfix",
     "threadtweak",
     "simple-voice-chat",
-    "ryoamiclights",
-    "obsidianui",
     "roughly-enough-professions-rep",
     "rei",
     "architectury-api",
     "cloth-config",
     "rrls",
+    "forge-config-api-port",
+    "obsidianui",
     "nbttooltip",
     "mouse-tweaks",
-    "modernfix",
     "lighty",
     "forcecloseworldloadingscreen",
     "jade",
@@ -73,10 +70,6 @@ mods = [
     "sodium",
     "in-game-account-switcher",
     "gamma-utils",
-    "gadget",
-    "owo-lib",
-    "exordium",
-    "ebe",
     "dynamic-fps",
     "appleskin",
     "advanced-chat",
@@ -87,11 +80,4 @@ mods = [
     "placeholder-api",
     "continuity",
     "sodium-extra",
-    "indium",
-    "cupboard",
-    "farsight-fabric",
-    "tweakeroo-community",
-    "malilib-community",
-    "minihud-community",
-    "litematica-community",
 ]

@@ -1,3 +1,6 @@
+import net.stracciatella.gradle.plugin.SourceSetDependency
+import net.stracciatella.gradle.plugin.StracciatellaExtension
+
 plugins {
     id(libs.plugins.stracciatella.fabric.get().pluginId)
     alias(libs.plugins.shadow)
@@ -11,13 +14,12 @@ sourceSets {
             java.srcDir("src/${testModuleName}/java")
             resources.srcDir("src/${testModuleName}/java")
         }.run {
-            // TODO
-//            StracciatellaExtension.registerGenerator(project, this@run) {
-//                name = "TestModule${
-//                    testModuleName.replace("test", "").replace("module", "")
-//                }"
-//                main = "net.stracciatella.test.${testModuleName}.$name"
-//            }
+            StracciatellaExtension.registerGeneratorAndConfigurations(project, testModuleName) {
+                name = "TestModule${
+                    testModuleName.replace("test", "").replace("module", "")
+                }"
+                main = "net.stracciatella.test.${testModuleName}.$name"
+            }
         }
     }
 }
@@ -42,10 +44,13 @@ dependencies {
     implementation(libs.jol.core)
     "injected"(project("injected"))
     // TODO
-//    "test1moduleStracciatellaDependency"(project("test3module"))
-//    "test2moduleStracciatellaDependency"(sourceSets.named("test1module").map { SourceSetDependency(it) })
-//    "test1moduleStracciatellaLibrary"("de.dasbabypixel:annotations:0.1")
-//    "test1moduleStracciatellaLibrary"("de.dasbabypixel:utils:1.0")
+    "test1moduleStracciatellaDependency"(project("test3module"))
+    "test2moduleStracciatellaDependency"(sourceSets.named("test1module").map { SourceSetDependency(it) })
+    "test1moduleStracciatellaLibrary"("de.dasbabypixel:annotations:0.1")
+    "test1moduleStracciatellaLibrary"("de.dasbabypixel:utils:1.0")
+
+    "test2moduleCompileOnly"("de.dasbabypixel:annotations:0.1")
+    "test2moduleCompileOnly"("de.dasbabypixel:utils:1.0")
 }
 
 tasks {

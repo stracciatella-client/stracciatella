@@ -1,6 +1,6 @@
 package net.stracciatella.fullscreen.config;
 
-import me.jellysquid.mods.sodium.client.gui.options.storage.OptionStorage;
+import net.caffeinemc.mods.sodium.client.gui.options.storage.OptionStorage;
 
 public class ConfigStorage implements OptionStorage<ConfigHandler> {
     private final ConfigHandler config;
