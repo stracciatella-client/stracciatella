@@ -1,0 +1,4 @@
+{
+  "config.anonymous-modlist.sodium": "Anonymous Modlist",
+  "config.anonymous-modlist.tooltip": "This setting stops your client from broadcasting your modlist to the server. This may interfere with mods like voice chat which need to communicate their existence"
+}

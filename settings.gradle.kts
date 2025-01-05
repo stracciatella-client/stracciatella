@@ -29,6 +29,7 @@ include("loader:injected")
 include("loader:test3module")
 includeModule("core")
 includeModule("fullscreen")
+includeModule("anonymous-modlist")
 
 fun includeModule(path: String) {
     include("modules:$path")

@@ -11,3 +11,4 @@ fun module(path: String) {
 // declare all modules here
 module("core")
 module("fullscreen")
+module("anonymous-modlist")
