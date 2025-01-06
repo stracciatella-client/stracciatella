@@ -15,15 +15,30 @@ plugins {
 version = providers.gradleProperty("version").get()
 group = providers.gradleProperty("group").get()
 
-val modList = configurations.register("modlist")
-configurations.modRuntimeOnly.configure { extendsFrom(modList.get()) }
-val includeInCreator = configurations.register("modlist2")
+val modListLight = configurations.register("modlistLight")
+val modList = configurations.register("modlist") { extendsFrom(modListLight.get()) }
+val includeInCreator = configurations.detachedConfiguration(projects.loader.apply {
+    targetConfiguration = "finalJar"
+})
+
+configurations.modLightRuntimeOnly.configure { extendsFrom(modListLight.get()) }
+configurations.modFullRuntimeOnly.configure { extendsFrom(modList.get()) }
+configurations.lightRuntimeClasspath.configure { extendsFrom(configurations.runtimeClasspath.get()) }
+configurations.fullRuntimeClasspath.configure { extendsFrom(configurations.runtimeClasspath.get()) }
 
 dependencies {
+    modListLight(mods.fabric.api)
+    modListLight(mods.sodium)
+    modListLight(mods.reeses.sodium.options)
+    modListLight(mods.modmenu)
+    modListLight(mods.viafabricplus)
+    modListLight(mods.`in`.game.account.switcher)
+    
+    lightRuntimeOnly(libs.fabric.loader)
+
     modList(mods.bundles.mods) { isTransitive = false }
-    includeInCreator(projects.loader) { targetConfiguration = "finalJar" }
     implementation(projects.loader) { targetConfiguration = "mergedJar" }
-    "stracciatellaModule"(projects.modules)
+    stracciatellaModule(projects.modules)
 }
 
 tasks {

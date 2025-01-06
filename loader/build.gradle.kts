@@ -79,6 +79,9 @@ tasks {
         configurations = listOf(project.configurations["includeInJar"])
         destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
     }
+    remapJar.configure {
+        this.archiveBaseName = "stracciatella"
+    }
     val mergeJar = register<Jar>("mergeJar") {
         destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
         archiveClassifier.convention("merged")

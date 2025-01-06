@@ -2,8 +2,10 @@ package stracciatella.root
 
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RunGameTask
+import net.fabricmc.loom.util.Constants
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
@@ -19,16 +21,35 @@ class StracciatellaRootPlugin : Plugin<Project> {
             version = providers.gradleProperty("version").get()
             group = providers.gradleProperty("group").get()
 
-            tasks.apply {
-                val generateClasspath = register<GenerateClasspath>("stracciatellaGenerateClasspath")
-                val runClient = named<RunGameTask>("runClient")
-                registerStracciatellaTask(this, generateClasspath, runClient)
-            }
             configurations.register(MODULE_CONFIGURATION)
+            val sourceSets = extensions.getByType<SourceSetContainer>()
+            val sourceLight = sourceSets.register("light")
+            val source = sourceSets.register("full")
+
             extensions.getByType<LoomGradleExtensionAPI>().apply {
+                createRemapConfigurations(sourceLight.get())
+                createRemapConfigurations(source.get())
+                runs {
+                    val light = this.register("stracciatellaLight") {
+                        inherit(getByName("client"))
+                        this.source(sourceLight.get())
+                    }
+                    this.register("stracciatella") {
+                        this.inherit(light.get())
+                        this.source(source.get())
+                    }
+                }
                 runConfigs.configureEach {
                     ideConfigGenerated(false)
                 }
+            }
+
+            tasks.apply {
+                val generateClasspath = register<GenerateClasspath>("stracciatellaGenerateClasspath")
+                val runStracciatella = named<RunGameTask>("runStracciatella")
+                val runStracciatellaLight = named<RunGameTask>("runStracciatellaLight")
+                registerStracciatellaTask("stracciatella", this, generateClasspath, runStracciatella)
+                registerStracciatellaTask("stracciatellaLight", this, generateClasspath, runStracciatellaLight)
             }
         }
 
@@ -105,8 +126,13 @@ class StracciatellaRootPlugin : Plugin<Project> {
         }
     }
 
-    private fun registerStracciatellaTask(tasks: TaskContainer, generateClasspath: TaskProvider<GenerateClasspath>, runClient: TaskProvider<RunGameTask>) {
-        tasks.register("stracciatella") {
+    private fun registerStracciatellaTask(
+        name: String,
+        tasks: TaskContainer,
+        generateClasspath: TaskProvider<GenerateClasspath>,
+        runClient: TaskProvider<RunGameTask>
+    ) {
+        tasks.register(name) {
             dependsOn(generateClasspath)
             doFirst {
                 val outputFile = generateClasspath.get().compiledOutput
