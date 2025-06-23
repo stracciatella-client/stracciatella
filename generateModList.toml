@@ -1,19 +1,18 @@
-version = "1.21.3"
+version = "1.21.5"
 
 curse = [
-    #    256717, # clumps
+#        256717, # clumps
     #    846196, # boosted-brightness-fabric
 #    579192, # farsight
 #    326652, # cupboard - farsight dependency
-    #    274816, # nbt-tooltip
 ]
 
 modrinth = [
     "sodium",
     "sodium-extra",
-    "continuity",
+#    "continuity", not yet updated
     "modmenu",
-    "cull-leaves",
+#    "cull-leaves",
     "reeses-sodium-options",
     "entityculling",
     "advanced-chat",
@@ -29,10 +28,10 @@ modrinth = [
     "iris",
     "jade",
     "forcecloseworldloadingscreen",
-    "lighty",
+#    "lighty",
 #    "modernfix",
     "mouse-tweaks",
-    "nbttooltip",
+#    "nbttooltip", wait for modrinth release, until then use my fork
     "obsidianui",
     "rrls",
     "rei",
@@ -43,11 +42,12 @@ modrinth = [
 #    "tooltipfix",
     "viafabricplus",
     "xaeros-minimap",
-    "xaeros-world-map",
+#    "xaeros-world-map", not yet updated
     "yacl",
     "zoomify",
     "fabric-language-kotlin",
-    "tweakeroo",
-    "minihud",
-    "litematica"
+#    "tweakeroo",
+#    "minihud",
+#    "litematica",
+    "clumps"
 ]

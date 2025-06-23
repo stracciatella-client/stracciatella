@@ -132,15 +132,12 @@ class StracciatellaRootPlugin : Plugin<Project> {
         generateClasspath: TaskProvider<GenerateClasspath>,
         runClient: TaskProvider<RunGameTask>
     ) {
-        tasks.register(name) {
+        runClient.configure {
             dependsOn(generateClasspath)
             doFirst {
                 val outputFile = generateClasspath.get().compiledOutput
-                runClient.configure {
-                    jvmArgs("-DstracciatellaClasspath=${outputFile.get().asFile.canonicalPath}")
-                }
+                jvmArgs("-DstracciatellaClasspath=${outputFile.get().asFile.canonicalPath}")
             }
-            finalizedBy(runClient)
         }
     }
 }

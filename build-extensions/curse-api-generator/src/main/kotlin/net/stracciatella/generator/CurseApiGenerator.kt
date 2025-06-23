@@ -8,6 +8,7 @@ import kotlin.io.path.bufferedWriter
 
 const val CURSEFORGE_DOCS_URL = "https://docs.curseforge.com/rest-api/"
 const val CURSEFORGE_API_URL = "https://api.curseforge.com" // NO SLASH AT END
+//const val CURSEFORGE_API_URL = "https://api.curse.tools/v1/cf" // NO SLASH AT END
 
 private const val CURSEFORGE_CORE_API_PREFIX = "curseforge-core-api-"
 
@@ -185,7 +186,7 @@ private fun generate(
                 val data: String
             }
 
-            class CurseHTTPClient(private val apiKey: String, private val baseUrl: String = CurseAPI.API, userAgent: UserAgent) : HttpClient(userAgent, baseUrl, apiKey) {
+            class CurseHTTPClient(private val apiKey: String?, private val baseUrl: String = CurseAPI.API, userAgent: UserAgent) : HttpClient(userAgent, baseUrl, apiKey) {
                 override fun connect(url: String, queryParams: Map<String, String?>?): CompletableFuture<Request.Builder> {
                     return nextRequest().thenApply {
                         val parsedUrl: HttpUrl
@@ -202,7 +203,9 @@ private fun generate(
                         }
 
                         val connection: Request.Builder = Request.Builder().url(parsedUrl)
-                        connection.header("x-api-key", apiKey)
+                        if (apiKey != null) {
+                            connection.header("x-api-key", apiKey)
+                        }
                         connection
                     }
                 }
@@ -227,29 +230,29 @@ private fun curseAPIToString(map: Map<String, Endpoints>): String {
                 }
             }
             
-            private val apiKey: String
             private val gson: Gson
             private val httpClient: CurseHTTPClient
             
             init {
-                val url = URI.create("https://arch.b4k.co/vg/thread/388569358").toURL()
-                val connection = url.openConnection()
-                
-                apiKey = connection.inputStream.use {
-                    val text = it.bufferedReader().readText()
-                    val pattern = Pattern.compile("settings and put ")
-                    val matcher = pattern.matcher(text)
-                    if (matcher.find()) {
-                        val end = matcher.end()
-                        val startApiKey = text.substring(end)
-                        val extracted = startApiKey.substring(0, startApiKey.indexOf(' '))
-                        return@use extracted
-                    } else {
-                        println("Not matched")
-                    }
-                    throw IllegalStateException()
-                }
-                httpClient = CurseHTTPClient(apiKey, userAgent = agent)
+//                val url = URI.create("https://arch.b4k.co/vg/thread/388569358").toURL()
+//                val connection = url.openConnection()
+//                
+//                val apiKey = connection.inputStream.use {
+//                    val text = it.bufferedReader().readText()
+//                    val pattern = Pattern.compile("settings and put ")
+//                    val matcher = pattern.matcher(text)
+//                    if (matcher.find()) {
+//                        val end = matcher.end()
+//                        val startApiKey = text.substring(end)
+//                        val extracted = startApiKey.substring(0, startApiKey.indexOf(' '))
+//                        return@use extracted
+//                    } else {
+//                        println("Not matched")
+//                    }
+//                    throw IllegalStateException()
+//                }
+//                httpClient = CurseHTTPClient(apiKey, userAgent = agent)
+                httpClient = CurseHTTPClient(null, userAgent = agent)
 
                 gson = GsonBuilder().setPrettyPrinting().registerTypeAdapterFactory(object : TypeAdapterFactory {
                     override fun <T : Any> create(gson: Gson, type: TypeToken<T>): TypeAdapter<T>? {

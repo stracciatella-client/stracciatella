@@ -9,6 +9,7 @@ import net.stracciatella.Stracciatella;
 import net.stracciatella.init.accesswidener.AccessWidenerConfig;
 import net.stracciatella.init.hack.KnotClassLoaderHack;
 import net.stracciatella.init.hack.classloader.ClassLoaderAccessorImpl;
+import net.stracciatella.init.transform.TransformerRegistry;
 import net.stracciatella.injected.ClassLoaderWrapper;
 import net.stracciatella.injected.StracciatellaInjections;
 import net.stracciatella.module.CommandLineModuleClasspath;
@@ -76,7 +77,7 @@ public class StracciatellaLanguageAdapter implements LanguageAdapter {
         public static void init(Stracciatella stracciatella) {
             var classLoader = stracciatella.service(StracciatellaClassLoader.class);
             var moduleManager = stracciatella.service(ModuleManager.class);
-            ClassLoaderWrapper.accessor = new ClassLoaderAccessorImpl(classLoader);
+            ClassLoaderWrapper.accessor = new ClassLoaderAccessorImpl(classLoader, stracciatella.service(TransformerRegistry.class));
             StracciatellaInjections.Holder.injections = new StracciatellaInjectionsImpl(moduleManager);
         }
     }

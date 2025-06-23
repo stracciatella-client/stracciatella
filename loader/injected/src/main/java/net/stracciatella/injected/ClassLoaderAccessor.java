@@ -11,4 +11,6 @@ public interface ClassLoaderAccessor {
 
     InputStream accessorGetResourceAsStream(String name);
 
+    byte[] transform(String className, byte[] bytes);
+
 }

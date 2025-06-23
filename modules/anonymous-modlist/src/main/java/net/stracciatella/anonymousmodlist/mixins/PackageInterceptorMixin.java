@@ -53,8 +53,8 @@ public class PackageInterceptorMixin {
     //     }
     // }
 
-    @Inject(method = "Lnet/minecraft/network/Connection;send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V", at = @At("HEAD"), cancellable = true)
-    public void method2(Packet<?> packet, @Nullable PacketSendListener packetSendListener, CallbackInfo ci) {
+    @Inject(method = "doSendPacket", at = @At("HEAD"), cancellable = true)
+    public void method2(Packet<?> packet, PacketSendListener packetSendListener, boolean bl, CallbackInfo ci) {
         if (!ConfigHandler.getInstance().isAnonymousModlistEnabled()) {
             return;
         }

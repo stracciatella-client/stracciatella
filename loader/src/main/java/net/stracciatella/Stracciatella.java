@@ -2,6 +2,8 @@ package net.stracciatella;
 
 import java.nio.file.Path;
 
+import net.stracciatella.init.hack.classloader.DefaultTransformerRegistry;
+import net.stracciatella.init.transform.TransformerRegistry;
 import net.stracciatella.internal.util.SimpleServiceProvider;
 import net.stracciatella.module.LibraryStorage;
 import net.stracciatella.module.ModuleManager;
@@ -18,6 +20,7 @@ public class Stracciatella implements ServiceProvider.Wrapper {
     public static final String CLASS_LOADER = "class_loader";
     public static final String MODULE_MANAGER = "module_manager";
     public static final String LIBRARY_STORAGE = "library_storage";
+    public static final String TRANSFORMER_REGISTRY = "transformer_registry";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("Stracciatella");
     private static final Stracciatella instance = new Stracciatella();
@@ -25,6 +28,7 @@ public class Stracciatella implements ServiceProvider.Wrapper {
 
     private Stracciatella() {
         register(STRACCIATELLA, Stracciatella.class, this);
+        registerProvider(TRANSFORMER_REGISTRY, TransformerRegistry.class, Provider.of(DefaultTransformerRegistry::new));
         registerProvider(WORKING_DIRECTORY, Path.class, Provider.of(this::findWorkingDirectory));
         registerProvider(CLASS_LOADER, StracciatellaClassLoader.class, Provider.of(StracciatellaClassLoader::new));
         registerProvider(MODULE_MANAGER, ModuleManager.class, Provider.of(SimpleModuleManager::new));

@@ -5,7 +5,7 @@ import stracciatella.modlist.ModListGenerator
 
 plugins {
     alias(libs.plugins.stracciatella.fabric) apply false
-    id("fabric-loom") version "1.8.0-alpha.50001"
+    id("fabric-loom") version "1.10.0-alpha.50006"
     alias(libs.plugins.stracciatella) apply false
     alias(libs.plugins.stracciatella.base)
     `version-catalog`
@@ -31,7 +31,7 @@ dependencies {
     modListLight(mods.sodium)
     modListLight(mods.reeses.sodium.options)
     modListLight(mods.modmenu)
-    modListLight(mods.viafabricplus)
+//    modListLight(mods.viafabricplus)
     modListLight(mods.`in`.game.account.switcher)
     
     lightRuntimeOnly(libs.fabric.loader)

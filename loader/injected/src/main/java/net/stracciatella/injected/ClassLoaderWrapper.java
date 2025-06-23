@@ -15,6 +15,12 @@ public class ClassLoaderWrapper {
         return accessor.accessorGetResourceAsStream(name);
     }
 
+    @SuppressWarnings("unused") // Used in ClassDelegateTransformer
+    public static byte[] transform(byte[] bytes, String className) {
+        if (accessor == null) return bytes;
+        return accessor.transform(className, bytes);
+    }
+
     @SuppressWarnings("unused") // Used in ClassLoaderTransformer
     public static URL getResource(String name) {
         if (accessor == null) return null;
