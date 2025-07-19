@@ -90,17 +90,15 @@ public class PathWalker {
     private void lookAt(Vec3 target, LocalPlayer player) {
         Vec3 playerPos = player.getEyePosition();
         double deltaX = target.x - playerPos.x;
-        double deltaY = target.y - playerPos.y;
         double deltaZ = target.z - playerPos.z;
-        double distance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
 
-        // Berechne Yaw (horizontale Drehung) und Pitch (vertikale Neigung)
+        // Berechne nur den Yaw (horizontale Drehung) für die Richtungsbestimmung
         float targetYaw = (float) (Math.atan2(deltaZ, deltaX) * (180.0 / Math.PI)) - 90.0F;
-        float targetPitch = (float) (-(Math.atan2(deltaY, distance) * (180.0 / Math.PI)));
 
-        // Direktes Setzen der Blickrichtung - kein Lerp, um Oszillation zu vermeiden
+        // Direktes Setzen der horizontalen Blickrichtung
         player.setYRot(targetYaw);
-        player.setXRot(targetPitch);
+
+        // Pitch (vertikale Neigung) bleibt unverändert, um das Auf- und Ab-Bewegen zu vermeiden
 
 
     }
