@@ -72,14 +72,35 @@ public class PathWalker {
         double deltaX = targetVec.x() - playerPos.x();
         double deltaZ = targetVec.z() - playerPos.z();
         double distance = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ);
-        if (distance < 0.2) {
-            currentIndex++;
-            if (currentIndex >= path.size()) {
-                stop();
-                return;
+        double deltaY = targetVec.y() - playerPos.y();
+
+        // Berechne, ob wir einen speziellen Sprung ausführen
+        boolean isSpecialJump = isLongJump(player.blockPosition(), targetPos);
+
+        // Spezielles Handling für Parkour-Sprünge: Wir müssen dem Ziel näher kommen,
+        // bevor wir zum nächsten Ziel übergehen
+        if (isSpecialJump) {
+            // Bei Sprüngen über Lücken reicht es, wenn wir in der horizontalen Ebene nah genug sind
+            if (distance < 0.5 && Math.abs(deltaY) < 1.0) {
+                currentIndex++;
+                if (currentIndex >= path.size()) {
+                    stop();
+                    return;
+                }
+                targetPos = path.get(currentIndex);
+                targetVec = Vec3.atCenterOf(targetPos);
             }
-            targetPos = path.get(currentIndex);
-            targetVec = Vec3.atCenterOf(targetPos);
+        } else {
+            // Normales Verhalten für andere Bewegungen
+            if (distance < 0.2) {
+                currentIndex++;
+                if (currentIndex >= path.size()) {
+                    stop();
+                    return;
+                }
+                targetPos = path.get(currentIndex);
+                targetVec = Vec3.atCenterOf(targetPos);
+            }
         }
 
         // --- Blickrichtung anpassen ---
@@ -87,6 +108,18 @@ public class PathWalker {
 
         // --- Bewegung steuern ---
         moveTowards(targetPos, player);
+    }
+
+    /**
+     * Überprüft, ob ein Sprung über eine große Lücke ausgeführt werden muss
+     */
+    private boolean isLongJump(BlockPos from, BlockPos to) {
+        int dx = Math.abs(to.getX() - from.getX());
+        int dz = Math.abs(to.getZ() - from.getZ());
+        int dy = to.getY() - from.getY(); // Positive Werte bedeuten Sprung nach oben
+
+        // Horizontaler Sprung über 2 oder mehr Blöcke
+        return (dx >= 2 || dz >= 2) || (dy >= 2);
     }
 
     private void lookAt(Vec3 target, LocalPlayer player) {
@@ -109,12 +142,19 @@ public class PathWalker {
         // Zuerst alle Tasten loslassen, um den Zustand zurückzusetzen
         minecraft.options.keyUp.setDown(false);
         minecraft.options.keyJump.setDown(false);
+        minecraft.options.keySprint.setDown(false);
 
         BlockPos playerPos = player.blockPosition();
         BlockState currentBlock = minecraft.level.getBlockState(playerPos);
         BlockState targetBlock = minecraft.level.getBlockState(targetPos);
         String currentBlockName = currentBlock.getBlock().getName().getString().toLowerCase();
         String targetBlockName = targetBlock.getBlock().getName().getString().toLowerCase();
+
+        // Berechne Distanz zwischen aktuellem Block und Zielblock
+        int dx = Math.abs(targetPos.getX() - playerPos.getX());
+        int dy = Math.abs(targetPos.getY() - playerPos.getY());
+        int dz = Math.abs(targetPos.getZ() - playerPos.getZ());
+        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
 
         // Leiter-Logik
         boolean onLadder = currentBlockName.contains("ladder") || currentBlockName.contains("vine");
@@ -127,6 +167,16 @@ public class PathWalker {
         // Da wir den Spieler immer in die richtige Richtung schauen lassen,
         // müssen wir nur die "Vorwärts"-Taste drücken.
         minecraft.options.keyUp.setDown(true);
+
+        // Prüfen, ob ein Sprung über eine Lücke erforderlich ist
+        boolean isJumpingGap = (dx >= 2 || dz >= 2) && dy <= 1;
+
+        // Sprung über eine Lücke
+        if (isJumpingGap) {
+            minecraft.options.keyJump.setDown(true);
+            minecraft.options.keySprint.setDown(true);
+            return; // Frühzeitig zurückkehren, um andere Bewegungslogik zu überspringen
+        }
 
         // Auf Leitern nach oben oder unten klettern
         if (onLadder || targetIsLadder) {
@@ -148,11 +198,13 @@ public class PathWalker {
                 minecraft.options.keyShift.setDown(true);
             }
         }
-        // Normales Springen (wenn nicht auf Leitern oder im Wasser)
+        // Springen nach oben
         else if (targetPos.getY() > playerPos.getY()) {
-            // Nur springen, wenn der Kopf frei ist
-            if (!minecraft.level.getBlockState(playerPos.above(2)).isSolid()) {
-                minecraft.options.keyJump.setDown(true);
+            // Normales Springen (1 Block hoch)
+            minecraft.options.keyJump.setDown(true);
+
+            // Für 2 Blöcke hohe Sprünge: Sprint + Sprung
+            if (dy >= 2) {
                 minecraft.options.keySprint.setDown(true);
             }
         }

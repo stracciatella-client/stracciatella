@@ -20,6 +20,9 @@ public class HumanizedPathfinder{
     private final double imperfectionFactor;
     private final double overshootChance;
 
+    // Aktueller Knoten für fortgeschrittene Pfadfindungslogik
+    private Node currentNode;
+
     public HumanizedPathfinder(BlockPos start, BlockPos end, double imperfectionFactor, double overshootChance) {
         // GEÄNDERT: MinecraftClient -> Minecraft, .world -> .level
         this.level = Minecraft.getInstance().level;
@@ -54,6 +57,7 @@ public class HumanizedPathfinder{
 
             openSet.remove(currentNode);
             closedSet.add(currentNode.position);
+            this.currentNode = currentNode;
 
             if (currentNode.position.equals(endPos)) {
                 return reconstructPath(currentNode);
@@ -89,6 +93,7 @@ public class HumanizedPathfinder{
     /**
      * Erweiterte isWalkable-Logik für Mojang Mappings.
      * Prüft, ob ein 2 Blöcke hohes Wesen an dieser Position stehen, klettern oder schwimmen kann.
+     * Unterstützt jetzt auch Sprünge über Lücken.
      */
     private boolean isWalkable(BlockPos pos) {
         BlockState currentState = level.getBlockState(pos);
@@ -112,10 +117,24 @@ public class HumanizedPathfinder{
                    aboveState.getBlock().getName().getString().toLowerCase().contains("water");
         }
 
-        // Standardprüfung für normales Gehen
-        // Der Block darunter muss eine solide Oberfläche haben, auf der man stehen kann.
+        // Standardprüfung für normales Gehen oder Springen
+        // Für Sprünge: Der Block kann in der Luft sein, solange der Spieler
+        // dorthin springen kann (wird in checkAndAddJumpNode geprüft)
         if (groundState.getCollisionShape(level, groundPos).getFaceShape(Direction.UP).isEmpty() && 
             !groundState.getBlock().getName().getString().toLowerCase().contains("water")) {
+            // Wir erlauben leere Blöcke darunter für Sprünge über Lücken,
+            // aber solche Knoten werden nur von checkAndAddJumpNode hinzugefügt
+            if (currentNode != null && currentNode.parent != null) {
+                BlockPos parentPos = currentNode.parent.position;
+                // Wenn die Distanz zum Elternknoten groß ist, handelt es sich um einen Sprung
+                int dx = Math.abs(parentPos.getX() - pos.getX());
+                int dz = Math.abs(parentPos.getZ() - pos.getZ());
+                if (dx >= 2 || dz >= 2) {
+                    // Erlauben, wenn es ein Sprung über eine Lücke ist
+                    return currentState.getCollisionShape(level, pos).isEmpty() &&
+                           aboveState.getCollisionShape(level, pos.above()).isEmpty();
+                }
+            }
             return false;
         }
 
@@ -138,8 +157,25 @@ public class HumanizedPathfinder{
     }
 
     private double getDistance(BlockPos a, BlockPos b) {
-        // GEÄNDERT: getSquaredDistance -> distSqr
-        return a.distSqr(b);
+        // Grundlegende Distanz
+        double baseDistance = a.distSqr(b);
+
+        // Größere Kosten für spezielle Sprünge hinzufügen
+        int dx = Math.abs(a.getX() - b.getX());
+        int dy = Math.abs(a.getY() - b.getY());
+        int dz = Math.abs(a.getZ() - b.getZ());
+
+        // Horizontaler Sprung über mehrere Blöcke (erhöhter Aufwand)
+        if (dy == 0 && (dx >= 2 || dz >= 2)) {
+            baseDistance *= 1.5; // Sprünge über mehrere Blöcke sind aufwändiger
+        }
+
+        // Sprung nach oben (erhöhter Aufwand)
+        if (dy > 0 && b.getY() > a.getY()) {
+            baseDistance *= (1.0 + dy * 0.5); // Je höher der Sprung, desto aufwändiger
+        }
+
+        return baseDistance;
     }
 
     private double getHeuristic(BlockPos pos) {
@@ -150,6 +186,8 @@ public class HumanizedPathfinder{
     private List<Node> getNeighbors(Node node) {
         List<Node> neighbors = new ArrayList<>();
         BlockPos p = node.position;
+
+        // Normale Nachbarn (1 Block Bewegung in jede Richtung)
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
                 for (int z = -1; z <= 1; z++) {
@@ -158,7 +196,82 @@ public class HumanizedPathfinder{
                 }
             }
         }
+
+        // Spezielle Sprungbewegungen hinzufügen
+        addJumpNodes(neighbors, p);
+
         return neighbors;
+    }
+
+    /**
+     * Fügt spezielle Sprungbewegungen zu den Nachbarn hinzu
+     * - Sprünge über 2-3 Blöcke breite Lücken
+     * - Sprünge nach oben (1-2 Blöcke hoch)
+     */
+    private void addJumpNodes(List<Node> neighbors, BlockPos pos) {
+        // Horizontal-Sprünge (2-3 Blöcke)
+        for (int d = 2; d <= 3; d++) {
+            // X-Achse (positiv und negativ)
+            checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() + d, pos.getY(), pos.getZ()));
+            checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() - d, pos.getY(), pos.getZ()));
+
+            // Z-Achse (positiv und negativ)
+            checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX(), pos.getY(), pos.getZ() + d));
+            checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX(), pos.getY(), pos.getZ() - d));
+
+            // Diagonale Sprünge (nur für d=2, bei d=3 zu weit)
+            if (d == 2) {
+                checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() + d, pos.getY(), pos.getZ() + d));
+                checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() + d, pos.getY(), pos.getZ() - d));
+                checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() - d, pos.getY(), pos.getZ() + d));
+                checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() - d, pos.getY(), pos.getZ() - d));
+            }
+        }
+
+        // Vertikale Sprünge (1-2 Blöcke nach oben)
+        for (int y = 1; y <= 2; y++) {
+            // Direkter Sprung nach oben
+            checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX(), pos.getY() + y, pos.getZ()));
+
+            // Diagonale Sprünge nach oben
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (x == 0 && z == 0) continue; // Überspringen des direkten Sprungs nach oben
+                    checkAndAddJumpNode(neighbors, pos, new BlockPos(pos.getX() + x, pos.getY() + y, pos.getZ() + z));
+                }
+            }
+        }
+    }
+
+    /**
+     * Prüft, ob ein Sprung zum Ziel möglich ist und fügt ihn gegebenenfalls zu den Nachbarn hinzu
+     */
+    private void checkAndAddJumpNode(List<Node> neighbors, BlockPos from, BlockPos to) {
+        // Prüfen, ob der Zielblock begehbar ist
+        if (!isWalkable(to)) {
+            return;
+        }
+
+        // Bei horizontalen Sprüngen: Überprüfen, ob der Pfad dazwischen frei ist
+        if (to.getY() == from.getY()) {
+            int dx = to.getX() - from.getX();
+            int dz = to.getZ() - from.getZ();
+
+            // Für Sprünge über 2-3 Blöcke muss der Luftraum frei sein
+            for (int i = 1; i < Math.max(Math.abs(dx), Math.abs(dz)); i++) {
+                int x = from.getX() + (dx != 0 ? (dx > 0 ? i : -i) : 0);
+                int z = from.getZ() + (dz != 0 ? (dz > 0 ? i : -i) : 0);
+
+                // Überprüfen, ob der Luftraum frei ist (inkl. Kopfraum)
+                BlockPos midPos = new BlockPos(x, from.getY(), z);
+                if (!level.getBlockState(midPos).getCollisionShape(level, midPos).isEmpty() ||
+                    !level.getBlockState(midPos.above()).getCollisionShape(level, midPos.above()).isEmpty()) {
+                    return;
+                }
+            }
+        }
+
+        neighbors.add(new Node(to, null, 0, 0));
     }
 
     private List<BlockPos> postProcessPath(List<BlockPos> path) {
