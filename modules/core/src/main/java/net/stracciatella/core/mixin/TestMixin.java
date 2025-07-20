@@ -2,6 +2,7 @@ package net.stracciatella.core.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
 import net.stracciatella.core.gui.api.MacroOptionsMenu;
 import net.stracciatella.core.macro.HumanizedPathfinder;
 import net.stracciatella.core.macro.PathWalker;
@@ -33,7 +34,12 @@ public class TestMixin {
 
         if (SettingsDictonary.isWalking) {
             if (!pathWalker.isActive()) {
-                pathWalker.start(new HumanizedPathfinder(player.blockPosition(), SettingsDictonary.goalPosition, 0, 0).findPath());
+                if (player.blockPosition().closerThan(SettingsDictonary.goalPosition, 200)) {
+                    pathWalker.start(new HumanizedPathfinder(player.blockPosition(), SettingsDictonary.goalPosition, 0, 0).findPath());
+                } else {
+                    SettingsDictonary.isWalking = false;
+                    player.displayClientMessage(Component.literal("Couldnt pathfind since the target is too far away!"), false);
+                }
             }
             pathWalker.tick();
         } else {
