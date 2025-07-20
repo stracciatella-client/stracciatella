@@ -1,11 +1,8 @@
 package net.stracciatella.core.mixin;
 
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.stracciatella.core.gui.api.MacroOptionsMenu;
-import net.stracciatella.core.gui.api.MenuOverlay;
 import net.stracciatella.core.macro.HumanizedPathfinder;
 import net.stracciatella.core.macro.PathWalker;
 import net.stracciatella.core.macro.SettingsDictonary;
