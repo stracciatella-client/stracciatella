@@ -36,7 +36,7 @@ public class TestMixin {
 
         if (SettingsDictonary.isWalking) {
             if (!pathWalker.isActive()) {
-                pathWalker.start(new HumanizedPathfinder(player.blockPosition(), SettingsDictonary.goalPosition, 0.4, 0.3).findPath());
+                pathWalker.start(new HumanizedPathfinder(player.blockPosition(), SettingsDictonary.goalPosition, 0, 0).findPath());
             }
             pathWalker.tick();
         } else {

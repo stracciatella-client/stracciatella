@@ -1,12 +1,11 @@
 package net.stracciatella.core.macro;
 
+import java.util.List;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.List;
 
 public class PathWalker {
 
@@ -21,7 +20,8 @@ public class PathWalker {
 
     /**
      * Startet den PathWalker mit einem neuen Pfad.
-     * @param path Die Liste der Blöcke, die abgelaufen werden sollen.
+     * <p/>
+     *  * @param path Die Liste der Blöcke, die abgelaufen werden sollen.
      */
     public void start(List<BlockPos> path) {
         if (path == null || path.isEmpty()) {
@@ -116,6 +116,8 @@ public class PathWalker {
         if (targetPos.getY() > player.blockPosition().getY()) {
             // Nur springen, wenn der Kopf frei ist
             if (!minecraft.level.getBlockState(player.blockPosition().above(2)).isSolid()) {
+                minecraft.options.keyJump.setDown(true);
+                minecraft.options.keySprint.setDown(true);
                 minecraft.options.keyJump.setDown(true);
             }
         }
