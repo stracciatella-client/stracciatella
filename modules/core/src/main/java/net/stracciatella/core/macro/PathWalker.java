@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 public class PathWalker {
@@ -44,6 +45,7 @@ public class PathWalker {
             minecraft.options.keyLeft.setDown(false);
             minecraft.options.keyRight.setDown(false);
             minecraft.options.keyJump.setDown(false);
+            minecraft.options.keyShift.setDown(false);
         }
     }
 
@@ -108,17 +110,50 @@ public class PathWalker {
         minecraft.options.keyUp.setDown(false);
         minecraft.options.keyJump.setDown(false);
 
+        BlockPos playerPos = player.blockPosition();
+        BlockState currentBlock = minecraft.level.getBlockState(playerPos);
+        BlockState targetBlock = minecraft.level.getBlockState(targetPos);
+        String currentBlockName = currentBlock.getBlock().getName().getString().toLowerCase();
+        String targetBlockName = targetBlock.getBlock().getName().getString().toLowerCase();
+
+        // Leiter-Logik
+        boolean onLadder = currentBlockName.contains("ladder") || currentBlockName.contains("vine");
+        boolean targetIsLadder = targetBlockName.contains("ladder") || targetBlockName.contains("vine");
+
+        // Wasser-Logik
+        boolean inWater = currentBlockName.contains("water") || player.isInWater();
+        boolean targetIsWater = targetBlockName.contains("water");
+
         // Da wir den Spieler immer in die richtige Richtung schauen lassen,
         // müssen wir nur die "Vorwärts"-Taste drücken.
         minecraft.options.keyUp.setDown(true);
 
-        // Springen, wenn der nächste Block höher ist als der, auf dem wir stehen.
-        if (targetPos.getY() > player.blockPosition().getY()) {
+        // Auf Leitern nach oben oder unten klettern
+        if (onLadder || targetIsLadder) {
+            if (targetPos.getY() > playerPos.getY()) {
+                // Nach oben klettern
+                minecraft.options.keyJump.setDown(true);
+            } else if (targetPos.getY() < playerPos.getY()) {
+                // Nach unten klettern (Schleichen/Sneaking)
+                minecraft.options.keyShift.setDown(true);
+            }
+        }
+        // Im Wasser schwimmen
+        else if (inWater || targetIsWater) {
+            if (targetPos.getY() > playerPos.getY()) {
+                // Nach oben schwimmen
+                minecraft.options.keyJump.setDown(true);
+            } else if (targetPos.getY() < playerPos.getY()) {
+                // Nach unten schwimmen
+                minecraft.options.keyShift.setDown(true);
+            }
+        }
+        // Normales Springen (wenn nicht auf Leitern oder im Wasser)
+        else if (targetPos.getY() > playerPos.getY()) {
             // Nur springen, wenn der Kopf frei ist
-            if (!minecraft.level.getBlockState(player.blockPosition().above(2)).isSolid()) {
+            if (!minecraft.level.getBlockState(playerPos.above(2)).isSolid()) {
                 minecraft.options.keyJump.setDown(true);
                 minecraft.options.keySprint.setDown(true);
-                minecraft.options.keyJump.setDown(true);
             }
         }
     }

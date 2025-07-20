@@ -87,21 +87,41 @@ public class HumanizedPathfinder{
     }
 
     /**
-     * NEU: Deutlich verbesserte isWalkable-Logik für Mojang Mappings.
-     * Prüft, ob ein 2 Blöcke hohes Wesen an dieser Position stehen kann.
+     * Erweiterte isWalkable-Logik für Mojang Mappings.
+     * Prüft, ob ein 2 Blöcke hohes Wesen an dieser Position stehen, klettern oder schwimmen kann.
      */
     private boolean isWalkable(BlockPos pos) {
+        BlockState currentState = level.getBlockState(pos);
+        BlockState aboveState = level.getBlockState(pos.above());
         BlockPos groundPos = pos.below();
         BlockState groundState = level.getBlockState(groundPos);
 
+        // Prüfen, ob es eine Leiter ist
+        if (currentState.getBlock().getName().getString().toLowerCase().contains("ladder") ||
+            currentState.getBlock().getName().getString().toLowerCase().contains("vine")) {
+            // Bei Leitern: Der Spieler kann klettern
+            return aboveState.getCollisionShape(level, pos.above()).isEmpty() || 
+                   aboveState.getBlock().getName().getString().toLowerCase().contains("ladder") ||
+                   aboveState.getBlock().getName().getString().toLowerCase().contains("vine");
+        }
+
+        // Prüfen, ob es Wasser ist (Schwimmen)
+        if (currentState.getBlock().getName().getString().toLowerCase().contains("water")) {
+            // Bei Wasser: Der Spieler kann schwimmen
+            return aboveState.getCollisionShape(level, pos.above()).isEmpty() ||
+                   aboveState.getBlock().getName().getString().toLowerCase().contains("water");
+        }
+
+        // Standardprüfung für normales Gehen
         // Der Block darunter muss eine solide Oberfläche haben, auf der man stehen kann.
-        if (groundState.getCollisionShape(level, groundPos).getFaceShape(Direction.UP).isEmpty()) {
+        if (groundState.getCollisionShape(level, groundPos).getFaceShape(Direction.UP).isEmpty() && 
+            !groundState.getBlock().getName().getString().toLowerCase().contains("water")) {
             return false;
         }
 
         // Der Block auf Fußhöhe und Kopfhöhe darf nicht kollidieren (muss passierbar sein).
-        return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty() &&
-                level.getBlockState(pos.above()).getCollisionShape(level, pos.above()).isEmpty();
+        return currentState.getCollisionShape(level, pos).isEmpty() &&
+               aboveState.getCollisionShape(level, pos.above()).isEmpty();
     }
 
     // --- Restliche Logik (größtenteils unverändert) ---
