@@ -27,6 +27,7 @@ public class ModuleManagerTest {
         Thread.currentThread().setContextClassLoader(classLoader);
         var classpath = CommandLineModuleClasspath.fromClasspath(System.getProperty("stracciatellaClasspath"));
         for (var pathString : classpath.paths()) {
+            System.out.println(pathString);
             moduleManager.load(Path.of(pathString));
         }
         var test1module = moduleManager.module("test1module");

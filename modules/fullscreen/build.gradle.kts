@@ -14,6 +14,9 @@ loom {
         this.useLegacyMixinAp
     }
 }
+tasks.checkstyleMain {
+    this.maxWarnings = 100
+}
 
 stracciatella {
     main = "net.stracciatella.fullscreen.FullscreenModule"

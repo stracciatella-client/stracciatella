@@ -15,9 +15,9 @@ sourceSets {
             resources.srcDir("src/${testModuleName}/java")
         }.run {
             StracciatellaExtension.registerGeneratorAndConfigurations(project, testModuleName) {
-                name = "TestModule${
-                    testModuleName.replace("test", "").replace("module", "")
-                }"
+                val nr = testModuleName.replace("test", "").replace("module", "").toInt()
+                id = testModuleName
+                name = "TestModule$nr"
                 main = "net.stracciatella.test.${testModuleName}.$name"
             }
         }
@@ -59,6 +59,7 @@ tasks {
         testModules.add(register<Jar>("${testModuleName}Jar") {
             dependsOn(named("${testModuleName}Classes"))
             from(sourceSets.named(testModuleName).map { it.output })
+            from(named("generateStracciatella${testModuleName}ModuleJson"))
             destinationDirectory = project.layout.buildDirectory.dir("test")
             archiveFileName = "${testModuleName}.jar"
         })
@@ -92,7 +93,7 @@ tasks {
     }
     artifacts.add("mergedJar", mergeJar)
     project("test3module").afterEvaluate {
-        val test3moduleJar = this.tasks.named<Jar>("jar")
+        val test3moduleJar = this.tasks.named<AbstractArchiveTask>("remapJar")
         val classpath = ArrayList<String>()
         testModules.forEach { classpath.add(it.get().archiveFile.get().asFile.canonicalPath) }
         classpath.add(test3moduleJar.get().archiveFile.get().asFile.canonicalPath)

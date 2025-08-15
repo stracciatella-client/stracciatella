@@ -17,15 +17,15 @@ import org.lwjgl.system.MemoryStack;
 public class DimensionsResolver {
     private static final Logger LOGGER = LogManager.getLogger(DimensionsResolver.class);
 
-    public int x;
-    public int y;
+    public int posX;
+    public int posY;
     public int width;
     public int height;
 
     public boolean resolve(Window window, ScreenManager screenManager) {
         if (ConfigHandler.getInstance().customWindowDimensions != null && ConfigHandler.getInstance().customWindowDimensions.enabled && !ConfigHandler.getInstance().customWindowDimensions.useMonitorCoordinates) {
-            x = 0;
-            y = 0;
+            posX = 0;
+            posY = 0;
             width = 0;
             height = 0;
         } else if (ConfigHandler.getInstance().forceWindowMonitor < 0) {
@@ -35,8 +35,8 @@ public class DimensionsResolver {
                 return false;
             }
             VideoMode mode = monitor.getCurrentMode();
-            x = monitor.getX();
-            y = monitor.getY();
+            posX = monitor.getX();
+            posY = monitor.getY();
             width = mode.getWidth();
             height = mode.getHeight();
         } else {
@@ -56,8 +56,8 @@ public class DimensionsResolver {
                 IntBuffer xBuf = stack.mallocInt(1);
                 IntBuffer yBuf = stack.mallocInt(1);
                 GLFW.glfwGetMonitorPos(monitorHandle, xBuf, yBuf);
-                x = xBuf.get();
-                y = yBuf.get();
+                posX = xBuf.get();
+                posY = yBuf.get();
             }
             GLFWVidMode mode = GLFW.glfwGetVideoMode(monitorHandle);
             if (mode == null) {
@@ -73,11 +73,11 @@ public class DimensionsResolver {
             ConfigHandler.CustomWindowDimensions dims = ConfigHandler.getInstance().customWindowDimensions;
             if (dims.enabled) {
                 if (dims.useMonitorCoordinates) {
-                    x += dims.x;
-                    y += dims.y;
+                    posX += dims.x;
+                    posY += dims.y;
                 } else {
-                    x = dims.x;
-                    y = dims.y;
+                    posX = dims.x;
+                    posY = dims.y;
                 }
                 if (dims.width > 0 && dims.height > 0) {
                     width = dims.width;

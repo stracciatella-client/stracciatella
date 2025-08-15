@@ -2,7 +2,6 @@ package net.stracciatella.fullscreen.mixin;
 
 import com.mojang.blaze3d.platform.Monitor;
 import com.mojang.blaze3d.platform.ScreenManager;
-import com.mojang.blaze3d.platform.VideoMode;
 import com.mojang.blaze3d.platform.Window;
 import net.stracciatella.fullscreen.config.ConfigHandler;
 import net.stracciatella.fullscreen.util.DimensionsResolver;
@@ -94,8 +93,8 @@ public abstract class WindowMixin implements WindowHooks {
 
                 // if (monitor != null) {
                 // Note: x/y/width/height can change between any GLFW call
-                x = res.x;
-                y = res.y;
+                x = res.posX;
+                y = res.posY;
                 width = res.width;
                 height = res.height;
                 // VideoMode mode = monitor.getCurrentMode();
