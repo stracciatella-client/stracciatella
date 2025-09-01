@@ -2,6 +2,7 @@ package net.stracciatella.init.hack;
 
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Set;
 
 import net.fabricmc.loader.impl.game.GameProvider;
 import net.fabricmc.loader.impl.game.patch.GameTransformer;
@@ -53,13 +54,13 @@ public class ProviderHack implements GameProvider {
     }
 
     @Override
-    public boolean isObfuscated() {
-        return handle.isObfuscated();
+    public boolean requiresUrlClassLoader() {
+        return handle.requiresUrlClassLoader();
     }
 
     @Override
-    public boolean requiresUrlClassLoader() {
-        return handle.requiresUrlClassLoader();
+    public Set<BuiltinTransform> getBuiltinTransforms(String className) {
+        return handle.getBuiltinTransforms(className);
     }
 
     @Override

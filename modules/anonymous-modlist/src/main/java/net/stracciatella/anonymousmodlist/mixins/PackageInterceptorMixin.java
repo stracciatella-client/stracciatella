@@ -1,16 +1,9 @@
 package net.stracciatella.anonymousmodlist.mixins;
 
-import com.google.common.graph.Network;
-import net.fabricmc.fabric.impl.networking.RegistrationPayload;
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import io.netty.channel.ChannelFutureListener;
 import net.minecraft.network.Connection;
-import net.minecraft.network.PacketSendListener;
 import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.PacketType;
-import net.minecraft.network.protocol.common.ClientCommonPacketListener;
-import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
-import net.minecraft.resources.ResourceLocation;
 import net.stracciatella.anonymousmodlist.config.ConfigHandler;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
@@ -54,18 +47,18 @@ public class PackageInterceptorMixin {
     // }
 
     @Inject(method = "doSendPacket", at = @At("HEAD"), cancellable = true)
-    public void method2(Packet<?> packet, PacketSendListener packetSendListener, boolean bl, CallbackInfo ci) {
+    public void method2(Packet<?> packet, @Nullable ChannelFutureListener channelFutureListener, boolean bl, CallbackInfo ci) {
         if (!ConfigHandler.getInstance().isAnonymousModlistEnabled()) {
             return;
         }
-        if (packet instanceof ServerboundCustomPayloadPacket customPayloadPacket) {
+        if (packet instanceof ServerboundCustomPayloadPacket(var payload)) {
             // System.out.println("method 2  caught packet:");
             // System.out.println(customPayloadPacket);
             // System.out.println(customPayloadPacket.payload());
             // System.out.println(customPayloadPacket.payload().type());
             // System.out.println(customPayloadPacket.payload().type().getClass());
             // System.out.println("type id string: " + customPayloadPacket.type().id().toString());
-            if (customPayloadPacket.payload().type().id().toString().equals("minecraft:register")) {
+            if (payload.type().id().toString().equals("minecraft:register")) {
                 //todo check for more characteristics and potentially just alter the data sent instead of just cancelling
                 System.out.println("confirmed correct packet");
                 ci.cancel();

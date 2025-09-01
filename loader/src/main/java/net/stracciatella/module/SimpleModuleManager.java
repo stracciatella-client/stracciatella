@@ -211,7 +211,7 @@ public class SimpleModuleManager implements ModuleManager {
             for (var accessWidenerPath : entry.moduleConfiguration().accessWideners()) {
                 var in = entry.classLoader().getResourceAsStream(accessWidenerPath);
                 if (in == null) throw new IllegalStateException("Access widener " + accessWidenerPath + " in module " + entry.moduleConfiguration().name() + " not found.");
-                reader.read(in.readAllBytes(), FabricLauncherBase.getLauncher().getTargetNamespace());
+                reader.read(in.readAllBytes(), FabricLauncherBase.getLauncher().getDefaultRuntimeNamespace());
                 in.close();
             }
         }
