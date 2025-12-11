@@ -22,7 +22,7 @@ public class SodiumCompat {
                 .createBuilder()
                 .add(OptionImpl.createBuilder(boolean.class, configStorage).setName(Component.translatable("config.borderlessmining.general.enabled")).setTooltip(Component.translatable("config.borderlessmining.general.enabled.tooltip")).setControl(TickBoxControl::new).setBinding(ConfigHandler::setEnabledPending, ConfigHandler::isEnabled).build())
                 .add(OptionImpl.createBuilder(boolean.class, configStorage).setName(Component.translatable("config.borderlessmining.general.videomodeoption")).setTooltip(Component.translatable("config.borderlessmining.general.videomodeoption.tooltip")).setControl(TickBoxControl::new).setBinding((opt, value) -> opt.addToVanillaVideoSettings = value, (opt) -> opt.addToVanillaVideoSettings).build())
-                .add(OptionImpl.createBuilder(boolean.class, configStorage).setName(Component.translatable("config.borderlessmining.general.enabledmac")).setTooltip(Component.translatable("config.borderlessmining.general.enabledmac.tooltip")).setControl(TickBoxControl::new).setBinding((opt, value) -> opt.enableMacOS = value, (opt) -> opt.enableMacOS).build())
+                // .add(OptionImpl.createBuilder(boolean.class, configStorage).setName(Component.translatable("config.borderlessmining.general.enabledmac")).setTooltip(Component.translatable("config.borderlessmining.general.enabledmac.tooltip")).setControl(TickBoxControl::new).setBinding((opt, value) -> opt.enableMacOS = value, (opt) -> opt.enableMacOS).build())
                 .build());
 
         // monitors are not listed because of the way sodium works. will implement later

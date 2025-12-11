@@ -4,29 +4,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.fabricmc.loader.impl.FabricLoaderImpl;
-import net.fabricmc.loader.impl.lib.accesswidener.AccessWidener;
-import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerReader;
-import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerVisitor;
+import net.fabricmc.loader.impl.lib.classtweaker.api.ClassTweaker;
+import net.fabricmc.loader.impl.lib.classtweaker.api.visitor.AccessWidenerVisitor;
+import net.fabricmc.loader.impl.lib.classtweaker.api.visitor.AccessWidenerVisitor.AccessType;
+import net.fabricmc.loader.impl.lib.classtweaker.api.visitor.ClassTweakerVisitor;
+import org.jetbrains.annotations.Nullable;
 
-public class AccessWidenerConfig implements AccessWidenerVisitor {
+public class AccessWidenerConfig implements ClassTweakerVisitor {
 
-    private final Map<String, Access> classAccesses = new HashMap<>();
-    private final Map<Triple, Access> methodAccesses = new HashMap<>();
-    private final Map<Triple, Access> fieldAccesses = new HashMap<>();
+    private final Map<String, Visitor> visitorMap = new HashMap<>();
     private boolean mutable = true;
 
     public void freeze() {
         mutable = false;
 
-        var accessWidener = FabricLoaderImpl.INSTANCE.getAccessWidener();
-        for (var entry : classAccesses.entrySet()) {
-            entry.getValue().apply(accessWidener, entry.getKey());
-        }
-        for (var entry : methodAccesses.entrySet()) {
-            entry.getValue().apply(accessWidener, entry.getKey());
-        }
-        for (var entry : fieldAccesses.entrySet()) {
-            entry.getValue().apply(accessWidener, entry.getKey());
+        var ct = FabricLoaderImpl.INSTANCE.getClassTweaker();
+        for (var visitor : visitorMap.values()) {
+            visitor.apply(ct);
         }
     }
 
@@ -34,32 +28,54 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
         if (!mutable) throw new IllegalStateException("Not mutable");
     }
 
-    @Override
-    public void visitClass(String name, AccessWidenerReader.AccessType access, boolean transitive) {
-        var a = classAccesses.getOrDefault(name, ClassAccess.DEFAULT);
-        if (a.is(access)) return;
-        checkMutable();
-        classAccesses.put(name, a.apply(access));
+    private class Visitor implements AccessWidenerVisitor {
+        private final String owner;
+        private final Map<Descriptor, Access> methodAccesses = new HashMap<>();
+        private final Map<Descriptor, Access> fieldAccesses = new HashMap<>();
+        private Access classAccess = ClassAccess.DEFAULT;
+
+        public Visitor(String owner) {
+            this.owner = owner;
+        }
+
+        private void apply(ClassTweaker tweaker) {
+            var aw = tweaker.visitAccessWidener(owner);
+            classAccess.apply(aw);
+            methodAccesses.forEach((descriptor, access) -> access.apply(aw, descriptor));
+            fieldAccesses.forEach((descriptor, access) -> access.apply(aw, descriptor));
+        }
+
+        @Override
+        public void visitClass(AccessType access, boolean transitive) {
+            if (classAccess.is(access)) return;
+            checkMutable();
+            classAccess = classAccess.apply(access);
+        }
+
+        @Override
+        public void visitField(String name, String descriptor, AccessType access, boolean transitive) {
+            var key = new Descriptor(name, descriptor);
+            var a = fieldAccesses.getOrDefault(key, FieldAccess.DEFAULT);
+            if (a.is(access)) return;
+            checkMutable();
+            if (access != AccessType.MUTABLE) visitClass(access, transitive);
+            fieldAccesses.put(key, a.apply(access));
+        }
+
+        @Override
+        public void visitMethod(String name, String descriptor, AccessType access, boolean transitive) {
+            var key = new Descriptor(name, descriptor);
+            var a = methodAccesses.getOrDefault(key, MethodAccess.DEFAULT);
+            if (a.is(access)) return;
+            checkMutable();
+            visitClass(access, transitive);
+            methodAccesses.put(key, a.apply(access));
+        }
     }
 
     @Override
-    public void visitField(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
-        var key = new Triple(owner, name, descriptor);
-        var a = fieldAccesses.getOrDefault(key, FieldAccess.DEFAULT);
-        if (a.is(access)) return;
-        checkMutable();
-        if (access != AccessWidenerReader.AccessType.MUTABLE) visitClass(owner, access, transitive);
-        fieldAccesses.put(key, a.apply(access));
-    }
-
-    @Override
-    public void visitMethod(String owner, String name, String descriptor, AccessWidenerReader.AccessType access, boolean transitive) {
-        var key = new Triple(owner, name, descriptor);
-        var a = methodAccesses.getOrDefault(key, MethodAccess.DEFAULT);
-        if (a.is(access)) return;
-        checkMutable();
-        visitClass(owner, access, transitive);
-        methodAccesses.put(key, a.apply(access));
+    public @Nullable AccessWidenerVisitor visitAccessWidener(String classOwner) {
+        return visitorMap.computeIfAbsent(classOwner, Visitor::new);
     }
 
     public enum ClassAccess implements Access {
@@ -86,8 +102,8 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, String className) {
-                accessWidener.visitClass(className, AccessWidenerReader.AccessType.ACCESSIBLE, false);
+            public void apply(AccessWidenerVisitor accessWidener) {
+                accessWidener.visitClass(AccessType.ACCESSIBLE, false);
             }
         },
         EXTENDABLE() {
@@ -102,8 +118,8 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, String className) {
-                accessWidener.visitClass(className, AccessWidenerReader.AccessType.EXTENDABLE, false);
+            public void apply(AccessWidenerVisitor accessWidener) {
+                accessWidener.visitClass(AccessType.EXTENDABLE, false);
             }
         },
         ACCESSIBLE_EXTENDABLE() {
@@ -118,14 +134,14 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, String className) {
-                ACCESSIBLE.apply(accessWidener, className);
-                EXTENDABLE.apply(accessWidener, className);
+            public void apply(AccessWidenerVisitor accessWidener) {
+                ACCESSIBLE.apply(accessWidener);
+                EXTENDABLE.apply(accessWidener);
             }
         };
 
         @Override
-        public boolean is(AccessWidenerReader.AccessType type) {
+        public boolean is(AccessType type) {
             return switch (type) {
                 case ACCESSIBLE -> this == ACCESSIBLE || this == ACCESSIBLE_EXTENDABLE;
                 case EXTENDABLE -> this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE;
@@ -158,8 +174,8 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, Triple triple) {
-                accessWidener.visitMethod(triple.className(), triple.name(), triple.descriptor(), AccessWidenerReader.AccessType.ACCESSIBLE, false);
+            public void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
+                accessWidener.visitMethod(descriptor.name(), descriptor.descriptor(), AccessType.ACCESSIBLE, false);
             }
         },
         EXTENDABLE() {
@@ -174,8 +190,8 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, Triple triple) {
-                accessWidener.visitMethod(triple.className(), triple.name(), triple.descriptor(), AccessWidenerReader.AccessType.EXTENDABLE, false);
+            public void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
+                accessWidener.visitMethod(descriptor.name(), descriptor.descriptor(), AccessType.EXTENDABLE, false);
             }
         },
         ACCESSIBLE_EXTENDABLE() {
@@ -190,14 +206,14 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, Triple triple) {
-                ACCESSIBLE.apply(accessWidener, triple);
-                EXTENDABLE.apply(accessWidener, triple);
+            public void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
+                ACCESSIBLE.apply(accessWidener, descriptor);
+                EXTENDABLE.apply(accessWidener, descriptor);
             }
         };
 
         @Override
-        public boolean is(AccessWidenerReader.AccessType type) {
+        public boolean is(AccessType type) {
             return switch (type) {
                 case ACCESSIBLE -> this == ACCESSIBLE || this == ACCESSIBLE_EXTENDABLE;
                 case EXTENDABLE -> this == EXTENDABLE || this == ACCESSIBLE_EXTENDABLE;
@@ -230,8 +246,8 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, Triple triple) {
-                accessWidener.visitField(triple.className(), triple.name(), triple.descriptor(), AccessWidenerReader.AccessType.ACCESSIBLE, false);
+            public void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
+                accessWidener.visitField(descriptor.name(), descriptor.descriptor(), AccessType.ACCESSIBLE, false);
             }
         },
         MUTABLE() {
@@ -246,8 +262,8 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, Triple triple) {
-                accessWidener.visitField(triple.className(), triple.name(), triple.descriptor(), AccessWidenerReader.AccessType.MUTABLE, false);
+            public void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
+                accessWidener.visitField(descriptor.name(), descriptor.descriptor(), AccessType.MUTABLE, false);
             }
         },
         ACCESSIBLE_MUTABLE() {
@@ -262,14 +278,14 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             }
 
             @Override
-            public void apply(AccessWidener accessWidener, Triple triple) {
-                ACCESSIBLE.apply(accessWidener, triple);
-                MUTABLE.apply(accessWidener, triple);
+            public void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
+                ACCESSIBLE.apply(accessWidener, descriptor);
+                MUTABLE.apply(accessWidener, descriptor);
             }
         };
 
         @Override
-        public boolean is(AccessWidenerReader.AccessType type) {
+        public boolean is(AccessType type) {
             return switch (type) {
                 case ACCESSIBLE -> this == ACCESSIBLE || this == ACCESSIBLE_MUTABLE;
                 case MUTABLE -> this == MUTABLE || this == ACCESSIBLE_MUTABLE;
@@ -280,9 +296,9 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
 
     public interface Access {
 
-        boolean is(AccessWidenerReader.AccessType type);
+        boolean is(AccessType type);
 
-        default Access apply(AccessWidenerReader.AccessType type) {
+        default Access apply(AccessType type) {
             return switch (type) {
                 case ACCESSIBLE -> makeAccessible();
                 case EXTENDABLE -> makeExtendable();
@@ -290,11 +306,11 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
             };
         }
 
-        default void apply(AccessWidener accessWidener, String className) {
+        default void apply(AccessWidenerVisitor accessWidener) {
             throw new UnsupportedOperationException();
         }
 
-        default void apply(AccessWidener accessWidener, Triple triple) {
+        default void apply(AccessWidenerVisitor accessWidener, Descriptor descriptor) {
             throw new UnsupportedOperationException();
         }
 
@@ -311,6 +327,6 @@ public class AccessWidenerConfig implements AccessWidenerVisitor {
         }
     }
 
-    public record Triple(String className, String name, String descriptor) {
+    public record Descriptor(String name, String descriptor) {
     }
 }

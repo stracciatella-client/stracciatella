@@ -44,7 +44,6 @@ public class ConfigHandler {
 
     private boolean enableBorderlessFullscreen = true;
     public boolean addToVanillaVideoSettings = true;
-    public boolean enableMacOS = false;
 
     public CustomWindowDimensions customWindowDimensions = CustomWindowDimensions.INITIAL;
     public int forceWindowMonitor = -1;
@@ -117,7 +116,7 @@ public class ConfigHandler {
     }
 
     public boolean isEnabled() {
-        return enableBorderlessFullscreen && (!Minecraft.ON_OSX || enableMacOS);
+        return enableBorderlessFullscreen;
     }
 
     public void save() {

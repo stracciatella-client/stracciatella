@@ -22,7 +22,7 @@ stracciatella {
     name = "Core Module"
     group = "net.stracciatella"
     mixin("core.mixins.json")
-    accessWidener("core.accesswidener")
+    accessWidener("core.classtweaker")
 }
 
 dependencies {

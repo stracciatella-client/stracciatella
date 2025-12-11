@@ -31,7 +31,7 @@ dependencies {
     modListLight(mods.sodium)
     modListLight(mods.reeses.sodium.options)
     modListLight(mods.modmenu)
-    modListLight(mods.viafabricplus)
+//    modListLight(mods.viafabricplus) // doesnt work in dev idk
     modListLight(mods.`in`.game.account.switcher)
 
     lightRuntimeOnly(libs.fabric.loader)

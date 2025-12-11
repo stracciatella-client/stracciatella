@@ -44,7 +44,7 @@ public abstract class WindowMixin implements WindowHooks {
 
     @Shadow
     @Final
-    private long window;
+    private long handle;
 
     @Shadow
     private boolean dirty;
@@ -76,7 +76,7 @@ public abstract class WindowMixin implements WindowHooks {
     @SuppressWarnings("UnreachableCode")
     @Inject(method = "setMode", at = @At("HEAD"), cancellable = true)
     private void beforeUpdateWindowRegion(CallbackInfo ci) {
-        boolean currFullscreen = GLFW.glfwGetWindowMonitor(this.window) != 0L;
+        boolean currFullscreen = GLFW.glfwGetWindowMonitor(this.handle) != 0L;
         if (ConfigHandler.getInstance().isEnabled() && fullscreen) {
             if (!currFullscreen && !wasEnabled) {
                 // Currently in windowed mode; save old coordinates
@@ -85,7 +85,7 @@ public abstract class WindowMixin implements WindowHooks {
                 windowedWidth = width;
                 windowedHeight = height;
             }
-            GLFW.glfwSetWindowAttrib(window, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
+            GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
 
             // Monitor monitor = findBestMonitor();
             DimensionsResolver res = new DimensionsResolver();
@@ -103,17 +103,17 @@ public abstract class WindowMixin implements WindowHooks {
                 // width = mode.getWidth();
                 // height = mode.getHeight();
                 // Set dimensions
-                GLFW.glfwSetWindowMonitor(window, 0L, x, y, width, height, GLFW.GLFW_DONT_CARE);
+                GLFW.glfwSetWindowMonitor(handle, 0L, x, y, width, height, GLFW.GLFW_DONT_CARE);
 
                 wasEnabled = true;
                 ci.cancel();
             } else {
                 // Reset decorated flag
-                GLFW.glfwSetWindowAttrib(window, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
+                GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
             }
         } else {
             // Reset decorated flag
-            GLFW.glfwSetWindowAttrib(window, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
+            GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_DECORATED, GLFW.GLFW_TRUE);
         }
 
         // The rest of this function will reset the windowed coordinates; if going borderless -> fullscreen, need to

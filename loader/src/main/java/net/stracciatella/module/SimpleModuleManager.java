@@ -20,7 +20,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import net.fabricmc.loader.impl.launch.FabricLauncherBase;
-import net.fabricmc.loader.impl.lib.accesswidener.AccessWidenerReader;
+import net.fabricmc.loader.impl.lib.classtweaker.api.ClassTweakerReader;
 import net.stracciatella.Stracciatella;
 import net.stracciatella.init.accesswidener.AccessWidenerConfig;
 import net.stracciatella.module.Module.LifeCycle;
@@ -207,11 +207,11 @@ public class SimpleModuleManager implements ModuleManager {
         parentLoader.moduleLoaders().add(entry.classLoader());
 
         { // load access widener
-            var reader = new AccessWidenerReader(Stracciatella.instance().service(AccessWidenerConfig.class));
+            var reader = ClassTweakerReader.create(Stracciatella.instance().service(AccessWidenerConfig.class));
             for (var accessWidenerPath : entry.moduleConfiguration().accessWideners()) {
                 var in = entry.classLoader().getResourceAsStream(accessWidenerPath);
                 if (in == null) throw new IllegalStateException("Access widener " + accessWidenerPath + " in module " + entry.moduleConfiguration().name() + " not found.");
-                reader.read(in.readAllBytes(), FabricLauncherBase.getLauncher().getDefaultRuntimeNamespace());
+                reader.read(in.readAllBytes(), FabricLauncherBase.getLauncher().getMappingConfiguration().getRuntimeNamespace());
                 in.close();
             }
         }

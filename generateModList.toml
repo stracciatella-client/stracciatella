@@ -1,4 +1,4 @@
-version = "1.21.8"
+version = "1.21.10"
 
 curse = [
 #        256717, # clumps
@@ -10,9 +10,9 @@ curse = [
 modrinth = [
     "sodium",
     "sodium-extra",
-#    "continuity", not yet updated
+    "continuity",
     "modmenu",
-#    "cull-leaves",
+    "cull-leaves",
     "reeses-sodium-options",
     "entityculling",
     "advanced-chat",
@@ -29,17 +29,16 @@ modrinth = [
     "item-scroller",
     "jade",
     "forcecloseworldloadingscreen",
-#    "lighty",
+    "lambdynamiclights",
+    "lighty",
 #    "modernfix",
     "mouse-tweaks",
-#    "nbttooltip", wait for modrinth release, until then use my fork
-    "obsidianui",
+#    "obsidianui",
     "rrls",
     "rei",
     "roughly-enough-professions-rep",
-#    "ryoamiclights",
     "simple-voice-chat",
-    "threadtweak",
+#    "threadtweak",
 #    "tooltipfix",
     "viafabricplus",
     "xaeros-minimap",

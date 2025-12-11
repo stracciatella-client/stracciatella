@@ -20,9 +20,6 @@ public class SodiumOptionMixin {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void init(CallbackInfo ci) {
-        for (int i = 0; i < 100; i++) {
-            System.out.println("asfgbazsfhgasfgzasdfa");
-        }
         pages.add(SodiumCompat.config());
     }
 }
