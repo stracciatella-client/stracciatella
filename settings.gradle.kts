@@ -3,14 +3,17 @@ includeBuild("build-extensions")
 rootProject.name = "stracciatella"
 pluginManagement {
     repositories {
-        maven("https://nexus.darkcube.eu/repository/stracciatella/") { name = "Stracciatella" }
+        maven("https://reposilite.dasbabypixel.de/stracciatella") {
+            name = "Stracciatella"
+            credentials(PasswordCredentials::class.java)
+        }
         maven {
             name = "Fabric"
             url = uri("https://maven.fabricmc.net/")
         }
         mavenCentral()
         gradlePluginPortal()
-        maven("https://nexus.darkcube.eu/repository/jitpack/") { name = "Jitpack-Mirror" }
+        maven("https://reposilite.dasbabypixel.de/jitpack") { name = "Jitpack-Mirror" }
     }
 }
 dependencyResolutionManagement {

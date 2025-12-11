@@ -8,9 +8,9 @@ plugins {
 
 repositories {
     gradlePluginPortal()
-    maven("https://nexus.darkcube.eu/repository/stracciatella") { name = "Stracciatella" }
+    maven("https://reposilite.dasbabypixel.de/stracciatella") { name = "Stracciatella" }
     maven("https://maven.fabricmc.net/") { name = "Fabric" }
-    maven("https://nexus.darkcube.eu/repository/jitpack/") { name = "Jitpack-Mirror" }
+    maven("https://reposilite.dasbabypixel.de/jitpack") { name = "Jitpack-Mirror" }
 }
 
 kotlin {

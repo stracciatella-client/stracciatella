@@ -13,7 +13,7 @@ kotlin {
 
 dependencies {
     implementation("org.jsoup:jsoup:1.18.1")
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("com.google.code.gson:gson:2.13.1")
 }
 
 val generateCurseAPI = tasks.register<JavaExec>("generateCurseAPI") {

@@ -55,7 +55,7 @@ class StracciatellaRootPlugin : Plugin<Project> {
 
         project.allprojects {
             repositories.apply {
-                maven("https://nexus.darkcube.eu/repository/stracciatella") {
+                maven("https://reposilite.dasbabypixel.de/stracciatella") {
                     name = "Stracciatella"
                 }
                 maven("https://maven.flashyreese.me/releases") // CaffeineConfig

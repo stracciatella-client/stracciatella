@@ -1,4 +1,4 @@
-version = "1.21.5"
+version = "1.21.8"
 
 curse = [
 #        256717, # clumps
@@ -22,10 +22,11 @@ modrinth = [
     "dynamic-fps",
 #    "ebe",
 #    "exordium",
-#    "gadget",
+    "gadget",
     "gamma-utils",
     "in-game-account-switcher",
     "iris",
+    "item-scroller",
     "jade",
     "forcecloseworldloadingscreen",
 #    "lighty",
@@ -46,8 +47,8 @@ modrinth = [
     "yacl",
     "zoomify",
     "fabric-language-kotlin",
-#    "tweakeroo",
-#    "minihud",
-#    "litematica",
+    "tweakeroo",
+    "minihud",
+    "litematica",
     "clumps"
 ]
