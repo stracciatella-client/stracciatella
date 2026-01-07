@@ -55,6 +55,13 @@ public class ConfigHandler {
         save();
     }
 
+    public static void set(boolean en) {
+        getInstance().setAnonymousModlist(en);
+    }
+
+    public static boolean get() {
+        return getInstance().isAnonymousModlistEnabled();
+    }
 
     public boolean isAnonymousModlistEnabled() {
         return anonymousModlist;

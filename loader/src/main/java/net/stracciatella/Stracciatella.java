@@ -21,6 +21,7 @@ public class Stracciatella implements ServiceProvider.Wrapper {
     public static final String MODULE_MANAGER = "module_manager";
     public static final String LIBRARY_STORAGE = "library_storage";
     public static final String TRANSFORMER_REGISTRY = "transformer_registry";
+    public static final String STRACCIATELLA_MOD_CONTAINER = "stracciatella_mod_container";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("Stracciatella");
     private static final Stracciatella instance = new Stracciatella();

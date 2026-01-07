@@ -2,9 +2,13 @@ package net.stracciatella.init;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.ModContainer;
+import net.fabricmc.loader.impl.FabricLoaderImpl;
+import net.fabricmc.loader.impl.entrypoint.EntrypointStorage;
 import net.stracciatella.Stracciatella;
 import net.stracciatella.init.accesswidener.AccessWidenerConfig;
 import net.stracciatella.init.hack.KnotClassLoaderHack;
@@ -20,7 +24,7 @@ import net.stracciatella.module.StracciatellaThrowables;
 import net.stracciatella.module.classloader.StracciatellaClassLoader;
 import net.stracciatella.util.Provider;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "unchecked"})
 public class StracciatellaLanguageAdapter implements LanguageAdapter {
 
     static {
@@ -33,6 +37,20 @@ public class StracciatellaLanguageAdapter implements LanguageAdapter {
         stracciatella.logger().info("Initializing Stracciatella");
         LazyInitAccessors.init(stracciatella);
         stracciatella.registerProvider("access_widener_config", AccessWidenerConfig.class, Provider.of(AccessWidenerConfig::new));
+        stracciatella.register(Stracciatella.STRACCIATELLA_MOD_CONTAINER, ModContainer.class, FabricLoader.getInstance().getModContainer(Stracciatella.STRACCIATELLA).orElseThrow());
+        try {
+            var loader = FabricLoader.getInstance();
+            var entrypointStorageField = FabricLoaderImpl.class.getDeclaredField("entrypointStorage");
+            entrypointStorageField.setAccessible(true);
+            var entrypointStorage = (EntrypointStorage) entrypointStorageField.get(loader);
+            var adapterMapField = FabricLoaderImpl.class.getDeclaredField("adapterMap");
+            adapterMapField.setAccessible(true);
+            var adapterMap = (Map<String, LanguageAdapter>) adapterMapField.get(loader);
+            stracciatella.serviceProvider().register("entrypoint_storage", EntrypointStorage.class, entrypointStorage);
+            stracciatella.serviceProvider().register("adapter_map", Map.class, adapterMap);
+        } catch (Throwable t) {
+            throw StracciatellaThrowables.propagate(t);
+        }
         var moduleManager = (SimpleModuleManager) stracciatella.service(ModuleManager.class);
 
         try {

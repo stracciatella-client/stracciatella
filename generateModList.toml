@@ -1,4 +1,4 @@
-version = "1.21.10"
+version = "1.21.11"
 
 curse = [
 #        256717, # clumps
@@ -22,12 +22,13 @@ modrinth = [
     "dynamic-fps",
 #    "ebe",
 #    "exordium",
-    "gadget",
+#    "gadget",
     "gamma-utils",
     "in-game-account-switcher",
     "iris",
     "item-scroller",
     "jade",
+    "jei",
     "forcecloseworldloadingscreen",
     "lambdynamiclights",
     "lighty",
@@ -35,19 +36,19 @@ modrinth = [
     "mouse-tweaks",
 #    "obsidianui",
     "rrls",
-    "rei",
-    "roughly-enough-professions-rep",
+#    "rei",
+#    "roughly-enough-professions-rep",
     "simple-voice-chat",
 #    "threadtweak",
 #    "tooltipfix",
     "viafabricplus",
     "xaeros-minimap",
 #    "xaeros-world-map", not yet updated
-    "yacl",
-    "zoomify",
-    "fabric-language-kotlin",
-    "tweakeroo",
-    "minihud",
-    "litematica",
-    "clumps"
+#    "yacl",
+#    "zoomify",
+#    "fabric-language-kotlin",
+#    "tweakeroo",
+#    "minihud",
+#    "litematica",
+#    "clumps"
 ]
