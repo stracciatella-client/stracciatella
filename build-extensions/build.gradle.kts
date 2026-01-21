@@ -9,7 +9,6 @@ plugins {
 repositories {
     gradlePluginPortal()
     maven("https://reposilite.dasbabypixel.de/stracciatella") { name = "Stracciatella" }
-    maven("https://maven.fabricmc.net/") { name = "Fabric" }
     maven("https://reposilite.dasbabypixel.de/jitpack") { name = "Jitpack-Mirror" }
 }
 
