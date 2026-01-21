@@ -8,6 +8,14 @@ plugins {
 
 val testModuleNames = listOf("test1module", "test2module")
 
+repositories {
+    val repos = this.toList()
+    maven("https://reposilite.dasbabypixel.de/stracciatella") {
+        name = "Stracciatella"
+    }
+    this.addAll(repos)
+}
+
 sourceSets {
     for (testModuleName in testModuleNames) {
         register(testModuleName) {

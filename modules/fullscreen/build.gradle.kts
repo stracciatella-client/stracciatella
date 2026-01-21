@@ -4,6 +4,14 @@ plugins {
     id(libs.plugins.stracciatella.asProvider().get().pluginId)
 }
 
+repositories {
+    val repos = this.toList()
+    maven("https://reposilite.dasbabypixel.de/stracciatella") {
+        name = "Stracciatella"
+    }
+    this.addAll(repos)
+}
+
 loom {
     mods {
         register("stracciatella-fullscreen") {

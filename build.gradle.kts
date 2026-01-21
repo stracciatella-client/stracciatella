@@ -12,6 +12,14 @@ plugins {
     id("stracciatella-root")
 }
 
+repositories {
+    val repos = this.toList()
+    maven("https://reposilite.dasbabypixel.de/stracciatella") {
+        name = "Stracciatella"
+    }
+    this.addAll(repos)
+}
+
 version = providers.gradleProperty("version").get()
 group = providers.gradleProperty("group").get()
 
