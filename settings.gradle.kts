@@ -28,6 +28,7 @@ include("loader:test3module")
 includeModule("core")
 includeModule("fullscreen")
 includeModule("anonymous-modlist")
+includeModule("pathfinding")
 
 fun includeModule(path: String) {
     include("modules:$path")
