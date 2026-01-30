@@ -31,7 +31,7 @@ stracciatella {
     id = "pathfinding"
     name = "Pathfinding"
     group = "net.stracciatella"
-//    mixin("fullscreen.mixins.json")
+    mixin("pathfinding.mixins.json")
 //    accessWidener("fullscreen.accesswidener")
 }
 

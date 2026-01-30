@@ -3,6 +3,7 @@ package net.stracciatella.pathfinding.logic.mesh;
 import java.util.List;
 
 import net.minecraft.commands.arguments.coordinates.WorldCoordinate;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 
 public class MeshNode {
@@ -35,5 +36,9 @@ public class MeshNode {
 
     public void setNeighbors(List<Neighbor> neighbors) {
         this.neighbors = neighbors;
+    }
+
+    public BlockPos getBlockPos() {
+        return new BlockPos(x, y, z);
     }
 }

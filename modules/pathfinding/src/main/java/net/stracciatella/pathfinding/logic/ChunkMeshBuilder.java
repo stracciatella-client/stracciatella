@@ -1,0 +1,138 @@
+package net.stracciatella.pathfinding.logic;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.stracciatella.pathfinding.display.PathDisplay;
+import net.stracciatella.pathfinding.logic.mesh.IMeshProvider;
+import net.stracciatella.pathfinding.logic.mesh.Mesh;
+import net.stracciatella.pathfinding.logic.mesh.MeshNode;
+import net.stracciatella.pathfinding.logic.mesh.Neighbor;
+import org.spongepowered.asm.mixin.Unique;
+
+public class ChunkMeshBuilder  {
+
+
+    public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
+        Mesh newMesh = new Mesh();
+        // Temporäre Map für schnellen Zugriff beim Verknüpfen der Nachbarn
+        Map<BlockPos, MeshNode> nodeMap = new HashMap<>();
+        List<MeshNode> nodes = new ArrayList<>();
+
+        int minX = chunk.getPos().getMinBlockX();
+        int minZ = chunk.getPos().getMinBlockZ();
+
+
+        int maxY = calculateMaxChunkY(chunk);
+        int minY = calculateMinChunkY(chunk);
+
+        BlockPos.MutableBlockPos baseBlock = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos oneAbove = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos twoAbove = new BlockPos.MutableBlockPos();
+
+        // 1. SCHRITT: KNOTEN ERSTELLEN
+        // Wir iterieren durch den Chunk (0-15 x, 0-15 z)
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                // Wir iterieren von oben nach unten oder unten nach oben
+                for (int y = minY; y < maxY - 2; y++) {
+                    baseBlock.set(minX + x, y, minZ + z);
+                    oneAbove.set(minX + x, y + 1, minZ + z);
+                    twoAbove.set(minX + x, y + 2, minZ + z);
+
+                    BlockState baseBlockState = chunk.getBlockState(baseBlock);
+                    if (baseBlockState.entityCanStandOn(Minecraft.getInstance().level, baseBlock.immutable(), entity)) {
+                        BlockState oneAboveState = chunk.getBlockState(oneAbove);
+                        BlockState twoAboveState = chunk.getBlockState(twoAbove);
+
+                        if (oneAboveState.isAir() && twoAboveState.isAir()) {
+
+                            // Node erstellen mit globalen Koordinaten
+                            MeshNode node = new MeshNode(baseBlock.getX(), baseBlock.getY(), baseBlock.getZ());
+                            nodes.add(node);
+                            newMesh.getNodes().add(node);
+
+
+                            // In Map speichern (immutable Key für HashMap wichtig)
+                            nodeMap.put(baseBlock.immutable(), node);
+
+                        }
+                    }
+
+                }
+            }
+        }
+
+        // 2. SCHRITT: NACHBARN VERKNÜPFEN
+        // Wir gehen alle erstellten Nodes durch und schauen, ob sie Nachbarn haben
+        int[][] directions = {
+                {1, 0, 0}, {-1, 0, 0}, // Ost, West
+                {0, 0, 1}, {0, 0, -1},  // Süd, Nord
+                { 1, 0, 1}, { 1, 0,-1},
+                {-1, 0, 1}, {-1, 0,-1}
+                // Optional: Diagonalen oder Sprünge (y+1) hier hinzufügen
+        };
+
+        for (MeshNode node : nodes) {
+            List<Neighbor> neighbors = new ArrayList<>();
+
+            for (int[] dir : directions) {
+                int nx = node.getX() + dir[0];
+                int ny = node.getY() + dir[1];
+                int nz = node.getZ() + dir[2];
+
+                BlockPos targetPos = new BlockPos(nx, ny, nz);
+
+                // Prüfen, ob an der Zielposition ein Node existiert
+                if (nodeMap.containsKey(targetPos)) {
+                    MeshNode neighborNode = nodeMap.get(targetPos);
+                    // Kosten: 1 für gerade Bewegung.
+                    neighbors.add(new Neighbor(neighborNode, 1));
+                } else {
+                    // ERWEITERTE LOGIK: Treppen / Sprünge
+                    // Prüfen wir y+1 (Springen) oder y-1 (Fallen)
+                    BlockPos jumpPos = targetPos.above();
+                    BlockPos fallPos = targetPos.below();
+
+                    if (nodeMap.containsKey(jumpPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(jumpPos), 2)); // Höhere Kosten für Sprung
+                    } else if (nodeMap.containsKey(fallPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(fallPos), 1));
+                    }
+                }
+            }
+            node.setNeighbors(neighbors);
+            return newMesh;
+        }
+
+
+        return newMesh;
+    }
+
+    @Unique
+    private int calculateMinChunkY(ChunkAccess chunk) {
+        int i = 0;
+        while (chunk.isInsideBuildHeight(i)) {
+            i = i - 1;
+        }
+        return i + 1;
+    }
+
+    @Unique
+    private int calculateMaxChunkY(ChunkAccess chunk) {
+        int i = 0;
+        while (chunk.isInsideBuildHeight(i)) {
+            i++;
+        }
+        return i - 1;
+    }
+
+}
