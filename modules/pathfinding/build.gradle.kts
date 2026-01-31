@@ -32,7 +32,7 @@ stracciatella {
     name = "Pathfinding"
     group = "net.stracciatella"
     mixin("pathfinding.mixins.json")
-//    accessWidener("fullscreen.accesswidener")
+    accessWidener("pathfinding.accesswidener")
 }
 
 dependencies {

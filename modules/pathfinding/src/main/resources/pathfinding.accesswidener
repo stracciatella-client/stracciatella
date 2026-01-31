@@ -1,0 +1,7 @@
+accessWidener v2 named
+# FIX: Put 'accessible' at the START of the line
+accessible class net/minecraft/client/renderer/RenderPipelines
+
+# FIX: Put 'accessible' first AND add the field descriptor (required for v2)
+accessible field net/minecraft/client/renderer/RenderPipelines DEBUG_LINE_STRIP Lcom/mojang/blaze3d/pipeline/RenderPipeline;
+accessible field net/minecraft/client/renderer/RenderPipelines LINES_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;

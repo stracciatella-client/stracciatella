@@ -6,6 +6,11 @@ import java.util.List;
 import java.util.Map;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.LayeringTransform;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -19,6 +24,7 @@ import net.stracciatella.pathfinding.logic.mesh.Neighbor;
 import org.spongepowered.asm.mixin.Unique;
 
 public class ChunkMeshBuilder  {
+
 
 
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
@@ -115,6 +121,14 @@ public class ChunkMeshBuilder  {
 
 
         return newMesh;
+    }
+
+    private boolean isBlockReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
+        //1. is block a node?
+        //2. is block reachable?
+        // return chunk.getBlockState(pos).isAir();
+        //todo move movement logic here
+        return true;
     }
 
     @Unique
