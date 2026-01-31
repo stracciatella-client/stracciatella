@@ -8,6 +8,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.stracciatella.pathfinding.display.PathDisplay;
 import net.stracciatella.pathfinding.logic.ChunkMeshBuilder;
 import net.stracciatella.pathfinding.logic.MeshManager;
 
@@ -25,6 +26,15 @@ public class PathCommands {
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(command);
+        });
+
+        var displayConnectionsCommand = ClientCommandManager.literal("displayConnections").executes(commandContext -> {
+            PathDisplay.displayNeighbors = !PathDisplay.displayNeighbors;
+            return 1;
+        });
+
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(displayConnectionsCommand);
         });
     }
 }

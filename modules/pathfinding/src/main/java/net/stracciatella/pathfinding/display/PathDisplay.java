@@ -2,17 +2,14 @@ package net.stracciatella.pathfinding.display;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DepthTestFunction;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.*;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -23,6 +20,7 @@ import org.joml.Matrix4f;
 public class PathDisplay {
 
     public static final RenderType LINES_NO_DEPTH = makeCustomLineRenderer();
+    public static boolean displayNeighbors = true;
 
     private static RenderType makeCustomLineRenderer() {
         // 1. Base it on LINES_SNIPPET (Standard MC Lines) so we get thickness & correct uniforms
@@ -55,9 +53,12 @@ public class PathDisplay {
                             mesh.getNodes().forEach(meshNode -> {
                                 renderBlockOutline(poseStack, consumers, meshNode.getBlockPos());
 
-                                for (Neighbor neighbor : meshNode.getNeighbors()) {
-                                    drawConnection(poseStack, consumers, meshNode.getBlockPos(), neighbor.getNode().getBlockPos());
+                                if (displayNeighbors) {
+                                    for (Neighbor neighbor : meshNode.getNeighbors()) {
+                                        drawConnection(poseStack, consumers, meshNode.getBlockPos(), neighbor.getNode().getBlockPos());
+                                    }
                                 }
+
                             });
                         }
                     });
@@ -91,10 +92,10 @@ public class PathDisplay {
 
         Vec3 cameraPos = mc.gameRenderer.getMainCamera().position();
         float x1 = (float) ((pos1.getX() + 0.5) - cameraPos.x);
-        float y1 = (float) ((pos1.getY() + 1.5) - cameraPos.y);
+        float y1 = (float) ((pos1.getY() + 0.5) - cameraPos.y);
         float z1 = (float) ((pos1.getZ() + 0.5) - cameraPos.z);
         float x2 = (float) ((pos2.getX() + 0.5) - cameraPos.x);
-        float y2 = (float) ((pos2.getY() + 1.5) - cameraPos.y);
+        float y2 = (float) ((pos2.getY() + 0.5) - cameraPos.y);
         float z2 = (float) ((pos2.getZ() + 0.5) - cameraPos.z);
 
         stack.pushPose();

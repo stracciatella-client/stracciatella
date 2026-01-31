@@ -89,7 +89,6 @@ public class ChunkMeshBuilder  {
 
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
-
             for (int[] dir : directions) {
                 int nx = node.getX() + dir[0];
                 int ny = node.getY() + dir[1];
@@ -98,7 +97,7 @@ public class ChunkMeshBuilder  {
                 BlockPos targetPos = new BlockPos(nx, ny, nz);
 
                 // Prüfen, ob an der Zielposition ein Node existiert
-                if (nodeMap.containsKey(targetPos)) {
+                if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
                     MeshNode neighborNode = nodeMap.get(targetPos);
                     // Kosten: 1 für gerade Bewegung.
                     neighbors.add(new Neighbor(neighborNode, 1));
@@ -116,7 +115,6 @@ public class ChunkMeshBuilder  {
                 }
             }
             node.setNeighbors(neighbors);
-            return newMesh;
         }
 
 
