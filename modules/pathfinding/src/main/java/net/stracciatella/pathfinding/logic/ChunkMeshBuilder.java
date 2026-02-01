@@ -141,7 +141,19 @@ public class ChunkMeshBuilder {
                         break;
                     }
                 }
-                //todo check for straight falls
+
+                //temporary fix so we can only drop down 1 block at a time todo extend this logic
+                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
+                for (int i = 0; i < 4; i++) {
+                    targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
+
+                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 1));
+                        break;
+                    } else if (nodeMap.containsKey(targetPos)) {
+                        break;
+                    }
+                }
             }
 
 
