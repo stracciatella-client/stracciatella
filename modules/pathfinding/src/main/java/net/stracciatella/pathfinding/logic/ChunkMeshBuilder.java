@@ -23,9 +23,7 @@ import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 import net.stracciatella.pathfinding.logic.mesh.Neighbor;
 import org.spongepowered.asm.mixin.Unique;
 
-public class ChunkMeshBuilder  {
-
-
+public class ChunkMeshBuilder {
 
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
         Mesh newMesh = new Mesh();
@@ -35,7 +33,6 @@ public class ChunkMeshBuilder  {
 
         int minX = chunk.getPos().getMinBlockX();
         int minZ = chunk.getPos().getMinBlockZ();
-
 
         int maxY = calculateMaxChunkY(chunk);
         int minY = calculateMinChunkY(chunk);
@@ -66,7 +63,6 @@ public class ChunkMeshBuilder  {
                             nodes.add(node);
                             newMesh.getNodes().add(node);
 
-
                             // In Map speichern (immutable Key für HashMap wichtig)
                             nodeMap.put(baseBlock.immutable(), node);
 
@@ -79,53 +75,120 @@ public class ChunkMeshBuilder  {
 
         // 2. SCHRITT: NACHBARN VERKNÜPFEN
         // Wir gehen alle erstellten Nodes durch und schauen, ob sie Nachbarn haben
-        int[][] directions = {
-                {1, 0, 0}, {-1, 0, 0}, // Ost, West
+        int[][] directions = {{1, 0, 0}, {-1, 0, 0}, // Ost, West
                 {0, 0, 1}, {0, 0, -1},  // Süd, Nord
-                { 1, 0, 1}, { 1, 0,-1},
-                {-1, 0, 1}, {-1, 0,-1}
+                {1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1}
                 // Optional: Diagonalen oder Sprünge (y+1) hier hinzufügen
         };
+        int[][] cardinalDirections = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
 
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
-            for (int[] dir : directions) {
-                int nx = node.getX() + dir[0];
-                int ny = node.getY() + dir[1];
-                int nz = node.getZ() + dir[2];
+            // for (int[] dir : directions) {
+            //     int nx = node.getX() + dir[0];
+            //     int ny = node.getY() + dir[1];
+            //     int nz = node.getZ() + dir[2];
+            //
+            //     BlockPos targetPos = new BlockPos(nx, ny, nz);
+            //
+            //     // Prüfen, ob an der Zielposition ein Node existiert
+            //     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+            //         MeshNode neighborNode = nodeMap.get(targetPos);
+            //         // Kosten: 1 für gerade Bewegung.
+            //         neighbors.add(new Neighbor(neighborNode, 1));
+            //     } else {
+            //         // ERWEITERTE LOGIK: Treppen / Sprünge
+            //         // Prüfen wir y+1 (Springen) oder y-1 (Fallen)
+            //         BlockPos jumpPos = targetPos.above();
+            //         BlockPos fallPos = targetPos.below();
+            //
+            //         // todo add more complex cost logic here and expand supported jumps
+            //         if (nodeMap.containsKey(jumpPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+            //             neighbors.add(new Neighbor(nodeMap.get(jumpPos), 2)); // Höhere Kosten für Sprung
+            //         } else if (nodeMap.containsKey(fallPos)) {
+            //             neighbors.add(new Neighbor(nodeMap.get(fallPos), 1));
+            //         } else {
+            //             // todo add longer jump logic here
+            //         }
+            //     }
+            // }
 
-                BlockPos targetPos = new BlockPos(nx, ny, nz);
+            //add all straight neighbors
+            for (int[] cardinalDirection : cardinalDirections) {
 
-                // Prüfen, ob an der Zielposition ein Node existiert
-                if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                    MeshNode neighborNode = nodeMap.get(targetPos);
-                    // Kosten: 1 für gerade Bewegung.
-                    neighbors.add(new Neighbor(neighborNode, 1));
-                } else {
-                    // ERWEITERTE LOGIK: Treppen / Sprünge
-                    // Prüfen wir y+1 (Springen) oder y-1 (Fallen)
-                    BlockPos jumpPos = targetPos.above();
-                    BlockPos fallPos = targetPos.below();
+                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
 
-                    if (nodeMap.containsKey(jumpPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(jumpPos), 2)); // Höhere Kosten für Sprung
-                    } else if (nodeMap.containsKey(fallPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(fallPos), 1));
+                for (int i = 0; i < 4; i++) {
+                    targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
+
+                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 1));
+                        break;
+                    } else if (nodeMap.containsKey(targetPos)) {
+                        break;
                     }
                 }
+
+                //check for all straight neighbors on y+1
+                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
+                for (int i = 0; i < 3; i++) {
+                    targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
+
+                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 1));
+                        break;
+                    } else if (nodeMap.containsKey(targetPos)) {
+                        break;
+                    }
+                }
+                //todo check for straight falls
             }
+
+
             node.setNeighbors(neighbors);
         }
-
 
         return newMesh;
     }
 
     private boolean isBlockReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
-        //1. is block a node?
-        //2. is block reachable?
+        // 1. is block a node?
+        // 2. is block reachable?
+        // 2.1. air between source and target?
+
+        if (source.getY() == target.getY() || source.getY() == target.getY() + 1 || source.getY() == target.getY() - 1) {
+            // close height
+            //      air
+            // air  air    air
+            // air  air    air
+            // solid  .... solid
+
+            if (source.getX() == target.getX() || source.getZ() == target.getZ()) {
+                // if its on the same axis we can easily check the blocks in a straight line
+
+                if (source.getX() == target.getX()) {
+                    // BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
+                    // while (pos.getZ() != target.getZ()) {
+                    //     // check all 3 blocks above to see if they are air
+                    //     for (int i = 0; i < 3; i++) {
+                    //         pos.move(0, 1, 0);
+                    //         if (!chunk.getBlockState(pos).isAir()) {
+                    //             return false;
+                    //         }
+                    //     }
+                    // }
+                } else {
+
+                }
+
+            } else {
+                // todo
+                // check for all relevant block on the line
+            }
+
+        }
         // return chunk.getBlockState(pos).isAir();
-        //todo move movement logic here
+        // todo move movement logic here
         return true;
     }
 
