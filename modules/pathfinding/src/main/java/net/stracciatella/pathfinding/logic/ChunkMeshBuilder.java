@@ -61,7 +61,7 @@ public class ChunkMeshBuilder {
                             // Node erstellen mit globalen Koordinaten
                             MeshNode node = new MeshNode(baseBlock.getX(), baseBlock.getY(), baseBlock.getZ());
                             nodes.add(node);
-                            newMesh.getNodes().put(baseBlock, node);
+                            newMesh.getNodes().put(baseBlock.immutable(), node);
 
                             // In Map speichern (immutable Key für HashMap wichtig)
                             nodeMap.put(baseBlock.immutable(), node);

@@ -8,6 +8,8 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.BlockHitResult;
+import net.stracciatella.pathfinding.ChunkCoordinate;
 import net.stracciatella.pathfinding.display.PathDisplay;
 import net.stracciatella.pathfinding.logic.ChunkMeshBuilder;
 import net.stracciatella.pathfinding.logic.MeshManager;
@@ -37,14 +39,15 @@ public class PathCommands {
                 commandContext.getSource().sendFeedback(Component.literal("Not looking at block"));
                 return 1;
             } else {
-                var targetBlock = new BlockPos((int) lookingAt.getLocation().x(), (int) lookingAt.getLocation().y(), (int) lookingAt.getLocation().z());
-                var node = MeshManager.meshes.get(sender).get(commandContext.getSource().getEntity().chunkPosition()).getNodes().get(targetBlock);
+                var targetBlock = ((BlockHitResult) lookingAt).getBlockPos();
+                var chunkPos = commandContext.getSource().getEntity().chunkPosition();
+                var node = MeshManager.meshes.get(sender).get(new ChunkCoordinate(chunkPos.x, chunkPos.z)).getNodes().get(targetBlock);
                 if (node != null) {
                     String result = "";
                     for (Neighbor neighbor : node.getNeighbors()) {
                         result += "{" + neighbor.getNode().getBlockPos() + "} ";
                     }
-                    commandContext.getSource().sendFeedback(Component.literal("Neighbors: " ));
+                    commandContext.getSource().sendFeedback(Component.literal("Neighbors: " + result));
                 } else {
                     commandContext.getSource().sendFeedback(Component.literal("No mesh node found for block " + targetBlock));
                 }
