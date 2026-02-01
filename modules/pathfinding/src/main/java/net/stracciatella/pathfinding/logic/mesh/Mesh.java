@@ -1,12 +1,15 @@
 package net.stracciatella.pathfinding.logic.mesh;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
-public class Mesh {
-    List<MeshNode> nodes = new ArrayList<>();
+import net.minecraft.core.BlockPos;
 
-    public List<MeshNode> getNodes() {
+public class Mesh {
+    HashMap<BlockPos, MeshNode> nodes = new HashMap<>();
+
+    public HashMap<BlockPos, MeshNode> getNodes() {
         return nodes;
     }
 }

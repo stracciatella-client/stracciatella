@@ -50,7 +50,7 @@ public class PathDisplay {
                 if (meshes != null) {
                     meshes.forEach((chunkCoordinate, mesh) -> {
                         if (mesh != null) {
-                            mesh.getNodes().forEach(meshNode -> {
+                            mesh.getNodes().forEach((pos, meshNode) -> {
                                 renderBlockOutline(poseStack, consumers, meshNode.getBlockPos());
 
                                 if (displayNeighbors) {
