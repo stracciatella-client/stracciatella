@@ -113,7 +113,7 @@ public class ChunkMeshBuilder {
             //     }
             // }
 
-            //add all straight neighbors
+            // add all straight neighbors
             for (int[] cardinalDirection : cardinalDirections) {
 
                 BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
@@ -129,7 +129,7 @@ public class ChunkMeshBuilder {
                     }
                 }
 
-                //check for all straight neighbors on y+1
+                // check for all straight neighbors on y+1
                 targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
                 for (int i = 0; i < 3; i++) {
                     targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
@@ -142,7 +142,7 @@ public class ChunkMeshBuilder {
                     }
                 }
 
-                //temporary fix so we can only drop down 1 block at a time todo extend this logic
+                // temporary fix so we can only drop down 1 block at a time todo extend this logic
                 targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
                 for (int i = 0; i < 4; i++) {
                     targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
@@ -156,7 +156,6 @@ public class ChunkMeshBuilder {
                 }
             }
 
-
             node.setNeighbors(neighbors);
         }
 
@@ -167,6 +166,7 @@ public class ChunkMeshBuilder {
         // 1. is block a node?
         // 2. is block reachable?
         // 2.1. air between source and target?
+        // todo implement rest
 
         if (source.getY() == target.getY() || source.getY() == target.getY() + 1 || source.getY() == target.getY() - 1) {
             // close height
@@ -179,18 +179,39 @@ public class ChunkMeshBuilder {
                 // if its on the same axis we can easily check the blocks in a straight line
 
                 if (source.getX() == target.getX()) {
-                    // BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
-                    // while (pos.getZ() != target.getZ()) {
-                    //     // check all 3 blocks above to see if they are air
-                    //     for (int i = 0; i < 3; i++) {
-                    //         pos.move(0, 1, 0);
-                    //         if (!chunk.getBlockState(pos).isAir()) {
-                    //             return false;
-                    //         }
-                    //     }
-                    // }
+                    BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
+                    boolean countUp = source.getZ() < target.getZ();
+                    while (pos.getZ() != target.getZ()) {
+                        // check all 3 blocks above to see if they are air
+                        for (int i = 0; i < 3; i++) {
+                            pos.move(0, 1, 0);
+                            if (!chunk.getBlockState(pos).isAir()) {
+                                return false;
+                            }
+                        }
+                        if (countUp) {
+                            pos.move(0, -3, 1);
+                        } else {
+                            pos.move(0, -3, -1);
+                        }
+                    }
                 } else {
-
+                    BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
+                    boolean countUp = source.getX() < target.getX();
+                    while (pos.getX() != target.getX()) {
+                        // check all 3 blocks above to see if they are air
+                        for (int i = 0; i < 3; i++) {
+                            pos.move(0, 1, 0);
+                            if (!chunk.getBlockState(pos).isAir()) {
+                                return false;
+                            }
+                        }
+                        if (countUp) {
+                            pos.move(1, -3, 0);
+                        } else {
+                            pos.move(-1, -3, 0);
+                        }
+                    }
                 }
 
             } else {
@@ -200,7 +221,6 @@ public class ChunkMeshBuilder {
 
         }
         // return chunk.getBlockState(pos).isAir();
-        // todo move movement logic here
         return true;
     }
 
