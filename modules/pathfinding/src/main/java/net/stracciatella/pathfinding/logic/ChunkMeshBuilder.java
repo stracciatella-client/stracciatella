@@ -73,52 +73,18 @@ public class ChunkMeshBuilder {
             }
         }
 
-        // 2. SCHRITT: NACHBARN VERKNÜPFEN
-        // Wir gehen alle erstellten Nodes durch und schauen, ob sie Nachbarn haben
-        int[][] directions = {{1, 0, 0}, {-1, 0, 0}, // Ost, West
-                {0, 0, 1}, {0, 0, -1},  // Süd, Nord
-                {1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1}
-                // Optional: Diagonalen oder Sprünge (y+1) hier hinzufügen
-        };
+
         int[][] cardinalDirections = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
 
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
-            // for (int[] dir : directions) {
-            //     int nx = node.getX() + dir[0];
-            //     int ny = node.getY() + dir[1];
-            //     int nz = node.getZ() + dir[2];
-            //
-            //     BlockPos targetPos = new BlockPos(nx, ny, nz);
-            //
-            //     // Prüfen, ob an der Zielposition ein Node existiert
-            //     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-            //         MeshNode neighborNode = nodeMap.get(targetPos);
-            //         // Kosten: 1 für gerade Bewegung.
-            //         neighbors.add(new Neighbor(neighborNode, 1));
-            //     } else {
-            //         // ERWEITERTE LOGIK: Treppen / Sprünge
-            //         // Prüfen wir y+1 (Springen) oder y-1 (Fallen)
-            //         BlockPos jumpPos = targetPos.above();
-            //         BlockPos fallPos = targetPos.below();
-            //
-            //         // todo add more complex cost logic here and expand supported jumps
-            //         if (nodeMap.containsKey(jumpPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-            //             neighbors.add(new Neighbor(nodeMap.get(jumpPos), 2)); // Höhere Kosten für Sprung
-            //         } else if (nodeMap.containsKey(fallPos)) {
-            //             neighbors.add(new Neighbor(nodeMap.get(fallPos), 1));
-            //         } else {
-            //             // todo add longer jump logic here
-            //         }
-            //     }
-            // }
 
             // add all straight neighbors
             for (int[] cardinalDirection : cardinalDirections) {
 
                 BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
 
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < 5; i++) {
                     targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
@@ -144,7 +110,7 @@ public class ChunkMeshBuilder {
 
                 // temporary fix so we can only drop down 1 block at a time todo extend this logic
                 targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < 5; i++) {
                     targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
