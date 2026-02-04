@@ -21,7 +21,7 @@ import net.stracciatella.pathfinding.logic.mesh.IMeshProvider;
 import net.stracciatella.pathfinding.logic.mesh.Mesh;
 import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 import net.stracciatella.pathfinding.logic.mesh.Neighbor;
-import org.spongepowered.asm.mixin.Unique;
+
 
 public class ChunkMeshBuilder {
 
@@ -162,6 +162,7 @@ public class ChunkMeshBuilder {
         return newMesh;
     }
 
+
     private boolean isBlockReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
         // 1. is block a node?
         // 2. is block reachable?
@@ -224,7 +225,7 @@ public class ChunkMeshBuilder {
         return true;
     }
 
-    @Unique
+
     private int calculateMinChunkY(ChunkAccess chunk) {
         int i = 0;
         while (chunk.isInsideBuildHeight(i)) {
@@ -233,7 +234,7 @@ public class ChunkMeshBuilder {
         return i + 1;
     }
 
-    @Unique
+
     private int calculateMaxChunkY(ChunkAccess chunk) {
         int i = 0;
         while (chunk.isInsideBuildHeight(i)) {
