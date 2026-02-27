@@ -14,13 +14,19 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.stracciatella.pathfinding.logic.MeshManager;
+import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 import net.stracciatella.pathfinding.logic.mesh.Neighbor;
 import org.joml.Matrix4f;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class PathDisplay {
 
     public static final RenderType LINES_NO_DEPTH = makeCustomLineRenderer();
     public static boolean displayNeighbors = true;
+    private static final Set<EdgeKey> highlightedEdges = new HashSet<>();
 
     private static RenderType makeCustomLineRenderer() {
         // 1. Base it on LINES_SNIPPET (Standard MC Lines) so we get thickness & correct uniforms
@@ -103,7 +109,11 @@ public class PathDisplay {
 
         // FIX: Use 'drawStandardLine' (which adds Normals) because we are using the standard shader now.
         // This ensures the lines are visible and thick.
-        drawStandardLine(buffer, matrix, x1, y1, z1, x2, y2, z2, 0.2F, 0.9F, 1.0F, 1.0F);
+        if (highlightedEdges.contains(EdgeKey.of(pos1, pos2))) {
+            drawStandardLine(buffer, matrix, x1, y1, z1, x2, y2, z2, 1.0F, 0.55F, 0.0F, 1.0F);
+        } else {
+            drawStandardLine(buffer, matrix, x1, y1, z1, x2, y2, z2, 0.2F, 0.9F, 1.0F, 1.0F);
+        }
 
         stack.popPose();
     }
@@ -155,5 +165,32 @@ public class PathDisplay {
         // Do NOT add normals or line width here.
         buffer.addVertex(matrix, x1, y1, z1).setColor(r, g, b, a);
         buffer.addVertex(matrix, x2, y2, z2).setColor(r, g, b, a);
+    }
+
+    public static void setHighlightedPath(List<MeshNode> path) {
+        highlightedEdges.clear();
+        if (path == null || path.size() < 2) {
+            return;
+        }
+        for (int i = 0; i < path.size() - 1; i++) {
+            BlockPos a = path.get(i).getBlockPos();
+            BlockPos b = path.get(i + 1).getBlockPos();
+            highlightedEdges.add(EdgeKey.of(a, b));
+        }
+    }
+
+    public static void clearHighlightedPath() {
+        highlightedEdges.clear();
+    }
+
+    private record EdgeKey(long a, long b) {
+        private static EdgeKey of(BlockPos pos1, BlockPos pos2) {
+            long p1 = pos1.asLong();
+            long p2 = pos2.asLong();
+            if (p1 <= p2) {
+                return new EdgeKey(p1, p2);
+            }
+            return new EdgeKey(p2, p1);
+        }
     }
 }
