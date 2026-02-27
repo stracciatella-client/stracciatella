@@ -469,6 +469,10 @@ public class PathWalker {
             return new JumpDecision(false, gap, false);
         }
 
+        if (gap <= 1 && dy >= 0.6 && landingSolid && distance <= CONFIG.stepUpJumpDistance) {
+            return new JumpDecision(true, gap, false);
+        }
+
         boolean needsJump = dy > 0.6 || forwardAir || gap > 1;
         if (!needsJump) {
             return new JumpDecision(false, gap, false);
@@ -1381,6 +1385,7 @@ public class PathWalker {
         public float walkTurnMaxDeg = 60.0f;
         public double offCourseDistance = 3.5;
         public int offCourseTicks = 10;
+        public double stepUpJumpDistance = 1.4;
         public boolean physicsCalibrated = false;
         public double physicsGravity = 0.08;
         public double physicsVerticalDrag = 0.98;
@@ -1447,6 +1452,7 @@ public class PathWalker {
             walkTurnMaxDeg = other.walkTurnMaxDeg;
             offCourseDistance = other.offCourseDistance;
             offCourseTicks = other.offCourseTicks;
+            stepUpJumpDistance = other.stepUpJumpDistance;
             physicsCalibrated = other.physicsCalibrated;
             physicsGravity = other.physicsGravity;
             physicsVerticalDrag = other.physicsVerticalDrag;
@@ -1490,6 +1496,9 @@ public class PathWalker {
             }
             if (offCourseTicks <= 0) {
                 offCourseTicks = 10;
+            }
+            if (stepUpJumpDistance <= 0.0) {
+                stepUpJumpDistance = 1.4;
             }
             edgeJumpHoldEdge = clamp(edgeJumpHoldEdge, 0.0, 0.5);
             edgeJumpTriggerEdge = clamp(edgeJumpTriggerEdge, 0.0, 0.5);
