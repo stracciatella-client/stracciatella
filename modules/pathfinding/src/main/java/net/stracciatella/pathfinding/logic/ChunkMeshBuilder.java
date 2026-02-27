@@ -25,6 +25,11 @@ import net.stracciatella.pathfinding.logic.mesh.Neighbor;
 
 public class ChunkMeshBuilder {
 
+    private static final int MAX_HORIZONTAL_SEARCH = 5;
+    private static final int MAX_UP_SEARCH = 3;
+    private static final int MAX_DOWN_SEARCH = 5;
+    private static final int[][] DIRECTION_VECTORS = buildDirectionVectors(MAX_HORIZONTAL_SEARCH);
+
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
         Mesh newMesh = new Mesh();
         // Temporäre Map für schnellen Zugriff beim Verknüpfen der Nachbarn
@@ -74,48 +79,20 @@ public class ChunkMeshBuilder {
         }
 
 
-        int[][] cardinalDirections = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-        int[][] diagonalDirections = {{1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1}};
-
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
 
-            // add all straight neighbors
-            for (int[] cardinalDirection : cardinalDirections) {
-
+            // add all neighbors in all directions on same y
+            for (int[] direction : DIRECTION_VECTORS) {
+                int dx = direction[0];
+                int dz = direction[1];
                 BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
 
-                for (int i = 0; i < 5; i++) {
-                    targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
+                for (int i = 0; i < MAX_HORIZONTAL_SEARCH; i++) {
+                    targetPos.move(dx, 0, dz);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 1));
-                        break;
-                    } else if (nodeMap.containsKey(targetPos)) {
-                        break;
-                    }
-                }
-
-                // check for all straight neighbors on y+1
-                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
-                for (int i = 0; i < 3; i++) {
-                    targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
-
-                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 1));
-                        break;
-                    } else if (nodeMap.containsKey(targetPos)) {
-                        break;
-                    }
-                }
-
-                // temporary fix so we can only drop down 1 block at a time todo extend this logic
-                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
-                for (int i = 0; i < 5; i++) {
-                    targetPos.move(cardinalDirection[0], cardinalDirection[1], cardinalDirection[2]);
-
-                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 1));
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
                         break;
                     } else if (nodeMap.containsKey(targetPos)) {
                         break;
@@ -123,42 +100,33 @@ public class ChunkMeshBuilder {
                 }
             }
 
-            // add all diagonal neighbors
-            for (int[] diagonalDirection : diagonalDirections) {
-
-                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
-
-                for (int i = 0; i < 5; i++) {
-                    targetPos.move(diagonalDirection[0], diagonalDirection[1], diagonalDirection[2]);
+            // check for all neighbors on y+1
+            for (int[] direction : DIRECTION_VECTORS) {
+                int dx = direction[0];
+                int dz = direction[1];
+                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
+                for (int i = 0; i < MAX_UP_SEARCH; i++) {
+                    targetPos.move(dx, 0, dz);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 2));
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
                         break;
                     } else if (nodeMap.containsKey(targetPos)) {
                         break;
                     }
                 }
+            }
 
-                // check for all diagonal neighbors on y+1
-                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
-                for (int i = 0; i < 3; i++) {
-                    targetPos.move(diagonalDirection[0], diagonalDirection[1], diagonalDirection[2]);
-
-                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 2));
-                        break;
-                    } else if (nodeMap.containsKey(targetPos)) {
-                        break;
-                    }
-                }
-
-                // temporary fix so we can only drop down 1 block at a time todo extend this logic
-                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
-                for (int i = 0; i < 5; i++) {
-                    targetPos.move(diagonalDirection[0], diagonalDirection[1], diagonalDirection[2]);
+            // temporary fix so we can only drop down 1 block at a time todo extend this logic
+            for (int[] direction : DIRECTION_VECTORS) {
+                int dx = direction[0];
+                int dz = direction[1];
+                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
+                for (int i = 0; i < MAX_DOWN_SEARCH; i++) {
+                    targetPos.move(dx, 0, dz);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 2));
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
                         break;
                     } else if (nodeMap.containsKey(targetPos)) {
                         break;
@@ -218,7 +186,7 @@ public class ChunkMeshBuilder {
                 }
 
             } else {
-                if (!isDiagonalReachable(chunk, source, target)) {
+                if (!isLineReachable(chunk, source, target)) {
                     return false;
                 }
             }
@@ -228,38 +196,87 @@ public class ChunkMeshBuilder {
         return true;
     }
 
-    private boolean isDiagonalReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
-        int dx = target.getX() - source.getX();
-        int dz = target.getZ() - source.getZ();
+    private boolean isLineReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
+        int x0 = source.getX();
+        int z0 = source.getZ();
+        int x1 = target.getX();
+        int z1 = target.getZ();
 
-        if (Math.abs(dx) != Math.abs(dz)) {
-            return false;
-        }
+        int dx = Math.abs(x1 - x0);
+        int dz = Math.abs(z1 - z0);
+        int sx = x0 < x1 ? 1 : -1;
+        int sz = z0 < z1 ? 1 : -1;
 
-        int stepX = Integer.compare(dx, 0);
-        int stepZ = Integer.compare(dz, 0);
+        int err = dx - dz;
+        int x = x0;
+        int z = z0;
 
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
-        while (pos.getX() != target.getX() || pos.getZ() != target.getZ()) {
-            pos.move(stepX, 0, stepZ);
+        while (x != x1 || z != z1) {
+            int prevX = x;
+            int prevZ = z;
+            int e2 = 2 * err;
+            if (e2 > -dz) {
+                err -= dz;
+                x += sx;
+            }
+            if (e2 < dx) {
+                err += dx;
+                z += sz;
+            }
 
+            BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, source.getY(), z);
             if (!isColumnClear(chunk, pos)) {
                 return false;
             }
 
-            // Avoid cutting corners by checking the adjacent cardinal tiles
-            BlockPos.MutableBlockPos sideX = new BlockPos.MutableBlockPos(pos.getX(), pos.getY(), pos.getZ() - stepZ);
-            if (!isColumnClear(chunk, sideX)) {
-                return false;
-            }
-
-            BlockPos.MutableBlockPos sideZ = new BlockPos.MutableBlockPos(pos.getX() - stepX, pos.getY(), pos.getZ());
-            if (!isColumnClear(chunk, sideZ)) {
-                return false;
+            if (x != prevX && z != prevZ) {
+                BlockPos.MutableBlockPos sideX = new BlockPos.MutableBlockPos(x, source.getY(), prevZ);
+                if (!isColumnClear(chunk, sideX)) {
+                    return false;
+                }
+                BlockPos.MutableBlockPos sideZ = new BlockPos.MutableBlockPos(prevX, source.getY(), z);
+                if (!isColumnClear(chunk, sideZ)) {
+                    return false;
+                }
             }
         }
 
         return true;
+    }
+
+    private static int movementCost(int dx, int dz) {
+        if (dx != 0 && dz != 0) {
+            return 2;
+        }
+        return 1;
+    }
+
+    private static int[][] buildDirectionVectors(int maxComponent) {
+        List<int[]> directions = new ArrayList<>();
+        for (int dx = -maxComponent; dx <= maxComponent; dx++) {
+            for (int dz = -maxComponent; dz <= maxComponent; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                int g = gcd(Math.abs(dx), Math.abs(dz));
+                if (g == 1) {
+                    directions.add(new int[]{dx, dz});
+                }
+            }
+        }
+        return directions.toArray(new int[0][0]);
+    }
+
+    private static int gcd(int a, int b) {
+        if (a == 0) {
+            return b;
+        }
+        while (b != 0) {
+            int t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
     }
 
     private boolean isColumnClear(ChunkAccess chunk, BlockPos pos) {
