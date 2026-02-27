@@ -178,6 +178,17 @@ public class PathCommands {
                             context.getSource().sendFeedback(Component.literal("Path walker debug disabled"));
                             return 1;
                         })))
+                .then(literal("walklearn")
+                        .then(literal("on").executes(context -> {
+                            PathWalker.setLearning(true);
+                            context.getSource().sendFeedback(Component.literal("Path walker learning enabled"));
+                            return 1;
+                        }))
+                        .then(literal("off").executes(context -> {
+                            PathWalker.setLearning(false);
+                            context.getSource().sendFeedback(Component.literal("Path walker learning disabled"));
+                            return 1;
+                        })))
                 .then(literal("walkconfig")
                         .then(literal("menu").executes(context -> {
                             sendWalkConfigMenu(context.getSource().getPlayer());
@@ -399,12 +410,28 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Edge jump hold distance set to " + value));
                                             return 1;
                                         })))
+                        .then(literal("edgejumpholdedge")
+                                .then(argument("value", DoubleArgumentType.doubleArg(0.0, 0.5))
+                                        .executes(context -> {
+                                            double value = DoubleArgumentType.getDouble(context, "value");
+                                            PathWalker.setEdgeJumpHoldEdge(value);
+                                            context.getSource().sendFeedback(Component.literal("Edge jump hold edge set to " + fmt(value)));
+                                            return 1;
+                                        })))
                         .then(literal("edgejumptrigger")
                                 .then(argument("value", DoubleArgumentType.doubleArg(0.0))
                                         .executes(context -> {
                                             double value = DoubleArgumentType.getDouble(context, "value");
                                             PathWalker.setEdgeJumpTriggerDistance(value);
                                             context.getSource().sendFeedback(Component.literal("Edge jump trigger distance set to " + value));
+                                            return 1;
+                                        })))
+                        .then(literal("edgejumptriggeredge")
+                                .then(argument("value", DoubleArgumentType.doubleArg(0.0, 0.5))
+                                        .executes(context -> {
+                                            double value = DoubleArgumentType.getDouble(context, "value");
+                                            PathWalker.setEdgeJumpTriggerEdge(value);
+                                            context.getSource().sendFeedback(Component.literal("Edge jump trigger edge set to " + fmt(value)));
                                             return 1;
                                         })))
                         .then(literal("alignhold")
@@ -458,7 +485,23 @@ public class PathCommands {
                                                     PathWalker.setJumpAimYawRange(min, max);
                                                     context.getSource().sendFeedback(Component.literal("Jump aim yaw range set to " + min + " - " + max + " deg"));
                                                     return 1;
-                                                })))));
+                                                }))))
+                        .then(literal("jumpsimticks")
+                                .then(argument("ticks", IntegerArgumentType.integer(5))
+                                        .executes(context -> {
+                                            int ticks = IntegerArgumentType.getInteger(context, "ticks");
+                                            PathWalker.setJumpSimTicks(ticks);
+                                            context.getSource().sendFeedback(Component.literal("Jump sim ticks set to " + ticks));
+                                            return 1;
+                                        })))
+                        .then(literal("jumplanding")
+                                .then(argument("margin", DoubleArgumentType.doubleArg(0.0))
+                                        .executes(context -> {
+                                            double margin = DoubleArgumentType.getDouble(context, "margin");
+                                            PathWalker.setJumpLandingMargin(margin);
+                                            context.getSource().sendFeedback(Component.literal("Jump landing margin set to " + fmt(margin)));
+                                            return 1;
+                                        }))));
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(command);
@@ -548,13 +591,17 @@ public class PathCommands {
         sendMenuLine(player, valueLine("edgejumpfwdairbias", PathWalker.CONFIG.edgeJumpForwardAirBias, 0.01, "/path walkconfig edgejumpfwdairbias", 0.0, 1.0));
         sendMenuLine(player, valueLine("edgejumpfwdairmin", PathWalker.CONFIG.edgeJumpForwardAirMin, 0.01, "/path walkconfig edgejumpfwdairmin", 0.0, 1.0));
         sendMenuLine(player, valueLine("edgejumphold", PathWalker.CONFIG.edgeJumpHoldDistance, 0.1, "/path walkconfig edgejumphold", 0.0, Double.POSITIVE_INFINITY));
+        sendMenuLine(player, valueLine("edgejumpholdedge", PathWalker.CONFIG.edgeJumpHoldEdge, 0.01, "/path walkconfig edgejumpholdedge", 0.0, 0.5));
         sendMenuLine(player, valueLine("edgejumptrigger", PathWalker.CONFIG.edgeJumpTriggerDistance, 0.1, "/path walkconfig edgejumptrigger", 0.0, Double.POSITIVE_INFINITY));
+        sendMenuLine(player, valueLine("edgejumptriggeredge", PathWalker.CONFIG.edgeJumpTriggerEdge, 0.01, "/path walkconfig edgejumptriggeredge", 0.0, 0.5));
         sendMenuLine(player, valueLineInt("alignhold", PathWalker.CONFIG.alignmentHoldMs, 50, "/path walkconfig alignhold", 0));
         sendMenuLine(player, valueLine("aligndeadzone", PathWalker.CONFIG.alignmentDeadzoneDeg, 0.5, "/path walkconfig aligndeadzone", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("walkturnmax", PathWalker.CONFIG.walkTurnMaxDeg, 2.0, "/path walkconfig walkturnmax", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLineInt("jumpcooldown", PathWalker.CONFIG.jumpCooldownTicks, 1, "/path walkconfig jumpcooldown", 0));
         sendMenuLine(player, rangeLine("pitchjitter", PathWalker.CONFIG.pitchJitterMinDeg, PathWalker.CONFIG.pitchJitterMaxDeg, 0.1, "/path walkconfig pitchjitter", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("jumpaimyaw", PathWalker.CONFIG.jumpAimYawMinDeg, PathWalker.CONFIG.jumpAimYawMaxDeg, 0.5, "/path walkconfig jumpaimyaw", 0.0, Double.POSITIVE_INFINITY));
+        sendMenuLine(player, valueLineInt("jumpsimticks", PathWalker.CONFIG.jumpSimTicks, 1, "/path walkconfig jumpsimticks", 5));
+        sendMenuLine(player, valueLine("jumplanding", PathWalker.CONFIG.jumpLandingMargin, 0.05, "/path walkconfig jumplanding", 0.0, Double.POSITIVE_INFINITY));
     }
 
     private static void sendMenuHeader(LocalPlayer player, String title) {
