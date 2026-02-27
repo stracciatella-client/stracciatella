@@ -29,6 +29,7 @@ public class ChunkMeshBuilder {
     private static final int MAX_UP_SEARCH = 3;
     private static final int MAX_DOWN_SEARCH = 5;
     private static final int MAX_DROP = 3;
+    private static final int MAX_DIAGONAL_SEARCH = 3;
     private static final int[][] DIRECTION_VECTORS = buildDirectionVectors(MAX_HORIZONTAL_SEARCH);
 
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
@@ -87,9 +88,10 @@ public class ChunkMeshBuilder {
             for (int[] direction : DIRECTION_VECTORS) {
                 int dx = direction[0];
                 int dz = direction[1];
+                int maxSteps = maxStepsForDirection(dx, dz, MAX_HORIZONTAL_SEARCH);
                 BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
 
-                for (int i = 0; i < MAX_HORIZONTAL_SEARCH; i++) {
+                for (int i = 0; i < maxSteps; i++) {
                     targetPos.move(dx, 0, dz);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
@@ -105,8 +107,9 @@ public class ChunkMeshBuilder {
             for (int[] direction : DIRECTION_VECTORS) {
                 int dx = direction[0];
                 int dz = direction[1];
+                int maxSteps = maxStepsForDirection(dx, dz, MAX_UP_SEARCH);
                 BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
-                for (int i = 0; i < MAX_UP_SEARCH; i++) {
+                for (int i = 0; i < maxSteps; i++) {
                     targetPos.move(dx, 0, dz);
 
                     if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
@@ -123,8 +126,9 @@ public class ChunkMeshBuilder {
                 for (int[] direction : DIRECTION_VECTORS) {
                     int dx = direction[0];
                     int dz = direction[1];
+                    int maxSteps = maxStepsForDirection(dx, dz, MAX_DOWN_SEARCH);
                     BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - drop, node.getZ());
-                    for (int i = 0; i < MAX_DOWN_SEARCH; i++) {
+                    for (int i = 0; i < maxSteps; i++) {
                         targetPos.move(dx, 0, dz);
 
                         if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
@@ -281,6 +285,13 @@ public class ChunkMeshBuilder {
             b = t;
         }
         return a;
+    }
+
+    private static int maxStepsForDirection(int dx, int dz, int baseMax) {
+        if (dx == 0 || dz == 0) {
+            return baseMax;
+        }
+        return Math.min(baseMax, MAX_DIAGONAL_SEARCH);
     }
 
     private boolean isColumnClear(ChunkAccess chunk, BlockPos pos) {

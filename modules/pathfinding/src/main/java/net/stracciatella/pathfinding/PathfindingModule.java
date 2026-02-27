@@ -16,15 +16,19 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import net.stracciatella.module.Module;
 import net.stracciatella.pathfinding.commands.PathCommands;
 import net.stracciatella.pathfinding.display.PathDisplay;
+import net.stracciatella.pathfinding.logic.PathWalker;
 import org.joml.Matrix4f;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
 public class PathfindingModule implements Module {
 
     @Task(lifeCycle = LifeCycle.STARTED)
     public void init() {
+        PathWalker.loadConfig();
         PathDisplay display = new PathDisplay();
         PathCommands commands = new PathCommands();
         commands.register();
+        ClientTickEvents.END_CLIENT_TICK.register(PathWalker::tick);
     }
 
 

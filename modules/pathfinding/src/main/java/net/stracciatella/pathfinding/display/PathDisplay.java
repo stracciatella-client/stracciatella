@@ -27,6 +27,13 @@ public class PathDisplay {
     public static final RenderType LINES_NO_DEPTH = makeCustomLineRenderer();
     public static boolean displayNeighbors = true;
     private static final Set<EdgeKey> highlightedEdges = new HashSet<>();
+    public static ConnectionMode connectionMode = ConnectionMode.ALL;
+
+    public enum ConnectionMode {
+        ALL,
+        PATH_ONLY,
+        NONE
+    }
 
     private static RenderType makeCustomLineRenderer() {
         // 1. Base it on LINES_SNIPPET (Standard MC Lines) so we get thickness & correct uniforms
@@ -59,8 +66,12 @@ public class PathDisplay {
                             mesh.getNodes().forEach((pos, meshNode) -> {
                                 renderBlockOutline(poseStack, consumers, meshNode.getBlockPos());
 
-                                if (displayNeighbors) {
+                                if (displayNeighbors && connectionMode != ConnectionMode.NONE) {
                                     for (Neighbor neighbor : meshNode.getNeighbors()) {
+                                        if (connectionMode == ConnectionMode.PATH_ONLY
+                                                && !highlightedEdges.contains(EdgeKey.of(meshNode.getBlockPos(), neighbor.getNode().getBlockPos()))) {
+                                            continue;
+                                        }
                                         drawConnection(poseStack, consumers, meshNode.getBlockPos(), neighbor.getNode().getBlockPos());
                                     }
                                 }
