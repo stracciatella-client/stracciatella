@@ -25,6 +25,7 @@ public class PathfindingModule implements Module {
     @Task(lifeCycle = LifeCycle.STARTED)
     public void init() {
         PathWalker.loadConfig();
+        PathDisplay.loadConfig();
         PathDisplay display = new PathDisplay();
         PathCommands commands = new PathCommands();
         commands.register();

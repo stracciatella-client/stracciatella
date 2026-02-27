@@ -43,6 +43,10 @@ public class PathWalker {
     private static boolean edgeThresholdInitialized = false;
     private static boolean jumpAimOffsetInitialized = false;
     private static float jumpAimYawOffsetDeg = 0.0f;
+    private static boolean debug = false;
+    private static long lastDebugMs = 0;
+    private static DebugState lastDebug = new DebugState();
+    private static long alignedUntilMs = 0;
 
     public static void start(List<MeshNode> path) {
         if (path == null || path.isEmpty()) {
@@ -62,6 +66,7 @@ public class PathWalker {
         jumpCooldownTicks = 0;
         edgeThresholdInitialized = false;
         jumpAimOffsetInitialized = false;
+        alignedUntilMs = 0;
         updateTargetOffset();
     }
 
@@ -78,6 +83,9 @@ public class PathWalker {
             Config loaded = GSON.fromJson(reader, Config.class);
             if (loaded != null) {
                 CONFIG.applyFrom(loaded);
+                CONFIG.normalize();
+                debug = CONFIG.debugEnabled;
+                saveConfig();
             }
         } catch (IOException ignored) {
             // ignore and keep defaults
@@ -170,7 +178,7 @@ public class PathWalker {
         }
 
         boolean sprint = shouldSprint(distanceSq);
-        JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint);
+        JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance);
         if (jumpDecision.jump) {
             jumpCooldownTicks = CONFIG.jumpCooldownTicks;
         }
@@ -239,15 +247,37 @@ public class PathWalker {
         player.setXRot(computePitch(dy));
 
         float angleDeltaAfter = Math.abs(wrapDegrees(desiredYaw - newYaw));
+        if (angleDeltaAfter <= CONFIG.alignmentDeadzoneDeg) {
+            currentTurnSpeed = 0.0f;
+            turnSpeedTarget = 0.0f;
+            nextTurnRetargetMs = System.currentTimeMillis() + CONFIG.turnJitterMinMs;
+        }
         boolean facing = isFacingTarget(newYaw, desiredYaw);
         boolean jump = facing && jumpDecision.jump;
         float moveThreshold = sharpTurn ? CONFIG.turnStopThresholdDeg : CONFIG.walkTurnThresholdDeg;
-        boolean canMoveForward = angleDeltaAfter <= moveThreshold;
+        long nowMs = System.currentTimeMillis();
+        if (!flicking && angleDeltaAfter <= moveThreshold) {
+            alignedUntilMs = nowMs + CONFIG.alignmentHoldMs;
+        }
+        boolean canMoveForward = angleDeltaAfter <= moveThreshold || nowMs < alignedUntilMs;
+        if (angleDeltaAfter >= CONFIG.walkTurnMaxDeg) {
+            canMoveForward = false;
+        }
         if (distance <= BRAKE_RADIUS && shouldBrakeForNextTurn()) {
             canMoveForward = false;
         }
         if (isMovingAway(player, targetX, targetZ)) {
             canMoveForward = false;
+        }
+        if (jumpDecision.holdBeforeJump) {
+            canMoveForward = false;
+        }
+        if (debug) {
+            long now = System.currentTimeMillis();
+            if (now - lastDebugMs > 200) {
+                lastDebugMs = now;
+                lastDebug.print(player, target, distance, angleDeltaAfter, canMoveForward, facing, jumpDecision);
+            }
         }
         applyMovement(client, canMoveForward, jump, sprint && canMoveForward);
     }
@@ -274,12 +304,12 @@ public class PathWalker {
         return ThreadLocalRandom.current().nextDouble() < chance;
     }
 
-    private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint) {
+    private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint, double distance) {
         if (jumpCooldownTicks > 0) {
-            return new JumpDecision(false, 0);
+            return new JumpDecision(false, 0, false);
         }
         if (!player.onGround()) {
-            return new JumpDecision(false, 0);
+            return new JumpDecision(false, 0, false);
         }
         int playerX = (int) Math.floor(player.getX());
         int playerZ = (int) Math.floor(player.getZ());
@@ -289,24 +319,29 @@ public class PathWalker {
         int dz = Math.abs(target.getZ() - playerZ);
         int gap = Math.max(dx, dz);
         if (stepX == 0 && stepZ == 0) {
-            return new JumpDecision(false, gap);
+            return new JumpDecision(false, gap, false);
         }
         BlockPos aheadBelow = new BlockPos(playerX + stepX, (int) Math.floor(player.getY()) - 1, playerZ + stepZ);
         boolean forwardAir = player.level().getBlockState(aheadBelow).isAir();
 
-        BlockPos landingBelow = new BlockPos(target.getX(), target.getY() - 1, target.getZ());
-        boolean landingSolid = !player.level().getBlockState(landingBelow).isAir();
+        BlockPos landingBlock = new BlockPos(target.getX(), target.getY(), target.getZ());
+        boolean landingSolid = !player.level().getBlockState(landingBlock).isAir();
+
+        lastDebug.forwardAir = forwardAir;
+        lastDebug.landingSolid = landingSolid;
+        lastDebug.gap = gap;
+        lastDebug.dy = dy;
 
         if (!landingSolid) {
-            return new JumpDecision(false, gap);
+            return new JumpDecision(false, gap, false);
         }
         if (dy < -0.2 && gap <= 1) {
-            return new JumpDecision(false, gap);
+            return new JumpDecision(false, gap, false);
         }
 
         boolean needsJump = dy > 0.6 || forwardAir || gap > 1;
         if (!needsJump) {
-            return new JumpDecision(false, gap);
+            return new JumpDecision(false, gap, false);
         }
 
         if (!edgeThresholdInitialized || currentGapForJump != gap) {
@@ -315,17 +350,28 @@ public class PathWalker {
             edgeThresholdInitialized = true;
         }
 
-        if (gap >= 3 && !isAtEdge(player, stepX, stepZ, currentEdgeThreshold)) {
-            return new JumpDecision(false, gap);
+        double usedThreshold = currentEdgeThreshold;
+        if (gap > 1 && forwardAir) {
+            usedThreshold = Math.max(CONFIG.edgeJumpForwardAirMin, currentEdgeThreshold - CONFIG.edgeJumpForwardAirBias);
         }
-        if (gap <= 1 && !isAtEdge(player, stepX, stepZ, currentEdgeThreshold)) {
-            return new JumpDecision(false, gap);
-        }
-        if (gap == 2 && !isAtEdge(player, stepX, stepZ, currentEdgeThreshold)) {
-            return new JumpDecision(false, gap);
+        lastDebug.edgeThreshold = usedThreshold;
+
+        if (gap > 1 && forwardAir && distance <= CONFIG.edgeJumpTriggerDistance) {
+            return new JumpDecision(true, gap, false);
         }
 
-        return new JumpDecision(true, gap);
+        boolean atEdge;
+        if (gap > 1) {
+            atEdge = isAtEdgeDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ(), usedThreshold);
+        } else {
+            atEdge = isAtEdge(player, stepX, stepZ, currentEdgeThreshold);
+        }
+        if (!atEdge) {
+            boolean hold = forwardAir && gap > 1 && distance <= CONFIG.edgeJumpHoldDistance;
+            return new JumpDecision(false, gap, hold);
+        }
+
+        return new JumpDecision(true, gap, false);
     }
 
     private static boolean isAtEdge(LocalPlayer player, int stepX, int stepZ, double threshold) {
@@ -334,6 +380,22 @@ public class PathWalker {
         boolean edgeX = stepX > 0 ? fracX >= threshold : stepX < 0 ? fracX <= (1.0 - threshold) : true;
         boolean edgeZ = stepZ > 0 ? fracZ >= threshold : stepZ < 0 ? fracZ <= (1.0 - threshold) : true;
         return edgeX && edgeZ;
+    }
+
+    private static boolean isAtEdgeDirectional(LocalPlayer player, double dirX, double dirZ, double threshold) {
+        double len = Math.sqrt(dirX * dirX + dirZ * dirZ);
+        if (len == 0.0) {
+            return false;
+        }
+        double ux = dirX / len;
+        double uz = dirZ / len;
+        double centerX = Math.floor(player.getX()) + 0.5;
+        double centerZ = Math.floor(player.getZ()) + 0.5;
+        double localX = player.getX() - centerX;
+        double localZ = player.getZ() - centerZ;
+        double progress = localX * ux + localZ * uz;
+        double required = 0.5 * threshold;
+        return progress >= required;
     }
 
     private static double edgeThresholdForGap(int gap, boolean sprint) {
@@ -655,7 +717,49 @@ public class PathWalker {
         saveConfig();
     }
 
+    public static void setEdgeJumpForwardAirBias(double bias) {
+        CONFIG.edgeJumpForwardAirBias = bias;
+        saveConfig();
+    }
+
+    public static void setEdgeJumpForwardAirMin(double min) {
+        CONFIG.edgeJumpForwardAirMin = min;
+        saveConfig();
+    }
+
+    public static void setEdgeJumpHoldDistance(double distance) {
+        CONFIG.edgeJumpHoldDistance = distance;
+        saveConfig();
+    }
+
+    public static void setEdgeJumpTriggerDistance(double distance) {
+        CONFIG.edgeJumpTriggerDistance = distance;
+        saveConfig();
+    }
+
+    public static void setAlignmentHoldMs(int ms) {
+        CONFIG.alignmentHoldMs = ms;
+        saveConfig();
+    }
+
+    public static void setAlignmentDeadzoneDeg(float deg) {
+        CONFIG.alignmentDeadzoneDeg = deg;
+        saveConfig();
+    }
+
+    public static void setWalkTurnMaxDeg(float deg) {
+        CONFIG.walkTurnMaxDeg = deg;
+        saveConfig();
+    }
+
+    public static void setDebug(boolean enabled) {
+        debug = enabled;
+        CONFIG.debugEnabled = enabled;
+        saveConfig();
+    }
+
     public static class Config {
+        public boolean debugEnabled = false;
         public float turnMinDeg = 6.0f;
         public float turnMaxDeg = 12.0f;
         public float turnAccel = 0.8f;
@@ -689,13 +793,21 @@ public class PathWalker {
         public double edgeJumpMidMin = 0.9;
         public double edgeJumpMidMax = 0.98;
         public double edgeJumpSprintBias = 0.02;
+        public double edgeJumpForwardAirBias = 0.08;
+        public double edgeJumpForwardAirMin = 0.75;
+        public double edgeJumpHoldDistance = 1.2;
+        public double edgeJumpTriggerDistance = 1.0;
         public int jumpCooldownTicks = 8;
         public float pitchJitterMinDeg = 0.3f;
         public float pitchJitterMaxDeg = 1.2f;
         public float jumpAimYawMinDeg = 1.5f;
         public float jumpAimYawMaxDeg = 4.0f;
+        public int alignmentHoldMs = 250;
+        public float alignmentDeadzoneDeg = 2.5f;
+        public float walkTurnMaxDeg = 60.0f;
 
         public void applyFrom(Config other) {
+            debugEnabled = other.debugEnabled;
             turnMinDeg = other.turnMinDeg;
             turnMaxDeg = other.turnMaxDeg;
             turnAccel = other.turnAccel;
@@ -729,15 +841,72 @@ public class PathWalker {
             edgeJumpMidMin = other.edgeJumpMidMin;
             edgeJumpMidMax = other.edgeJumpMidMax;
             edgeJumpSprintBias = other.edgeJumpSprintBias;
+            edgeJumpForwardAirBias = other.edgeJumpForwardAirBias;
+            edgeJumpForwardAirMin = other.edgeJumpForwardAirMin;
+            edgeJumpHoldDistance = other.edgeJumpHoldDistance;
+            edgeJumpTriggerDistance = other.edgeJumpTriggerDistance;
             jumpCooldownTicks = other.jumpCooldownTicks;
             pitchJitterMinDeg = other.pitchJitterMinDeg;
             pitchJitterMaxDeg = other.pitchJitterMaxDeg;
             jumpAimYawMinDeg = other.jumpAimYawMinDeg;
             jumpAimYawMaxDeg = other.jumpAimYawMaxDeg;
+            alignmentHoldMs = other.alignmentHoldMs;
+            alignmentDeadzoneDeg = other.alignmentDeadzoneDeg;
+            walkTurnMaxDeg = other.walkTurnMaxDeg;
+        }
+
+        public void normalize() {
+            if (edgeJumpTriggerDistance <= 0.0) {
+                edgeJumpTriggerDistance = 1.0;
+            }
+            if (edgeJumpHoldDistance <= 0.0) {
+                edgeJumpHoldDistance = 1.2;
+            }
+            if (edgeJumpForwardAirMin <= 0.0) {
+                edgeJumpForwardAirMin = 0.75;
+            }
+            if (edgeJumpForwardAirBias < 0.0) {
+                edgeJumpForwardAirBias = 0.0;
+            }
+            if (walkTurnMaxDeg <= 0.0) {
+                walkTurnMaxDeg = 60.0f;
+            }
+            if (alignmentHoldMs < 0) {
+                alignmentHoldMs = 0;
+            }
+            if (alignmentDeadzoneDeg < 0.0f) {
+                alignmentDeadzoneDeg = 0.0f;
+            }
         }
     }
 
-    private record JumpDecision(boolean jump, int gap) {}
+    private record JumpDecision(boolean jump, int gap, boolean holdBeforeJump) {}
+
+    private static class DebugState {
+        boolean forwardAir;
+        boolean landingSolid;
+        double edgeThreshold;
+        int gap;
+        double dy;
+
+        void print(LocalPlayer player, MeshNode target, double distance, float angleDeltaAfter, boolean canMoveForward, boolean facing, JumpDecision jumpDecision) {
+            System.out.println(
+                    "[PathWalker] pos=" + player.blockPosition()
+                            + " target=" + target.getBlockPos()
+                            + " dist=" + String.format("%.2f", distance)
+                            + " angleDelta=" + String.format("%.1f", angleDeltaAfter)
+                            + " canMove=" + canMoveForward
+                            + " facing=" + facing
+                            + " gap=" + gap
+                            + " dy=" + String.format("%.2f", dy)
+                            + " jump=" + jumpDecision.jump
+                            + " hold=" + jumpDecision.holdBeforeJump
+                            + " forwardAir=" + forwardAir
+                            + " landingSolid=" + landingSolid
+                            + " edgeTh=" + String.format("%.2f", edgeThreshold)
+            );
+        }
+    }
 
     private static Path getConfigPath() {
         Minecraft client = Minecraft.getInstance();

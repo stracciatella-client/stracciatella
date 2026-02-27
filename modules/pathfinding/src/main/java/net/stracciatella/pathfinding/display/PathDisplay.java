@@ -1,5 +1,7 @@
 package net.stracciatella.pathfinding.display;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.DepthTestFunction;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -18,6 +20,11 @@ import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 import net.stracciatella.pathfinding.logic.mesh.Neighbor;
 import org.joml.Matrix4f;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,6 +35,10 @@ public class PathDisplay {
     public static boolean displayNeighbors = true;
     private static final Set<EdgeKey> highlightedEdges = new HashSet<>();
     public static ConnectionMode connectionMode = ConnectionMode.ALL;
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final String CONFIG_FILE = "pathdisplay.json";
+
+    private static final DisplayConfig CONFIG = new DisplayConfig();
 
     public enum ConnectionMode {
         ALL,
@@ -192,6 +203,74 @@ public class PathDisplay {
 
     public static void clearHighlightedPath() {
         highlightedEdges.clear();
+    }
+
+    public static void setConnectionMode(ConnectionMode mode) {
+        connectionMode = mode;
+        CONFIG.connectionMode = mode;
+        saveConfig();
+    }
+
+    public static void setDisplayNeighbors(boolean enabled) {
+        displayNeighbors = enabled;
+        CONFIG.displayNeighbors = enabled;
+        saveConfig();
+    }
+
+    public static void loadConfig() {
+        Path configPath = getConfigPath();
+        if (configPath == null) {
+            return;
+        }
+        if (!Files.exists(configPath)) {
+            saveConfig();
+            return;
+        }
+        try (BufferedReader reader = Files.newBufferedReader(configPath)) {
+            DisplayConfig loaded = GSON.fromJson(reader, DisplayConfig.class);
+            if (loaded != null) {
+                CONFIG.applyFrom(loaded);
+                displayNeighbors = CONFIG.displayNeighbors;
+                connectionMode = CONFIG.connectionMode;
+            }
+        } catch (IOException ignored) {
+            // ignore
+        }
+    }
+
+    private static void saveConfig() {
+        Path configPath = getConfigPath();
+        if (configPath == null) {
+            return;
+        }
+        try {
+            Files.createDirectories(configPath.getParent());
+        } catch (IOException ignored) {
+            return;
+        }
+        try (BufferedWriter writer = Files.newBufferedWriter(configPath)) {
+            GSON.toJson(CONFIG, writer);
+        } catch (IOException ignored) {
+            // ignore
+        }
+    }
+
+    private static Path getConfigPath() {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.gameDirectory == null) {
+            return null;
+        }
+        return client.gameDirectory.toPath().resolve("config").resolve("stracciatella").resolve(CONFIG_FILE);
+    }
+
+    private static class DisplayConfig {
+        public boolean displayNeighbors = true;
+        public ConnectionMode connectionMode = ConnectionMode.ALL;
+
+        public void applyFrom(DisplayConfig other) {
+            displayNeighbors = other.displayNeighbors;
+            connectionMode = other.connectionMode;
+        }
     }
 
     private record EdgeKey(long a, long b) {

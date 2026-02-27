@@ -39,24 +39,24 @@ public class PathCommands {
         });
 
         var displayConnectionsCommand = ClientCommandManager.literal("displayConnections").executes(commandContext -> {
-            PathDisplay.displayNeighbors = !PathDisplay.displayNeighbors;
+            PathDisplay.setDisplayNeighbors(!PathDisplay.displayNeighbors);
             return 1;
         });
 
         var connectionModeCommand = ClientCommandManager.literal("path")
                 .then(literal("connections")
                         .then(literal("all").executes(context -> {
-                            PathDisplay.connectionMode = PathDisplay.ConnectionMode.ALL;
+                            PathDisplay.setConnectionMode(PathDisplay.ConnectionMode.ALL);
                             context.getSource().sendFeedback(Component.literal("Connection display: ALL"));
                             return 1;
                         }))
                         .then(literal("path").executes(context -> {
-                            PathDisplay.connectionMode = PathDisplay.ConnectionMode.PATH_ONLY;
+                            PathDisplay.setConnectionMode(PathDisplay.ConnectionMode.PATH_ONLY);
                             context.getSource().sendFeedback(Component.literal("Connection display: PATH_ONLY"));
                             return 1;
                         }))
                         .then(literal("none").executes(context -> {
-                            PathDisplay.connectionMode = PathDisplay.ConnectionMode.NONE;
+                            PathDisplay.setConnectionMode(PathDisplay.ConnectionMode.NONE);
                             context.getSource().sendFeedback(Component.literal("Connection display: NONE"));
                             return 1;
                         })));
@@ -165,6 +165,17 @@ public class PathCommands {
                         .then(literal("stop").executes(context -> {
                             PathWalker.stop();
                             context.getSource().sendFeedback(Component.literal("Path walking stopped"));
+                            return 1;
+                        })))
+                .then(literal("walkdebug")
+                        .then(literal("on").executes(context -> {
+                            PathWalker.setDebug(true);
+                            context.getSource().sendFeedback(Component.literal("Path walker debug enabled (console)"));
+                            return 1;
+                        }))
+                        .then(literal("off").executes(context -> {
+                            PathWalker.setDebug(false);
+                            context.getSource().sendFeedback(Component.literal("Path walker debug disabled"));
                             return 1;
                         })))
                 .then(literal("walkconfig")
@@ -364,6 +375,62 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Edge jump sprint bias set to " + value));
                                             return 1;
                                         })))
+                        .then(literal("edgejumpfwdairbias")
+                                .then(argument("value", DoubleArgumentType.doubleArg(0.0, 1.0))
+                                        .executes(context -> {
+                                            double value = DoubleArgumentType.getDouble(context, "value");
+                                            PathWalker.setEdgeJumpForwardAirBias(value);
+                                            context.getSource().sendFeedback(Component.literal("Edge jump forward-air bias set to " + value));
+                                            return 1;
+                                        })))
+                        .then(literal("edgejumpfwdairmin")
+                                .then(argument("value", DoubleArgumentType.doubleArg(0.0, 1.0))
+                                        .executes(context -> {
+                                            double value = DoubleArgumentType.getDouble(context, "value");
+                                            PathWalker.setEdgeJumpForwardAirMin(value);
+                                            context.getSource().sendFeedback(Component.literal("Edge jump forward-air min set to " + value));
+                                            return 1;
+                                        })))
+                        .then(literal("edgejumphold")
+                                .then(argument("value", DoubleArgumentType.doubleArg(0.0))
+                                        .executes(context -> {
+                                            double value = DoubleArgumentType.getDouble(context, "value");
+                                            PathWalker.setEdgeJumpHoldDistance(value);
+                                            context.getSource().sendFeedback(Component.literal("Edge jump hold distance set to " + value));
+                                            return 1;
+                                        })))
+                        .then(literal("edgejumptrigger")
+                                .then(argument("value", DoubleArgumentType.doubleArg(0.0))
+                                        .executes(context -> {
+                                            double value = DoubleArgumentType.getDouble(context, "value");
+                                            PathWalker.setEdgeJumpTriggerDistance(value);
+                                            context.getSource().sendFeedback(Component.literal("Edge jump trigger distance set to " + value));
+                                            return 1;
+                                        })))
+                        .then(literal("alignhold")
+                                .then(argument("ms", IntegerArgumentType.integer(0))
+                                        .executes(context -> {
+                                            int ms = IntegerArgumentType.getInteger(context, "ms");
+                                            PathWalker.setAlignmentHoldMs(ms);
+                                            context.getSource().sendFeedback(Component.literal("Alignment hold set to " + ms + " ms"));
+                                            return 1;
+                                        })))
+                        .then(literal("aligndeadzone")
+                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
+                                        .executes(context -> {
+                                            float deg = FloatArgumentType.getFloat(context, "deg");
+                                            PathWalker.setAlignmentDeadzoneDeg(deg);
+                                            context.getSource().sendFeedback(Component.literal("Alignment deadzone set to " + deg + " deg"));
+                                            return 1;
+                                        })))
+                        .then(literal("walkturnmax")
+                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
+                                        .executes(context -> {
+                                            float deg = FloatArgumentType.getFloat(context, "deg");
+                                            PathWalker.setWalkTurnMaxDeg(deg);
+                                            context.getSource().sendFeedback(Component.literal("Walk turn max set to " + deg + " deg"));
+                                            return 1;
+                                        })))
                         .then(literal("jumpcooldown")
                                 .then(argument("ticks", IntegerArgumentType.integer(0))
                                         .executes(context -> {
@@ -478,6 +545,13 @@ public class PathCommands {
         sendMenuLine(player, rangeLine("edgejumpshort", PathWalker.CONFIG.edgeJumpShortMin, PathWalker.CONFIG.edgeJumpShortMax, 0.01, "/path walkconfig edgejumpshort", 0.0, 1.0));
         sendMenuLine(player, rangeLine("edgejumpmid", PathWalker.CONFIG.edgeJumpMidMin, PathWalker.CONFIG.edgeJumpMidMax, 0.01, "/path walkconfig edgejumpmid", 0.0, 1.0));
         sendMenuLine(player, valueLine("edgejumpsprintbias", PathWalker.CONFIG.edgeJumpSprintBias, 0.005, "/path walkconfig edgejumpsprintbias", 0.0, 1.0));
+        sendMenuLine(player, valueLine("edgejumpfwdairbias", PathWalker.CONFIG.edgeJumpForwardAirBias, 0.01, "/path walkconfig edgejumpfwdairbias", 0.0, 1.0));
+        sendMenuLine(player, valueLine("edgejumpfwdairmin", PathWalker.CONFIG.edgeJumpForwardAirMin, 0.01, "/path walkconfig edgejumpfwdairmin", 0.0, 1.0));
+        sendMenuLine(player, valueLine("edgejumphold", PathWalker.CONFIG.edgeJumpHoldDistance, 0.1, "/path walkconfig edgejumphold", 0.0, Double.POSITIVE_INFINITY));
+        sendMenuLine(player, valueLine("edgejumptrigger", PathWalker.CONFIG.edgeJumpTriggerDistance, 0.1, "/path walkconfig edgejumptrigger", 0.0, Double.POSITIVE_INFINITY));
+        sendMenuLine(player, valueLineInt("alignhold", PathWalker.CONFIG.alignmentHoldMs, 50, "/path walkconfig alignhold", 0));
+        sendMenuLine(player, valueLine("aligndeadzone", PathWalker.CONFIG.alignmentDeadzoneDeg, 0.5, "/path walkconfig aligndeadzone", 0.0, Double.POSITIVE_INFINITY));
+        sendMenuLine(player, valueLine("walkturnmax", PathWalker.CONFIG.walkTurnMaxDeg, 2.0, "/path walkconfig walkturnmax", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLineInt("jumpcooldown", PathWalker.CONFIG.jumpCooldownTicks, 1, "/path walkconfig jumpcooldown", 0));
         sendMenuLine(player, rangeLine("pitchjitter", PathWalker.CONFIG.pitchJitterMinDeg, PathWalker.CONFIG.pitchJitterMaxDeg, 0.1, "/path walkconfig pitchjitter", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("jumpaimyaw", PathWalker.CONFIG.jumpAimYawMinDeg, PathWalker.CONFIG.jumpAimYawMaxDeg, 0.5, "/path walkconfig jumpaimyaw", 0.0, Double.POSITIVE_INFINITY));
@@ -544,8 +618,8 @@ public class PathCommands {
     private static Component button(String label, String command, String hover) {
         return Component.literal("[" + label + "]").withStyle(style ->
                 style.withColor(ChatFormatting.AQUA)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hover + " (" + command + ")")))
+                        .withClickEvent(new ClickEvent.RunCommand(command))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal(hover + " (" + command + ")")))
         );
     }
 
