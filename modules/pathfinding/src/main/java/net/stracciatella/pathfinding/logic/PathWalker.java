@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.gson.Gson;
@@ -34,14 +35,10 @@ public class PathWalker {
     private static double targetOffsetZ = 0.0;
     private static final double ARRIVAL_RADIUS = 0.18;
     private static final double BRAKE_RADIUS = 0.6;
-    private static final double JUMP_GRAVITY = 0.08;
-    private static final double JUMP_VERTICAL_DRAG = 0.98;
-    private static final double JUMP_AIR_DRAG = 0.91;
-    private static final double JUMP_BASE_VELOCITY = 0.42;
-    private static final double JUMP_SPRINT_BOOST = 0.2;
-    private static final double JUMP_AIR_ACCEL = 0.02;
+    private static final double ARRIVAL_MARGIN = 0.05;
     private static final double JUMP_FORWARD_AXIS_RATIO = 1.5;
     private static final int LEARN_MAX_GAP = 4;
+    private static final int JUMP_SIM_HOLD_TICKS = 2;
     private static float currentTurnSpeed = 0.0f;
     private static float turnSpeedTarget = 0.0f;
     private static long nextTurnRetargetMs = 0;
@@ -64,6 +61,9 @@ public class PathWalker {
     private static double lastLearnX = 0.0;
     private static double lastLearnZ = 0.0;
     private static final LearnStats[] learnStatsByGap = initLearnStats();
+    private static final CalibrationState CALIBRATION = new CalibrationState();
+    private static double lastDistance = -1.0;
+    private static int offCourseTicks = 0;
 
     public static void start(List<MeshNode> path) {
         if (path == null || path.isEmpty()) {
@@ -84,6 +84,8 @@ public class PathWalker {
         edgeThresholdInitialized = false;
         jumpAimOffsetInitialized = false;
         alignedUntilMs = 0;
+        lastDistance = -1.0;
+        offCourseTicks = 0;
         updateTargetOffset();
     }
 
@@ -147,6 +149,7 @@ public class PathWalker {
             LocalPlayer idlePlayer = client.player;
             if (idlePlayer != null) {
                 updateLearning(idlePlayer);
+                updateCalibration(client, idlePlayer);
             }
             return;
         }
@@ -155,6 +158,7 @@ public class PathWalker {
             return;
         }
         updateLearning(player);
+        updateCalibration(client, player);
         if (jumpCooldownTicks > 0) {
             jumpCooldownTicks--;
         }
@@ -179,7 +183,7 @@ public class PathWalker {
         double distanceSq = dx * dx + dz * dz;
         double distance = Math.sqrt(distanceSq);
         boolean sharpTurn = isSharpTurnAhead();
-        if (distanceSq <= ARRIVAL_RADIUS * ARRIVAL_RADIUS) {
+        if (hasReachedNode(player, target, distanceSq)) {
             boolean pause = false;
             if (index + 1 < currentPath.size()) {
                 int nextDy = currentPath.get(index + 1).getY() - target.getY();
@@ -196,6 +200,10 @@ public class PathWalker {
             if (pause) {
                 schedulePause();
             }
+            return;
+        }
+        if (shouldCancelOffCourse(distance, player, target)) {
+            stop();
             return;
         }
 
@@ -275,7 +283,12 @@ public class PathWalker {
             nextTurnRetargetMs = System.currentTimeMillis() + CONFIG.turnJitterMinMs;
         }
         boolean facing = isFacingTarget(newYaw, desiredYaw);
-        boolean jump = facing && jumpDecision.jump;
+        boolean jumpFacing = facing;
+        if (!jumpFacing && jumpDecision.jump && jumpDecision.gap > 1) {
+            float gapTolerance = CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg;
+            jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
+        }
+        boolean jump = jumpFacing && jumpDecision.jump;
         float moveThreshold = sharpTurn ? CONFIG.turnStopThresholdDeg : CONFIG.walkTurnThresholdDeg;
         long nowMs = System.currentTimeMillis();
         if (!flicking && angleDeltaAfter <= moveThreshold) {
@@ -305,7 +318,75 @@ public class PathWalker {
                 lastDebug.print(player, target, distance, angleDeltaAfter, canMoveForward, facing, jumpDecision);
             }
         }
+        if (debug) {
+            logFallDiagnostics(player, target, dy, distance, jumpDecision);
+            if (jumpDecision.jump && !jump) {
+                System.out.println(
+                        "[PathWalker] jump blocked: angleDelta=" + fmt(Math.abs(wrapDegrees(desiredYaw - newYaw)))
+                                + " facingTol=" + fmt(CONFIG.jumpFacingToleranceDeg)
+                                + " gapTol=" + fmt(CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg)
+                                + " gap=" + jumpDecision.gap
+                );
+            }
+        }
         applyMovement(client, canMoveForward, jump, sprint && canMoveForward);
+    }
+
+    private static void logFallDiagnostics(LocalPlayer player, MeshNode target, double dy, double distance, JumpDecision jumpDecision) {
+        Vec3 velocity = player.getDeltaMovement();
+        if (!player.onGround() && velocity.y < -0.08 && distance > 0.8) {
+            System.out.println(
+                    "[PathWalker] fall? velY=" + fmt(velocity.y)
+                            + " dy=" + fmt(dy)
+                            + " dist=" + fmt(distance)
+                            + " jump=" + jumpDecision.jump
+                            + " gap=" + jumpDecision.gap
+                            + " target=" + target.getBlockPos()
+            );
+        }
+    }
+
+    private static boolean hasReachedNode(LocalPlayer player, MeshNode target, double distanceSq) {
+        if (distanceSq <= ARRIVAL_RADIUS * ARRIVAL_RADIUS) {
+            return true;
+        }
+        double px = player.getX();
+        double pz = player.getZ();
+        double minX = target.getX() - ARRIVAL_MARGIN;
+        double maxX = target.getX() + 1.0 + ARRIVAL_MARGIN;
+        double minZ = target.getZ() - ARRIVAL_MARGIN;
+        double maxZ = target.getZ() + 1.0 + ARRIVAL_MARGIN;
+        if (px < minX || px > maxX || pz < minZ || pz > maxZ) {
+            return false;
+        }
+        double py = player.getY();
+        double minY = target.getY() - 0.25;
+        double maxY = target.getY() + 1.75;
+        return py >= minY && py <= maxY;
+    }
+
+    private static boolean shouldCancelOffCourse(double distance, LocalPlayer player, MeshNode target) {
+        if (distance > CONFIG.offCourseDistance) {
+            if (lastDistance >= 0.0 && distance > lastDistance - 0.01) {
+                offCourseTicks++;
+            } else {
+                offCourseTicks = Math.max(0, offCourseTicks - 1);
+            }
+        } else {
+            offCourseTicks = 0;
+        }
+        lastDistance = distance;
+        if (offCourseTicks >= CONFIG.offCourseTicks) {
+            if (debug) {
+                System.out.println(
+                        "[PathWalker] cancel: off course dist=" + fmt(distance)
+                                + " target=" + target.getBlockPos()
+                                + " pos=" + player.blockPosition()
+                );
+            }
+            return true;
+        }
+        return false;
     }
 
     private static void applyMovement(Minecraft client, boolean forward, boolean jump, boolean sprint) {
@@ -393,8 +474,9 @@ public class PathWalker {
             return new JumpDecision(false, gap, false);
         }
 
-        if ((forwardAir || dy > 0.6 || gap > 1) && shouldJumpByPhysics(player, target, sprint)) {
-            return new JumpDecision(true, gap, false);
+        JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
+        if (simDecision != null) {
+            return simDecision;
         }
 
         if (!edgeThresholdInitialized || currentGapForJump != gap) {
@@ -414,7 +496,9 @@ public class PathWalker {
             double edgeProgressDir = edgeProgressDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ());
             double edgeProgressAxis = axisBias ? edgeProgressAxis(player, stepX, stepZ) : edgeProgressAxisDiagonal(player, stepX, stepZ);
             double edgeProgress = Math.max(edgeProgressDir, edgeProgressAxis);
-            double edgeDistance = 0.5 - edgeProgress;
+            double edgeDistanceDir = 0.5 - edgeProgressDir;
+            double edgeDistanceAxis = 0.5 - edgeProgressAxis;
+            double edgeDistance = Math.min(edgeDistanceDir, edgeDistanceAxis);
             Vec3 velocity = player.getDeltaMovement();
             double projectedDir = projectedProgressDirectional(velocity, target.getX() - player.getX(), target.getZ() - player.getZ());
             double projectedAxis = axisBias
@@ -430,6 +514,8 @@ public class PathWalker {
             if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
                 System.out.println(
                         "[PathWalker] edgeDist=" + String.format("%.3f", edgeDistance)
+                                + " edgeAxis=" + String.format("%.3f", edgeDistanceAxis)
+                                + " edgeDir=" + String.format("%.3f", edgeDistanceDir)
                                 + " nextEdgeDist=" + String.format("%.3f", nextEdgeDistance)
                                 + " dynTrigger=" + String.format("%.3f", dynamicTrigger)
                                 + " dist=" + String.format("%.2f", distance)
@@ -437,23 +523,21 @@ public class PathWalker {
                                 + " gap=" + gap
                 );
             }
-            if (distance <= CONFIG.edgeJumpHoldDistance) {
-                if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) {
-                    return new JumpDecision(true, gap, false);
+            if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) {
+                return new JumpDecision(true, gap, false);
+            }
+            if (edgeDistance <= dynamicTrigger) {
+                return new JumpDecision(true, gap, false);
+            }
+            if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
+                return new JumpDecision(true, gap, false);
+            }
+            if (dy >= -0.2) {
+                if (edgeDistance <= CONFIG.edgeJumpHoldEdge) {
+                    return new JumpDecision(false, gap, true);
                 }
-                if (edgeDistance <= dynamicTrigger) {
-                    return new JumpDecision(true, gap, false);
-                }
-                if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
-                    return new JumpDecision(true, gap, false);
-                }
-                if (dy >= -0.2) {
-                    if (edgeDistance <= CONFIG.edgeJumpHoldEdge) {
-                        return new JumpDecision(false, gap, true);
-                    }
-                    if (nextEdgeDistance <= CONFIG.edgeJumpHoldEdge) {
-                        return new JumpDecision(false, gap, true);
-                    }
+                if (nextEdgeDistance <= CONFIG.edgeJumpHoldEdge) {
+                    return new JumpDecision(false, gap, true);
                 }
             }
         }
@@ -480,7 +564,19 @@ public class PathWalker {
         return new JumpDecision(true, gap, false);
     }
 
-    private static boolean shouldJumpByPhysics(LocalPlayer player, MeshNode target, boolean sprint) {
+    private static JumpDecision decideJumpBySimulation(LocalPlayer player, MeshNode target, boolean sprint, int gap) {
+        SimulationResult now = simulateJumpLanding(player, target, sprint, 0);
+        if (now.lands) {
+            return new JumpDecision(true, gap, false);
+        }
+        SimulationResult later = simulateJumpLanding(player, target, sprint, JUMP_SIM_HOLD_TICKS);
+        if (later.lands) {
+            return new JumpDecision(false, gap, true);
+        }
+        return null;
+    }
+
+    private static SimulationResult simulateJumpLanding(LocalPlayer player, MeshNode target, boolean sprint, int preTicks) {
         double targetX = target.getX();
         double targetZ = target.getZ();
         double targetY = target.getY() + 1.0;
@@ -490,29 +586,41 @@ public class PathWalker {
         double dirZ = centerZ - player.getZ();
         double len = Math.sqrt(dirX * dirX + dirZ * dirZ);
         if (len < 1.0e-6) {
-            return false;
+            return new SimulationResult(false);
         }
         dirX /= len;
         dirZ /= len;
 
+        PhysicsSnapshot physics = PhysicsSnapshot.from(player, sprint);
         Vec3 velocity = player.getDeltaMovement();
-        double jumpVelocity = JUMP_BASE_VELOCITY + getJumpBoost(player);
         double velX = velocity.x;
-        double velY = jumpVelocity;
+        double velY = velocity.y;
         double velZ = velocity.z;
-        if (sprint) {
-            velX += dirX * JUMP_SPRINT_BOOST;
-            velZ += dirZ * JUMP_SPRINT_BOOST;
-        }
-
-        double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        if (sprint && !player.isSprinting()) {
-            speed *= 1.3;
-        }
-        double airAccel = speed * JUMP_AIR_ACCEL;
         double posX = player.getX();
         double posY = player.getY();
         double posZ = player.getZ();
+
+        if (preTicks > 0) {
+            for (int i = 0; i < preTicks; i++) {
+                double forward = velX * dirX + velZ * dirZ;
+                double sideX = velX - forward * dirX;
+                double sideZ = velZ - forward * dirZ;
+                forward = moveToward(forward, physics.maxSpeed, physics.groundAccel);
+                velX = sideX + forward * dirX;
+                velZ = sideZ + forward * dirZ;
+                velY = 0.0;
+                posX += velX;
+                posZ += velZ;
+            }
+        }
+
+        double jumpVelocity = physics.jumpVelocity + getJumpBoost(player);
+        velY = jumpVelocity;
+        if (sprint) {
+            velX += dirX * physics.sprintJumpBoost;
+            velZ += dirZ * physics.sprintJumpBoost;
+        }
+
         double minX = targetX - CONFIG.jumpLandingMargin;
         double maxX = targetX + 1.0 + CONFIG.jumpLandingMargin;
         double minZ = targetZ - CONFIG.jumpLandingMargin;
@@ -520,11 +628,11 @@ public class PathWalker {
         double prevY = posY;
 
         for (int tick = 0; tick < CONFIG.jumpSimTicks; tick++) {
-            velX += dirX * airAccel;
-            velZ += dirZ * airAccel;
-            velX *= JUMP_AIR_DRAG;
-            velY = (velY - JUMP_GRAVITY) * JUMP_VERTICAL_DRAG;
-            velZ *= JUMP_AIR_DRAG;
+            velX += dirX * physics.airAccel;
+            velZ += dirZ * physics.airAccel;
+            velX *= physics.airDrag;
+            velY = (velY - physics.gravity) * physics.verticalDrag;
+            velZ *= physics.airDrag;
 
             posX += velX;
             posY += velY;
@@ -533,15 +641,26 @@ public class PathWalker {
             boolean withinXZ = posX >= minX && posX <= maxX && posZ >= minZ && posZ <= maxZ;
             boolean crossesY = (prevY <= targetY && posY >= targetY) || (prevY >= targetY && posY <= targetY);
             if (withinXZ && crossesY) {
-                return true;
+                return new SimulationResult(true);
             }
             if (posY < targetY - 1.6 && velY < 0.0) {
-                return false;
+                return new SimulationResult(false);
             }
             prevY = posY;
         }
 
-        return false;
+        return new SimulationResult(false);
+    }
+
+    private static double moveToward(double value, double target, double step) {
+        if (step <= 0.0) {
+            return value;
+        }
+        double delta = target - value;
+        if (Math.abs(delta) <= step) {
+            return target;
+        }
+        return value + Math.copySign(step, delta);
     }
 
     private static double getJumpBoost(LocalPlayer player) {
@@ -696,6 +815,32 @@ public class PathWalker {
         }
     }
 
+    public static void startCalibration() {
+        CALIBRATION.start();
+    }
+
+    public static CalibrationReport stopCalibration() {
+        return CALIBRATION.stopAndApply();
+    }
+
+    public static boolean isCalibrationActive() {
+        return CALIBRATION.enabled;
+    }
+
+    public static String getCalibrationSummary() {
+        return CALIBRATION.summary();
+    }
+
+    private static void updateCalibration(Minecraft client, LocalPlayer player) {
+        if (!CALIBRATION.enabled) {
+            return;
+        }
+        if (active) {
+            return;
+        }
+        CALIBRATION.update(client, player);
+    }
+
     private static boolean isAtEdge(LocalPlayer player, int stepX, int stepZ, double threshold) {
         double fracX = player.getX() - Math.floor(player.getX());
         double fracZ = player.getZ() - Math.floor(player.getZ());
@@ -705,17 +850,7 @@ public class PathWalker {
     }
 
     private static boolean isAtEdgeDirectional(LocalPlayer player, double dirX, double dirZ, double threshold) {
-        double len = Math.sqrt(dirX * dirX + dirZ * dirZ);
-        if (len == 0.0) {
-            return false;
-        }
-        double ux = dirX / len;
-        double uz = dirZ / len;
-        double centerX = Math.floor(player.getX()) + 0.5;
-        double centerZ = Math.floor(player.getZ()) + 0.5;
-        double localX = player.getX() - centerX;
-        double localZ = player.getZ() - centerZ;
-        double progress = localX * ux + localZ * uz;
+        double progress = edgeProgressDirectional(player, dirX, dirZ);
         double required = 0.5 * threshold;
         return progress >= required;
     }
@@ -727,11 +862,16 @@ public class PathWalker {
         }
         double ux = dirX / len;
         double uz = dirZ / len;
+        double totalDist = directionalEdgeDistance(ux, uz);
+        if (totalDist <= 1.0e-6) {
+            return 0.0;
+        }
         double centerX = Math.floor(player.getX()) + 0.5;
         double centerZ = Math.floor(player.getZ()) + 0.5;
         double localX = player.getX() - centerX;
         double localZ = player.getZ() - centerZ;
-        return localX * ux + localZ * uz;
+        double progress = localX * ux + localZ * uz;
+        return progress * (0.5 / totalDist);
     }
 
     private static double projectedProgressDirectional(Vec3 velocity, double dirX, double dirZ) {
@@ -741,7 +881,19 @@ public class PathWalker {
         }
         double ux = dirX / len;
         double uz = dirZ / len;
-        return velocity.x * ux + velocity.z * uz;
+        double totalDist = directionalEdgeDistance(ux, uz);
+        if (totalDist <= 1.0e-6) {
+            return 0.0;
+        }
+        return (velocity.x * ux + velocity.z * uz) * (0.5 / totalDist);
+    }
+
+    private static double directionalEdgeDistance(double ux, double uz) {
+        double absUx = Math.abs(ux);
+        double absUz = Math.abs(uz);
+        double edgeX = absUx > 1.0e-6 ? 0.5 / absUx : Double.POSITIVE_INFINITY;
+        double edgeZ = absUz > 1.0e-6 ? 0.5 / absUz : Double.POSITIVE_INFINITY;
+        return Math.min(edgeX, edgeZ);
     }
 
     private static double edgeProgressAxis(LocalPlayer player, int stepX, int stepZ) {
@@ -955,6 +1107,13 @@ public class PathWalker {
         return ThreadLocalRandom.current().nextInt(min, max + 1);
     }
 
+    private static double forwardSpeed(Vec3 velocity, float yawDeg) {
+        double yawRad = Math.toRadians(yawDeg);
+        double dirX = -Math.sin(yawRad);
+        double dirZ = Math.cos(yawRad);
+        return velocity.x * dirX + velocity.z * dirZ;
+    }
+
     private static double clamp(double value, double min, double max) {
         if (value < min) {
             return min;
@@ -963,6 +1122,10 @@ public class PathWalker {
             return max;
         }
         return value;
+    }
+
+    private static String fmt(double value) {
+        return String.format(Locale.US, "%.3f", value);
     }
 
     private static void schedulePause() {
@@ -1172,6 +1335,7 @@ public class PathWalker {
         public int turnJitterMinMs = 120;
         public int turnJitterMaxMs = 260;
         public float jumpFacingToleranceDeg = 18.0f;
+        public float jumpFacingExtraGapDeg = 18.0f;
         public float walkTurnThresholdDeg = 25.0f;
         public float flickTriggerDeg = 70.0f;
         public float flickOvershootMinDeg = 5.0f;
@@ -1215,6 +1379,19 @@ public class PathWalker {
         public int alignmentHoldMs = 250;
         public float alignmentDeadzoneDeg = 2.5f;
         public float walkTurnMaxDeg = 60.0f;
+        public double offCourseDistance = 3.5;
+        public int offCourseTicks = 10;
+        public boolean physicsCalibrated = false;
+        public double physicsGravity = 0.08;
+        public double physicsVerticalDrag = 0.98;
+        public double physicsAirDrag = 0.91;
+        public double physicsJumpVelocity = 0.42;
+        public double physicsSprintJumpBoost = 0.2;
+        public double physicsAirAccelFactor = 0.02;
+        public double physicsMaxWalkSpeedFactor = 1.0;
+        public double physicsMaxSprintSpeedFactor = 1.3;
+        public double physicsGroundAccelFactorWalk = 1.0;
+        public double physicsGroundAccelFactorSprint = 1.3;
 
         public void applyFrom(Config other) {
             debugEnabled = other.debugEnabled;
@@ -1224,6 +1401,7 @@ public class PathWalker {
             turnJitterMinMs = other.turnJitterMinMs;
             turnJitterMaxMs = other.turnJitterMaxMs;
             jumpFacingToleranceDeg = other.jumpFacingToleranceDeg;
+            jumpFacingExtraGapDeg = other.jumpFacingExtraGapDeg;
             walkTurnThresholdDeg = other.walkTurnThresholdDeg;
             flickTriggerDeg = other.flickTriggerDeg;
             flickOvershootMinDeg = other.flickOvershootMinDeg;
@@ -1267,6 +1445,19 @@ public class PathWalker {
             alignmentHoldMs = other.alignmentHoldMs;
             alignmentDeadzoneDeg = other.alignmentDeadzoneDeg;
             walkTurnMaxDeg = other.walkTurnMaxDeg;
+            offCourseDistance = other.offCourseDistance;
+            offCourseTicks = other.offCourseTicks;
+            physicsCalibrated = other.physicsCalibrated;
+            physicsGravity = other.physicsGravity;
+            physicsVerticalDrag = other.physicsVerticalDrag;
+            physicsAirDrag = other.physicsAirDrag;
+            physicsJumpVelocity = other.physicsJumpVelocity;
+            physicsSprintJumpBoost = other.physicsSprintJumpBoost;
+            physicsAirAccelFactor = other.physicsAirAccelFactor;
+            physicsMaxWalkSpeedFactor = other.physicsMaxWalkSpeedFactor;
+            physicsMaxSprintSpeedFactor = other.physicsMaxSprintSpeedFactor;
+            physicsGroundAccelFactorWalk = other.physicsGroundAccelFactorWalk;
+            physicsGroundAccelFactorSprint = other.physicsGroundAccelFactorSprint;
         }
 
         public void normalize() {
@@ -1291,6 +1482,15 @@ public class PathWalker {
             if (alignmentDeadzoneDeg < 0.0f) {
                 alignmentDeadzoneDeg = 0.0f;
             }
+            if (jumpFacingExtraGapDeg < 0.0f) {
+                jumpFacingExtraGapDeg = 0.0f;
+            }
+            if (offCourseDistance <= 0.0) {
+                offCourseDistance = 3.5;
+            }
+            if (offCourseTicks <= 0) {
+                offCourseTicks = 10;
+            }
             edgeJumpHoldEdge = clamp(edgeJumpHoldEdge, 0.0, 0.5);
             edgeJumpTriggerEdge = clamp(edgeJumpTriggerEdge, 0.0, 0.5);
             if (jumpSimTicks < 5) {
@@ -1299,10 +1499,68 @@ public class PathWalker {
             if (jumpLandingMargin < 0.0) {
                 jumpLandingMargin = 0.0;
             }
+            if (physicsGravity <= 0.0) {
+                physicsGravity = 0.08;
+            }
+            physicsVerticalDrag = clamp(physicsVerticalDrag, 0.5, 0.999);
+            physicsAirDrag = clamp(physicsAirDrag, 0.5, 0.999);
+            if (physicsJumpVelocity <= 0.0) {
+                physicsJumpVelocity = 0.42;
+            }
+            if (physicsSprintJumpBoost < 0.0) {
+                physicsSprintJumpBoost = 0.2;
+            }
+            if (physicsAirAccelFactor <= 0.0) {
+                physicsAirAccelFactor = 0.02;
+            }
+            if (physicsMaxWalkSpeedFactor <= 0.0) {
+                physicsMaxWalkSpeedFactor = 1.0;
+            }
+            if (physicsMaxSprintSpeedFactor <= 0.0) {
+                physicsMaxSprintSpeedFactor = 1.3;
+            }
+            if (physicsGroundAccelFactorWalk <= 0.0) {
+                physicsGroundAccelFactorWalk = 1.0;
+            }
+            if (physicsGroundAccelFactorSprint <= 0.0) {
+                physicsGroundAccelFactorSprint = 1.3;
+            }
         }
     }
 
     private record JumpDecision(boolean jump, int gap, boolean holdBeforeJump) {}
+
+    private record SimulationResult(boolean lands) {}
+
+    private record PhysicsSnapshot(
+            double gravity,
+            double verticalDrag,
+            double airDrag,
+            double jumpVelocity,
+            double sprintJumpBoost,
+            double airAccel,
+            double maxSpeed,
+            double groundAccel
+    ) {
+        static PhysicsSnapshot from(LocalPlayer player, boolean sprint) {
+            double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            double maxWalk = speed * CONFIG.physicsMaxWalkSpeedFactor;
+            double maxSprint = speed * CONFIG.physicsMaxSprintSpeedFactor;
+            double maxSpeed = sprint ? maxSprint : maxWalk;
+            double airAccel = speed * CONFIG.physicsAirAccelFactor;
+            double groundAccel = speed * (sprint ? CONFIG.physicsGroundAccelFactorSprint : CONFIG.physicsGroundAccelFactorWalk);
+            return new PhysicsSnapshot(
+                    CONFIG.physicsGravity,
+                    CONFIG.physicsVerticalDrag,
+                    CONFIG.physicsAirDrag,
+                    CONFIG.physicsJumpVelocity,
+                    CONFIG.physicsSprintJumpBoost,
+                    airAccel,
+                    maxSpeed,
+                    groundAccel
+            );
+        }
+    }
 
     private record LearnSample(int gap, double threshold) {}
 
@@ -1330,6 +1588,264 @@ public class PathWalker {
             count = 0;
             mean = 0.0;
             m2 = 0.0;
+        }
+    }
+
+    public record CalibrationReport(boolean applied, String summary) {}
+
+    private static class RunningMean {
+        int count;
+        double mean;
+
+        void add(double value) {
+            count++;
+            double delta = value - mean;
+            mean += delta / count;
+        }
+    }
+
+    private static class Regression {
+        int count;
+        double sumX;
+        double sumY;
+        double sumXX;
+        double sumXY;
+
+        void add(double x, double y) {
+            count++;
+            sumX += x;
+            sumY += y;
+            sumXX += x * x;
+            sumXY += x * y;
+        }
+
+        double meanX() {
+            return count == 0 ? 0.0 : sumX / count;
+        }
+
+        double meanY() {
+            return count == 0 ? 0.0 : sumY / count;
+        }
+
+        double slope() {
+            double denom = count * sumXX - sumX * sumX;
+            if (count < 2 || Math.abs(denom) < 1.0e-9) {
+                return 0.0;
+            }
+            return (count * sumXY - sumX * sumY) / denom;
+        }
+
+        double intercept() {
+            if (count == 0) {
+                return 0.0;
+            }
+            return meanY() - slope() * meanX();
+        }
+    }
+
+    private static class CalibrationState {
+        private static final int MIN_AIR_SAMPLES = 10;
+        private static final int MIN_JUMP_SAMPLES = 3;
+
+        boolean enabled;
+        private boolean initialized;
+        private boolean lastOnGround;
+        private boolean lastForwardDown;
+        private boolean lastSprintDown;
+        private float lastYaw;
+        private double lastVy;
+        private double lastForwardSpeed;
+
+        private final Regression verticalReg = new Regression();
+        private final Regression airNoInputReg = new Regression();
+        private final Regression airInputReg = new Regression();
+        private final RunningMean jumpVelocity = new RunningMean();
+        private final RunningMean groundAccelWalk = new RunningMean();
+        private final RunningMean groundAccelSprint = new RunningMean();
+        private final RunningMean speedWalk = new RunningMean();
+        private final RunningMean speedSprint = new RunningMean();
+        private final RunningMean speedAir = new RunningMean();
+        private double maxWalkSpeed;
+        private double maxSprintSpeed;
+
+        void start() {
+            enabled = true;
+            initialized = false;
+            lastOnGround = false;
+            lastForwardDown = false;
+            lastSprintDown = false;
+            lastYaw = 0.0f;
+            lastVy = 0.0;
+            lastForwardSpeed = 0.0;
+            verticalReg.count = 0;
+            verticalReg.sumX = 0.0;
+            verticalReg.sumY = 0.0;
+            verticalReg.sumXX = 0.0;
+            verticalReg.sumXY = 0.0;
+            airNoInputReg.count = 0;
+            airNoInputReg.sumX = 0.0;
+            airNoInputReg.sumY = 0.0;
+            airNoInputReg.sumXX = 0.0;
+            airNoInputReg.sumXY = 0.0;
+            airInputReg.count = 0;
+            airInputReg.sumX = 0.0;
+            airInputReg.sumY = 0.0;
+            airInputReg.sumXX = 0.0;
+            airInputReg.sumXY = 0.0;
+            jumpVelocity.count = 0;
+            jumpVelocity.mean = 0.0;
+            groundAccelWalk.count = 0;
+            groundAccelWalk.mean = 0.0;
+            groundAccelSprint.count = 0;
+            groundAccelSprint.mean = 0.0;
+            speedWalk.count = 0;
+            speedWalk.mean = 0.0;
+            speedSprint.count = 0;
+            speedSprint.mean = 0.0;
+            speedAir.count = 0;
+            speedAir.mean = 0.0;
+            maxWalkSpeed = 0.0;
+            maxSprintSpeed = 0.0;
+        }
+
+        CalibrationReport stopAndApply() {
+            enabled = false;
+            boolean applied = applyToConfig();
+            return new CalibrationReport(applied, summary());
+        }
+
+        void update(Minecraft client, LocalPlayer player) {
+            Options options = client.options;
+            boolean forwardDown = options.keyUp.isDown();
+            boolean sprintDown = options.keySprint.isDown();
+            boolean onGround = player.onGround();
+            float yaw = player.getYRot();
+            Vec3 velocity = player.getDeltaMovement();
+            double movementSpeed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            double forwardSpeed = forwardSpeed(velocity, yaw);
+
+            if (onGround && forwardDown && forwardSpeed >= 0.0) {
+                if (sprintDown) {
+                    maxSprintSpeed = Math.max(maxSprintSpeed, forwardSpeed);
+                    speedSprint.add(movementSpeed);
+                } else {
+                    maxWalkSpeed = Math.max(maxWalkSpeed, forwardSpeed);
+                    speedWalk.add(movementSpeed);
+                }
+            }
+
+            if (initialized) {
+                if (lastOnGround && !onGround && velocity.y > 0.0) {
+                    jumpVelocity.add(velocity.y);
+                }
+                boolean yawStable = Math.abs(wrapDegrees(yaw - lastYaw)) <= 5.0f;
+                if (!onGround && yawStable && forwardSpeed >= 0.0 && lastForwardSpeed >= 0.0) {
+                    if (lastForwardDown && forwardDown) {
+                        airInputReg.add(lastForwardSpeed, forwardSpeed);
+                        speedAir.add(movementSpeed);
+                    } else if (!forwardDown) {
+                        airNoInputReg.add(lastForwardSpeed, forwardSpeed);
+                        speedAir.add(movementSpeed);
+                    }
+                }
+                if (lastOnGround && onGround && lastForwardDown && forwardDown) {
+                    double accel = forwardSpeed - lastForwardSpeed;
+                    if (accel > 0.0) {
+                        if (sprintDown) {
+                            groundAccelSprint.add(accel);
+                        } else {
+                            groundAccelWalk.add(accel);
+                        }
+                    }
+                }
+                if (!lastOnGround && !onGround) {
+                    verticalReg.add(lastVy, velocity.y);
+                }
+            }
+
+            initialized = true;
+            lastOnGround = onGround;
+            lastForwardDown = forwardDown;
+            lastSprintDown = sprintDown;
+            lastYaw = yaw;
+            lastVy = velocity.y;
+            lastForwardSpeed = forwardSpeed;
+        }
+
+        boolean applyToConfig() {
+            boolean updated = false;
+            double airDrag = estimateAirDrag();
+            if (airDrag > 0.0 && airDrag < 1.0) {
+                CONFIG.physicsAirDrag = airDrag;
+                updated = true;
+            }
+            if (verticalReg.count >= MIN_AIR_SAMPLES) {
+                double verticalDrag = clamp(verticalReg.slope(), 0.5, 0.999);
+                double gravity = 0.0;
+                if (verticalDrag > 0.0) {
+                    gravity = -verticalReg.intercept() / verticalDrag;
+                }
+                if (gravity > 0.0) {
+                    CONFIG.physicsGravity = clamp(gravity, 0.01, 0.2);
+                    CONFIG.physicsVerticalDrag = verticalDrag;
+                    updated = true;
+                }
+            }
+            if (jumpVelocity.count >= MIN_JUMP_SAMPLES) {
+                CONFIG.physicsJumpVelocity = clamp(jumpVelocity.mean, 0.2, 0.8);
+                updated = true;
+            }
+
+            if (airInputReg.count >= MIN_AIR_SAMPLES && airDrag > 0.0) {
+                double accel = airInputReg.meanY() / airDrag - airInputReg.meanX();
+                double speedBase = speedAir.count > 0 ? speedAir.mean : 0.0;
+                if (speedBase > 0.0) {
+                    CONFIG.physicsAirAccelFactor = clamp(accel / speedBase, 0.001, 0.2);
+                    updated = true;
+                }
+            }
+
+            if (maxWalkSpeed > 0.0 && speedWalk.count > 0) {
+                CONFIG.physicsMaxWalkSpeedFactor = clamp(maxWalkSpeed / speedWalk.mean, 0.2, 4.0);
+                updated = true;
+            }
+            if (maxSprintSpeed > 0.0 && speedSprint.count > 0) {
+                CONFIG.physicsMaxSprintSpeedFactor = clamp(maxSprintSpeed / speedSprint.mean, 0.2, 5.0);
+                updated = true;
+            }
+
+            if (groundAccelWalk.count > 0 && speedWalk.count > 0) {
+                CONFIG.physicsGroundAccelFactorWalk = clamp(groundAccelWalk.mean / speedWalk.mean, 0.001, 4.0);
+                updated = true;
+            }
+            if (groundAccelSprint.count > 0 && speedSprint.count > 0) {
+                CONFIG.physicsGroundAccelFactorSprint = clamp(groundAccelSprint.mean / speedSprint.mean, 0.001, 5.0);
+                updated = true;
+            }
+
+            CONFIG.physicsCalibrated = updated;
+            if (updated) {
+                saveConfig();
+            }
+            return updated;
+        }
+
+        double estimateAirDrag() {
+            Regression reg = airNoInputReg.count >= MIN_AIR_SAMPLES ? airNoInputReg : airInputReg;
+            if (reg.count < MIN_AIR_SAMPLES) {
+                return CONFIG.physicsAirDrag;
+            }
+            return reg.slope();
+        }
+
+        String summary() {
+            return "airSamples=" + verticalReg.count
+                    + " jumpSamples=" + jumpVelocity.count
+                    + " airInput=" + airInputReg.count
+                    + " airNoInput=" + airNoInputReg.count
+                    + " maxWalk=" + fmt(maxWalkSpeed)
+                    + " maxSprint=" + fmt(maxSprintSpeed)
+                    + " calibrated=" + CONFIG.physicsCalibrated;
         }
     }
 

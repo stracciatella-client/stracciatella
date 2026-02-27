@@ -189,6 +189,26 @@ public class PathCommands {
                             context.getSource().sendFeedback(Component.literal("Path walker learning disabled"));
                             return 1;
                         })))
+                .then(literal("walkcalibrate")
+                        .then(literal("start").executes(context -> {
+                            PathWalker.startCalibration();
+                            context.getSource().sendFeedback(Component.literal("Path walker calibration started"));
+                            return 1;
+                        }))
+                        .then(literal("stop").executes(context -> {
+                            PathWalker.CalibrationReport report = PathWalker.stopCalibration();
+                            if (report.applied()) {
+                                context.getSource().sendFeedback(Component.literal("Calibration applied: " + report.summary()));
+                            } else {
+                                context.getSource().sendFeedback(Component.literal("Calibration incomplete: " + report.summary()));
+                            }
+                            return 1;
+                        }))
+                        .then(literal("status").executes(context -> {
+                            String status = PathWalker.isCalibrationActive() ? "active" : "inactive";
+                            context.getSource().sendFeedback(Component.literal("Calibration " + status + ": " + PathWalker.getCalibrationSummary()));
+                            return 1;
+                        })))
                 .then(literal("walkconfig")
                         .then(literal("menu").executes(context -> {
                             sendWalkConfigMenu(context.getSource().getPlayer());
