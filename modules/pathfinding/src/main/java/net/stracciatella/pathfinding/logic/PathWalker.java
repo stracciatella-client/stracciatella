@@ -353,19 +353,33 @@ public class PathWalker {
         int dx = Math.abs(target.getX() - playerX);
         int dz = Math.abs(target.getZ() - playerZ);
         int gap = Math.max(dx, dz);
+        lastDebug.gap = gap;
+        lastDebug.dy = dy;
         if (gap == 0 || (stepX == 0 && stepZ == 0)) {
+            lastDebug.forwardAir = false;
+            lastDebug.landingSolid = false;
+            lastDebug.edgeThreshold = 0.0;
             return new JumpDecision(false, gap, false);
         }
         BlockPos aheadBelow = new BlockPos(playerX + stepX, (int) Math.floor(player.getY()) - 1, playerZ + stepZ);
         boolean forwardAir = player.level().getBlockState(aheadBelow).isAir();
+        if (gap > 1) {
+            forwardAir = false;
+            int baseY = (int) Math.floor(player.getY()) - 1;
+            for (int i = 1; i <= gap; i++) {
+                BlockPos scan = new BlockPos(playerX + stepX * i, baseY, playerZ + stepZ * i);
+                if (player.level().getBlockState(scan).isAir()) {
+                    forwardAir = true;
+                    break;
+                }
+            }
+        }
 
         BlockPos landingBlock = new BlockPos(target.getX(), target.getY(), target.getZ());
         boolean landingSolid = !player.level().getBlockState(landingBlock).isAir();
 
         lastDebug.forwardAir = forwardAir;
         lastDebug.landingSolid = landingSolid;
-        lastDebug.gap = gap;
-        lastDebug.dy = dy;
 
         if (!landingSolid) {
             return new JumpDecision(false, gap, false);
@@ -397,15 +411,50 @@ public class PathWalker {
 
         if (gap > 1 && forwardAir) {
             boolean axisBias = (stepX == 0) ^ (stepZ == 0);
-            double edgeProgress = axisBias
-                    ? edgeProgressAxis(player, stepX, stepZ)
-                    : edgeProgressDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ());
+            double edgeProgressDir = edgeProgressDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ());
+            double edgeProgressAxis = axisBias ? edgeProgressAxis(player, stepX, stepZ) : edgeProgressAxisDiagonal(player, stepX, stepZ);
+            double edgeProgress = Math.max(edgeProgressDir, edgeProgressAxis);
             double edgeDistance = 0.5 - edgeProgress;
-            if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) {
-                return new JumpDecision(true, gap, false);
+            Vec3 velocity = player.getDeltaMovement();
+            double projectedDir = projectedProgressDirectional(velocity, target.getX() - player.getX(), target.getZ() - player.getZ());
+            double projectedAxis = axisBias
+                    ? (stepX != 0 ? velocity.x * Math.signum(stepX) : velocity.z * Math.signum(stepZ))
+                    : projectedProgressAxisDiagonal(velocity, stepX, stepZ);
+            double nextProgress = Math.max(edgeProgressDir + projectedDir, edgeProgressAxis + projectedAxis);
+            double nextEdgeDistance = 0.5 - nextProgress;
+            double projectedForward = Math.max(projectedDir, projectedAxis);
+            double dynamicTrigger = CONFIG.edgeJumpTriggerEdge;
+            if (projectedForward > 0.0) {
+                dynamicTrigger = Math.max(dynamicTrigger, Math.min(0.25, projectedForward * 1.5));
             }
-            if (edgeDistance <= CONFIG.edgeJumpHoldEdge) {
-                return new JumpDecision(false, gap, true);
+            if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
+                System.out.println(
+                        "[PathWalker] edgeDist=" + String.format("%.3f", edgeDistance)
+                                + " nextEdgeDist=" + String.format("%.3f", nextEdgeDistance)
+                                + " dynTrigger=" + String.format("%.3f", dynamicTrigger)
+                                + " dist=" + String.format("%.2f", distance)
+                                + " dy=" + String.format("%.2f", dy)
+                                + " gap=" + gap
+                );
+            }
+            if (distance <= CONFIG.edgeJumpHoldDistance) {
+                if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) {
+                    return new JumpDecision(true, gap, false);
+                }
+                if (edgeDistance <= dynamicTrigger) {
+                    return new JumpDecision(true, gap, false);
+                }
+                if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
+                    return new JumpDecision(true, gap, false);
+                }
+                if (dy >= -0.2) {
+                    if (edgeDistance <= CONFIG.edgeJumpHoldEdge) {
+                        return new JumpDecision(false, gap, true);
+                    }
+                    if (nextEdgeDistance <= CONFIG.edgeJumpHoldEdge) {
+                        return new JumpDecision(false, gap, true);
+                    }
+                }
             }
         }
         if (gap > 1 && forwardAir && distance <= CONFIG.edgeJumpTriggerDistance) {
@@ -685,6 +734,16 @@ public class PathWalker {
         return localX * ux + localZ * uz;
     }
 
+    private static double projectedProgressDirectional(Vec3 velocity, double dirX, double dirZ) {
+        double len = Math.sqrt(dirX * dirX + dirZ * dirZ);
+        if (len == 0.0) {
+            return 0.0;
+        }
+        double ux = dirX / len;
+        double uz = dirZ / len;
+        return velocity.x * ux + velocity.z * uz;
+    }
+
     private static double edgeProgressAxis(LocalPlayer player, int stepX, int stepZ) {
         double centerX = Math.floor(player.getX()) + 0.5;
         double centerZ = Math.floor(player.getZ()) + 0.5;
@@ -697,6 +756,22 @@ public class PathWalker {
             return localZ * Math.signum(stepZ);
         }
         return 0.0;
+    }
+
+    private static double edgeProgressAxisDiagonal(LocalPlayer player, int stepX, int stepZ) {
+        double centerX = Math.floor(player.getX()) + 0.5;
+        double centerZ = Math.floor(player.getZ()) + 0.5;
+        double localX = player.getX() - centerX;
+        double localZ = player.getZ() - centerZ;
+        double progressX = localX * Math.signum(stepX);
+        double progressZ = localZ * Math.signum(stepZ);
+        return Math.max(progressX, progressZ);
+    }
+
+    private static double projectedProgressAxisDiagonal(Vec3 velocity, int stepX, int stepZ) {
+        double progressX = velocity.x * Math.signum(stepX);
+        double progressZ = velocity.z * Math.signum(stepZ);
+        return Math.max(progressX, progressZ);
     }
 
     private static double edgeThresholdForGap(int gap, boolean sprint) {
