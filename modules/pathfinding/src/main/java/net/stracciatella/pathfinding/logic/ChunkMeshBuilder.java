@@ -75,6 +75,7 @@ public class ChunkMeshBuilder {
 
 
         int[][] cardinalDirections = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+        int[][] diagonalDirections = {{1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1}};
 
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
@@ -122,6 +123,49 @@ public class ChunkMeshBuilder {
                 }
             }
 
+            // add all diagonal neighbors
+            for (int[] diagonalDirection : diagonalDirections) {
+
+                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
+
+                for (int i = 0; i < 5; i++) {
+                    targetPos.move(diagonalDirection[0], diagonalDirection[1], diagonalDirection[2]);
+
+                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 2));
+                        break;
+                    } else if (nodeMap.containsKey(targetPos)) {
+                        break;
+                    }
+                }
+
+                // check for all diagonal neighbors on y+1
+                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
+                for (int i = 0; i < 3; i++) {
+                    targetPos.move(diagonalDirection[0], diagonalDirection[1], diagonalDirection[2]);
+
+                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 2));
+                        break;
+                    } else if (nodeMap.containsKey(targetPos)) {
+                        break;
+                    }
+                }
+
+                // temporary fix so we can only drop down 1 block at a time todo extend this logic
+                targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
+                for (int i = 0; i < 5; i++) {
+                    targetPos.move(diagonalDirection[0], diagonalDirection[1], diagonalDirection[2]);
+
+                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                        neighbors.add(new Neighbor(nodeMap.get(targetPos), 2));
+                        break;
+                    } else if (nodeMap.containsKey(targetPos)) {
+                        break;
+                    }
+                }
+            }
+
             node.setNeighbors(neighbors);
         }
 
@@ -149,45 +193,83 @@ public class ChunkMeshBuilder {
                     BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
                     boolean countUp = source.getZ() < target.getZ();
                     while (pos.getZ() != target.getZ()) {
-                        // check all 3 blocks above to see if they are air
-                        for (int i = 0; i < 3; i++) {
-                            pos.move(0, 1, 0);
-                            if (!chunk.getBlockState(pos).isAir()) {
-                                return false;
-                            }
+                        if (!isColumnClear(chunk, pos)) {
+                            return false;
                         }
                         if (countUp) {
-                            pos.move(0, -3, 1);
+                            pos.move(0, 0, 1);
                         } else {
-                            pos.move(0, -3, -1);
+                            pos.move(0, 0, -1);
                         }
                     }
                 } else {
                     BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
                     boolean countUp = source.getX() < target.getX();
                     while (pos.getX() != target.getX()) {
-                        // check all 3 blocks above to see if they are air
-                        for (int i = 0; i < 3; i++) {
-                            pos.move(0, 1, 0);
-                            if (!chunk.getBlockState(pos).isAir()) {
-                                return false;
-                            }
+                        if (!isColumnClear(chunk, pos)) {
+                            return false;
                         }
                         if (countUp) {
-                            pos.move(1, -3, 0);
+                            pos.move(1, 0, 0);
                         } else {
-                            pos.move(-1, -3, 0);
+                            pos.move(-1, 0, 0);
                         }
                     }
                 }
 
             } else {
-                // todo
-                // check for all relevant block on the line
+                if (!isDiagonalReachable(chunk, source, target)) {
+                    return false;
+                }
             }
 
         }
         // return chunk.getBlockState(pos).isAir();
+        return true;
+    }
+
+    private boolean isDiagonalReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
+        int dx = target.getX() - source.getX();
+        int dz = target.getZ() - source.getZ();
+
+        if (Math.abs(dx) != Math.abs(dz)) {
+            return false;
+        }
+
+        int stepX = Integer.compare(dx, 0);
+        int stepZ = Integer.compare(dz, 0);
+
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
+        while (pos.getX() != target.getX() || pos.getZ() != target.getZ()) {
+            pos.move(stepX, 0, stepZ);
+
+            if (!isColumnClear(chunk, pos)) {
+                return false;
+            }
+
+            // Avoid cutting corners by checking the adjacent cardinal tiles
+            BlockPos.MutableBlockPos sideX = new BlockPos.MutableBlockPos(pos.getX(), pos.getY(), pos.getZ() - stepZ);
+            if (!isColumnClear(chunk, sideX)) {
+                return false;
+            }
+
+            BlockPos.MutableBlockPos sideZ = new BlockPos.MutableBlockPos(pos.getX() - stepX, pos.getY(), pos.getZ());
+            if (!isColumnClear(chunk, sideZ)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isColumnClear(ChunkAccess chunk, BlockPos pos) {
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos(pos.getX(), pos.getY(), pos.getZ());
+        for (int i = 0; i < 3; i++) {
+            cursor.move(0, 1, 0);
+            if (!chunk.getBlockState(cursor).isAir()) {
+                return false;
+            }
+        }
         return true;
     }
 
