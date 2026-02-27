@@ -15,6 +15,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.Options;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.Vec3;
 import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 
 public class PathWalker {
@@ -30,6 +34,14 @@ public class PathWalker {
     private static double targetOffsetZ = 0.0;
     private static final double ARRIVAL_RADIUS = 0.18;
     private static final double BRAKE_RADIUS = 0.6;
+    private static final double JUMP_GRAVITY = 0.08;
+    private static final double JUMP_VERTICAL_DRAG = 0.98;
+    private static final double JUMP_AIR_DRAG = 0.91;
+    private static final double JUMP_BASE_VELOCITY = 0.42;
+    private static final double JUMP_SPRINT_BOOST = 0.2;
+    private static final double JUMP_AIR_ACCEL = 0.02;
+    private static final int JUMP_SIM_TICKS = 40;
+    private static final double JUMP_LANDING_MARGIN = 0.3;
     private static float currentTurnSpeed = 0.0f;
     private static float turnSpeedTarget = 0.0f;
     private static long nextTurnRetargetMs = 0;
@@ -344,6 +356,10 @@ public class PathWalker {
             return new JumpDecision(false, gap, false);
         }
 
+        if ((forwardAir || dy > 0.6) && shouldJumpByPhysics(player, target, sprint)) {
+            return new JumpDecision(true, gap, false);
+        }
+
         if (!edgeThresholdInitialized || currentGapForJump != gap) {
             currentGapForJump = gap;
             currentEdgeThreshold = edgeThresholdForGap(gap, sprint);
@@ -372,6 +388,78 @@ public class PathWalker {
         }
 
         return new JumpDecision(true, gap, false);
+    }
+
+    private static boolean shouldJumpByPhysics(LocalPlayer player, MeshNode target, boolean sprint) {
+        double targetX = target.getX();
+        double targetZ = target.getZ();
+        double targetY = target.getY() + 1.0;
+        double centerX = targetX + 0.5;
+        double centerZ = targetZ + 0.5;
+        double dirX = centerX - player.getX();
+        double dirZ = centerZ - player.getZ();
+        double len = Math.sqrt(dirX * dirX + dirZ * dirZ);
+        if (len < 1.0e-6) {
+            return false;
+        }
+        dirX /= len;
+        dirZ /= len;
+
+        Vec3 velocity = player.getDeltaMovement();
+        double jumpVelocity = JUMP_BASE_VELOCITY + getJumpBoost(player);
+        double velX = velocity.x;
+        double velY = jumpVelocity;
+        double velZ = velocity.z;
+        if (sprint) {
+            velX += dirX * JUMP_SPRINT_BOOST;
+            velZ += dirZ * JUMP_SPRINT_BOOST;
+        }
+
+        double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
+        if (sprint && !player.isSprinting()) {
+            speed *= 1.3;
+        }
+        double airAccel = speed * JUMP_AIR_ACCEL;
+        double posX = player.getX();
+        double posY = player.getY();
+        double posZ = player.getZ();
+        double minX = targetX - JUMP_LANDING_MARGIN;
+        double maxX = targetX + 1.0 + JUMP_LANDING_MARGIN;
+        double minZ = targetZ - JUMP_LANDING_MARGIN;
+        double maxZ = targetZ + 1.0 + JUMP_LANDING_MARGIN;
+        double prevY = posY;
+
+        for (int tick = 0; tick < JUMP_SIM_TICKS; tick++) {
+            velX += dirX * airAccel;
+            velZ += dirZ * airAccel;
+            velX *= JUMP_AIR_DRAG;
+            velY = (velY - JUMP_GRAVITY) * JUMP_VERTICAL_DRAG;
+            velZ *= JUMP_AIR_DRAG;
+
+            posX += velX;
+            posY += velY;
+            posZ += velZ;
+
+            boolean withinXZ = posX >= minX && posX <= maxX && posZ >= minZ && posZ <= maxZ;
+            boolean crossesY = (prevY <= targetY && posY >= targetY) || (prevY >= targetY && posY <= targetY);
+            if (withinXZ && crossesY) {
+                return true;
+            }
+            if (posY < targetY - 1.6 && velY < 0.0) {
+                return false;
+            }
+            prevY = posY;
+        }
+
+        return false;
+    }
+
+    private static double getJumpBoost(LocalPlayer player) {
+        MobEffectInstance effect = player.getEffect(MobEffects.JUMP_BOOST);
+        if (effect == null) {
+            return 0.0;
+        }
+        return 0.1 * (effect.getAmplifier() + 1);
     }
 
     private static boolean isAtEdge(LocalPlayer player, int stepX, int stepZ, double threshold) {
