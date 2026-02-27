@@ -28,6 +28,7 @@ public class ChunkMeshBuilder {
     private static final int MAX_HORIZONTAL_SEARCH = 5;
     private static final int MAX_UP_SEARCH = 3;
     private static final int MAX_DOWN_SEARCH = 5;
+    private static final int MAX_DROP = 3;
     private static final int[][] DIRECTION_VECTORS = buildDirectionVectors(MAX_HORIZONTAL_SEARCH);
 
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
@@ -117,19 +118,21 @@ public class ChunkMeshBuilder {
                 }
             }
 
-            // temporary fix so we can only drop down 1 block at a time todo extend this logic
-            for (int[] direction : DIRECTION_VECTORS) {
-                int dx = direction[0];
-                int dz = direction[1];
-                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - 1, node.getZ());
-                for (int i = 0; i < MAX_DOWN_SEARCH; i++) {
-                    targetPos.move(dx, 0, dz);
+            // temporary fix so we can only drop down up to MAX_DROP blocks at a time todo extend this logic
+            for (int drop = 1; drop <= MAX_DROP; drop++) {
+                for (int[] direction : DIRECTION_VECTORS) {
+                    int dx = direction[0];
+                    int dz = direction[1];
+                    BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - drop, node.getZ());
+                    for (int i = 0; i < MAX_DOWN_SEARCH; i++) {
+                        targetPos.move(dx, 0, dz);
 
-                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
-                        break;
-                    } else if (nodeMap.containsKey(targetPos)) {
-                        break;
+                        if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
+                            neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
+                            break;
+                        } else if (nodeMap.containsKey(targetPos)) {
+                            break;
+                        }
                     }
                 }
             }
@@ -147,7 +150,8 @@ public class ChunkMeshBuilder {
         // 2.1. air between source and target?
         // todo implement rest
 
-        if (source.getY() == target.getY() || source.getY() == target.getY() + 1 || source.getY() == target.getY() - 1) {
+        int dy = source.getY() - target.getY();
+        if (dy == 0 || dy == -1 || (dy >= 1 && dy <= MAX_DROP)) {
             // close height
             //      air
             // air  air    air
