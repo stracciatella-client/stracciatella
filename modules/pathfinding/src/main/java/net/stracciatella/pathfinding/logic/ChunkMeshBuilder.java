@@ -13,9 +13,11 @@ import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.stracciatella.pathfinding.ChunkCoordinate;
 import net.stracciatella.pathfinding.display.PathDisplay;
 import net.stracciatella.pathfinding.logic.mesh.IMeshProvider;
 import net.stracciatella.pathfinding.logic.mesh.Mesh;
@@ -81,6 +83,75 @@ public class ChunkMeshBuilder {
         }
 
 
+        rebuildNeighbors(chunk::getBlockState, nodeMap, nodes);
+
+        return newMesh;
+    }
+
+    public void reconnectBorderNodes(Level level, ChunkCoordinate chunkA, Mesh meshA, ChunkCoordinate chunkB, Mesh meshB) {
+        if (level == null || meshA == null || meshB == null) {
+            return;
+        }
+        int dx = chunkB.x() - chunkA.x();
+        int dz = chunkB.z() - chunkA.z();
+        if (dx == 0 && dz == 0) {
+            return;
+        }
+        if (Math.abs(dx) > 1 || Math.abs(dz) > 1) {
+            return;
+        }
+
+        int borderRange = Math.max(MAX_HORIZONTAL_SEARCH, Math.max(MAX_UP_SEARCH, MAX_DOWN_SEARCH));
+        List<MeshNode> borderA = collectBorderNodes(meshA, chunkA, dx, dz, borderRange);
+        List<MeshNode> borderB = collectBorderNodes(meshB, chunkB, -dx, -dz, borderRange);
+        if (borderA.isEmpty() && borderB.isEmpty()) {
+            return;
+        }
+
+        Map<BlockPos, MeshNode> combined = new HashMap<>();
+        combined.putAll(meshA.getNodes());
+        combined.putAll(meshB.getNodes());
+
+        if (!borderA.isEmpty()) {
+            rebuildNeighbors(level::getBlockState, combined, borderA);
+        }
+        if (!borderB.isEmpty()) {
+            rebuildNeighbors(level::getBlockState, combined, borderB);
+        }
+    }
+
+    private List<MeshNode> collectBorderNodes(Mesh mesh, ChunkCoordinate chunk, int dx, int dz, int borderRange) {
+        int minX = chunk.x() * 16;
+        int maxX = minX + 15;
+        int minZ = chunk.z() * 16;
+        int maxZ = minZ + 15;
+
+        List<MeshNode> result = new ArrayList<>();
+        for (MeshNode node : mesh.getNodes().values()) {
+            if (isWithinBorder(node, minX, maxX, minZ, maxZ, dx, dz, borderRange)) {
+                result.add(node);
+            }
+        }
+        return result;
+    }
+
+    private boolean isWithinBorder(MeshNode node, int minX, int maxX, int minZ, int maxZ, int dx, int dz, int borderRange) {
+        boolean inX = true;
+        boolean inZ = true;
+        if (dx > 0) {
+            inX = node.getX() >= maxX - borderRange;
+        } else if (dx < 0) {
+            inX = node.getX() <= minX + borderRange;
+        }
+        if (dz > 0) {
+            inZ = node.getZ() >= maxZ - borderRange;
+        } else if (dz < 0) {
+            inZ = node.getZ() <= minZ + borderRange;
+        }
+        return inX && inZ;
+    }
+
+    private void rebuildNeighbors(BlockStateLookup lookup, Map<BlockPos, MeshNode> nodeMap, List<MeshNode> nodes) {
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
 
@@ -93,11 +164,11 @@ public class ChunkMeshBuilder {
 
                 for (int i = 0; i < maxSteps; i++) {
                     targetPos.move(dx, 0, dz);
-
-                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
-                        break;
-                    } else if (nodeMap.containsKey(targetPos)) {
+                    MeshNode candidate = nodeMap.get(targetPos);
+                    if (candidate != null) {
+                        if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
+                            neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
+                        }
                         break;
                     }
                 }
@@ -111,11 +182,11 @@ public class ChunkMeshBuilder {
                 BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
                 for (int i = 0; i < maxSteps; i++) {
                     targetPos.move(dx, 0, dz);
-
-                    if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                        neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
-                        break;
-                    } else if (nodeMap.containsKey(targetPos)) {
+                    MeshNode candidate = nodeMap.get(targetPos);
+                    if (candidate != null) {
+                        if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
+                            neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
+                        }
                         break;
                     }
                 }
@@ -130,11 +201,11 @@ public class ChunkMeshBuilder {
                     BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - drop, node.getZ());
                     for (int i = 0; i < maxSteps; i++) {
                         targetPos.move(dx, 0, dz);
-
-                        if (nodeMap.containsKey(targetPos) && isBlockReachable(chunk, node.getBlockPos(), targetPos)) {
-                            neighbors.add(new Neighbor(nodeMap.get(targetPos), movementCost(dx, dz)));
-                            break;
-                        } else if (nodeMap.containsKey(targetPos)) {
+                        MeshNode candidate = nodeMap.get(targetPos);
+                        if (candidate != null) {
+                            if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
+                                neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
+                            }
                             break;
                         }
                     }
@@ -143,12 +214,10 @@ public class ChunkMeshBuilder {
 
             node.setNeighbors(neighbors);
         }
-
-        return newMesh;
     }
 
 
-    private boolean isBlockReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
+    private boolean isBlockReachable(BlockStateLookup lookup, BlockPos source, BlockPos target) {
         // 1. is block a node?
         // 2. is block reachable?
         // 2.1. air between source and target?
@@ -169,7 +238,7 @@ public class ChunkMeshBuilder {
                     BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
                     boolean countUp = source.getZ() < target.getZ();
                     while (pos.getZ() != target.getZ()) {
-                        if (!isColumnClear(chunk, pos)) {
+                        if (!isColumnClear(lookup, pos)) {
                             return false;
                         }
                         if (countUp) {
@@ -182,7 +251,7 @@ public class ChunkMeshBuilder {
                     BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(source.getX(), source.getY(), source.getZ());
                     boolean countUp = source.getX() < target.getX();
                     while (pos.getX() != target.getX()) {
-                        if (!isColumnClear(chunk, pos)) {
+                        if (!isColumnClear(lookup, pos)) {
                             return false;
                         }
                         if (countUp) {
@@ -194,7 +263,7 @@ public class ChunkMeshBuilder {
                 }
 
             } else {
-                if (!isLineReachable(chunk, source, target)) {
+                if (!isLineReachable(lookup, source, target)) {
                     return false;
                 }
             }
@@ -204,7 +273,7 @@ public class ChunkMeshBuilder {
         return true;
     }
 
-    private boolean isLineReachable(ChunkAccess chunk, BlockPos source, BlockPos target) {
+    private boolean isLineReachable(BlockStateLookup lookup, BlockPos source, BlockPos target) {
         int x0 = source.getX();
         int z0 = source.getZ();
         int x1 = target.getX();
@@ -233,17 +302,17 @@ public class ChunkMeshBuilder {
             }
 
             BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, source.getY(), z);
-            if (!isColumnClear(chunk, pos)) {
+            if (!isColumnClear(lookup, pos)) {
                 return false;
             }
 
             if (x != prevX && z != prevZ) {
                 BlockPos.MutableBlockPos sideX = new BlockPos.MutableBlockPos(x, source.getY(), prevZ);
-                if (!isColumnClear(chunk, sideX)) {
+                if (!isColumnClear(lookup, sideX)) {
                     return false;
                 }
                 BlockPos.MutableBlockPos sideZ = new BlockPos.MutableBlockPos(prevX, source.getY(), z);
-                if (!isColumnClear(chunk, sideZ)) {
+                if (!isColumnClear(lookup, sideZ)) {
                     return false;
                 }
             }
@@ -294,11 +363,11 @@ public class ChunkMeshBuilder {
         return Math.min(baseMax, MAX_DIAGONAL_SEARCH);
     }
 
-    private boolean isColumnClear(ChunkAccess chunk, BlockPos pos) {
+    private boolean isColumnClear(BlockStateLookup lookup, BlockPos pos) {
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos(pos.getX(), pos.getY(), pos.getZ());
         for (int i = 0; i < 3; i++) {
             cursor.move(0, 1, 0);
-            if (!chunk.getBlockState(cursor).isAir()) {
+            if (!lookup.getBlockState(cursor).isAir()) {
                 return false;
             }
         }
@@ -321,6 +390,10 @@ public class ChunkMeshBuilder {
             i++;
         }
         return i - 1;
+    }
+
+    private interface BlockStateLookup {
+        BlockState getBlockState(BlockPos pos);
     }
 
 }

@@ -17,20 +17,48 @@ public class MeshManager {
         meshes.forEach((entity, meshes) -> {
             Mesh mesh = meshBuilder.generatePathfindingMesh(Minecraft.getInstance().level.getChunk(chunkCoordinate.x(), chunkCoordinate.z()), entity);
             meshes.put(chunkCoordinate, mesh);
-            // todo adjacent and diagonal as well
+            connectAdjacentMeshes(entity, chunkCoordinate);
         });
     }
 
     public static void generateMesh(ChunkAccess chunk, Entity entity) {
 
         Mesh mesh = meshBuilder.generatePathfindingMesh(chunk, entity);
-        // todo adjacent and diagonal as well
         if (!meshes.containsKey(entity)) {
             meshes.put(entity, new HashMap<>());
         }
 
-        meshes.get(entity).put(new ChunkCoordinate(chunk), mesh);
+        ChunkCoordinate chunkCoordinate = new ChunkCoordinate(chunk);
+        meshes.get(entity).put(chunkCoordinate, mesh);
+        connectAdjacentMeshes(entity, chunkCoordinate);
 
+    }
+
+    private static void connectAdjacentMeshes(Entity entity, ChunkCoordinate chunkCoordinate) {
+        var meshesForEntity = meshes.get(entity);
+        if (meshesForEntity == null) {
+            return;
+        }
+        Mesh center = meshesForEntity.get(chunkCoordinate);
+        if (center == null) {
+            return;
+        }
+        var level = Minecraft.getInstance().level;
+        if (level == null) {
+            return;
+        }
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                ChunkCoordinate neighborCoord = new ChunkCoordinate(chunkCoordinate.x() + dx, chunkCoordinate.z() + dz);
+                Mesh neighbor = meshesForEntity.get(neighborCoord);
+                if (neighbor != null) {
+                    meshBuilder.reconnectBorderNodes(level, chunkCoordinate, center, neighborCoord, neighbor);
+                }
+            }
+        }
     }
 
 }
