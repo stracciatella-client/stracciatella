@@ -209,9 +209,6 @@ public class PathWalker {
 
         boolean sprint = shouldSprint(distanceSq);
         JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance);
-        if (jumpDecision.jump) {
-            jumpCooldownTicks = CONFIG.jumpCooldownTicks;
-        }
         if (jumpDecision.jump && jumpDecision.gap <= 1) {
             sprint = false;
         }
@@ -289,6 +286,9 @@ public class PathWalker {
             jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
         }
         boolean jump = jumpFacing && jumpDecision.jump;
+        if (jump) {
+            jumpCooldownTicks = CONFIG.jumpCooldownTicks;
+        }
         float moveThreshold = sharpTurn ? CONFIG.turnStopThresholdDeg : CONFIG.walkTurnThresholdDeg;
         long nowMs = System.currentTimeMillis();
         if (!flicking && angleDeltaAfter <= moveThreshold) {
@@ -308,8 +308,12 @@ public class PathWalker {
             canMoveForward = false;
         }
         if (jumpDecision.jump && jumpDecision.gap > 1) {
+            if (!jump) {
+                canMoveForward = false;
+            } else {
             canMoveForward = true;
             sprint = true;
+            }
         }
         if (debug) {
             long now = System.currentTimeMillis();
