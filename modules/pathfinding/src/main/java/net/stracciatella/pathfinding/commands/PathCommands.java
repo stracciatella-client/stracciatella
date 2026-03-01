@@ -308,34 +308,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Walk turn threshold set to " + deg + " deg"));
                                             return 1;
                                         })))
-                        .then(literal("flicktrigger")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setFlickTrigger(deg);
-                                            context.getSource().sendFeedback(Component.literal("Flick trigger set to " + deg + " deg"));
-                                            return 1;
-                                        })))
-                        .then(literal("flickovershoot")
-                                .then(argument("min", FloatArgumentType.floatArg(0.0f))
-                                        .then(argument("max", FloatArgumentType.floatArg(0.0f))
-                                                .executes(context -> {
-                                                    float min = FloatArgumentType.getFloat(context, "min");
-                                                    float max = FloatArgumentType.getFloat(context, "max");
-                                                    PathWalker.setFlickOvershootRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Flick overshoot range set to " + min + " - " + max + " deg"));
-                                                    return 1;
-                                                }))))
-                        .then(literal("flickduration")
-                                .then(argument("minMs", IntegerArgumentType.integer(0))
-                                        .then(argument("maxMs", IntegerArgumentType.integer(0))
-                                                .executes(context -> {
-                                                    int min = IntegerArgumentType.getInteger(context, "minMs");
-                                                    int max = IntegerArgumentType.getInteger(context, "maxMs");
-                                                    PathWalker.setFlickDurationRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Flick duration range set to " + min + " - " + max + " ms"));
-                                                    return 1;
-                                                }))))
                         .then(literal("sharpturn")
                                 .then(argument("deg", FloatArgumentType.floatArg(0.0f))
                                         .executes(context -> {
@@ -597,9 +569,6 @@ public class PathCommands {
         sendMenuLine(player, rangeLineInt("turnjitter", PathWalker.CONFIG.turnJitterMinMs, PathWalker.CONFIG.turnJitterMaxMs, 20, "/path walkconfig turnjitter", 0));
         sendMenuLine(player, valueLine("jumptolerance", PathWalker.CONFIG.jumpFacingToleranceDeg, 1.0, "/path walkconfig jumptolerance", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("walkturn", PathWalker.CONFIG.walkTurnThresholdDeg, 1.0, "/path walkconfig walkturn", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, valueLine("flicktrigger", PathWalker.CONFIG.flickTriggerDeg, 2.0, "/path walkconfig flicktrigger", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, rangeLine("flickovershoot", PathWalker.CONFIG.flickOvershootMinDeg, PathWalker.CONFIG.flickOvershootMaxDeg, 0.5, "/path walkconfig flickovershoot", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, rangeLineInt("flickduration", PathWalker.CONFIG.flickMinMs, PathWalker.CONFIG.flickMaxMs, 10, "/path walkconfig flickduration", 0));
         sendMenuLine(player, valueLine("sharpturn", PathWalker.CONFIG.sharpTurnDeg, 2.0, "/path walkconfig sharpturn", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("turnprep", PathWalker.CONFIG.turnPrepDistance, 0.1, "/path walkconfig turnprep", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("turnstop", PathWalker.CONFIG.turnStopThresholdDeg, 1.0, "/path walkconfig turnstop", 0.0, Double.POSITIVE_INFINITY));

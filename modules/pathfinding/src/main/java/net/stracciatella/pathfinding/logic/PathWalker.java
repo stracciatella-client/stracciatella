@@ -1,5 +1,17 @@
 package net.stracciatella.pathfinding.logic;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.Vec3;
+import net.stracciatella.pathfinding.logic.mesh.MeshNode;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -9,18 +21,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.Options;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.phys.Vec3;
-import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 
 public class PathWalker {
 
@@ -42,9 +42,9 @@ public class PathWalker {
     private static float currentTurnSpeed = 0.0f;
     private static float turnSpeedTarget = 0.0f;
     private static long nextTurnRetargetMs = 0;
-    private static boolean flicking = false;
-    private static long flickEndMs = 0;
-    private static float flickTargetYaw = 0.0f;
+    private static float aimYaw;
+    private static float aimYawVelocity;
+    private static float aimYawAccel;
     private static long turnPauseUntilMs = 0;
     private static int jumpCooldownTicks = 0;
     private static int currentGapForJump = 0;
@@ -77,8 +77,9 @@ public class PathWalker {
         currentTurnSpeed = 0.0f;
         turnSpeedTarget = 0.0f;
         nextTurnRetargetMs = 0;
-        flicking = false;
-        flickEndMs = 0;
+        aimYaw = 0.0f;
+        aimYawVelocity = 0.0f;
+        aimYawAccel = 0.0f;
         turnPauseUntilMs = 0;
         jumpCooldownTicks = 0;
         edgeThresholdInitialized = false;
@@ -237,38 +238,7 @@ public class PathWalker {
         if (stabilizeForJump) {
             desiredYaw += jumpAimYawOffsetDeg;
         }
-        float currentYaw = player.getYRot();
-        float newYaw;
-        float angleDelta = Math.abs(wrapDegrees(desiredYaw - currentYaw));
-
-        boolean shouldForceFlick = sharpTurn && distanceSq <= CONFIG.turnPrepDistance * CONFIG.turnPrepDistance;
-        if (!stabilizeForJump && !flicking && (angleDelta >= CONFIG.flickTriggerDeg || shouldForceFlick)) {
-            float overshootAmount = randomRange(CONFIG.flickOvershootMinDeg, CONFIG.flickOvershootMaxDeg);
-            float turnDir = Math.signum(wrapDegrees(desiredYaw - currentYaw));
-            if (turnDir == 0.0f) {
-                turnDir = 1.0f;
-            }
-            boolean undershoot = ThreadLocalRandom.current().nextBoolean();
-            float overshoot = undershoot ? -overshootAmount * 0.6f : overshootAmount;
-            flickTargetYaw = desiredYaw + (turnDir * overshoot);
-            newYaw = flickTargetYaw;
-            flicking = true;
-            flickEndMs = System.currentTimeMillis() + randomRange(CONFIG.flickMinMs, CONFIG.flickMaxMs);
-            if (sharpTurn) {
-                turnPauseUntilMs = System.currentTimeMillis() + randomRange(CONFIG.turnPauseMinMs, CONFIG.turnPauseMaxMs);
-            }
-        } else if (flicking) {
-            if (System.currentTimeMillis() >= flickEndMs) {
-                flicking = false;
-                float turnStep = nextTurnStep();
-                newYaw = rotateToward(currentYaw, desiredYaw, turnStep);
-            } else {
-                newYaw = flickTargetYaw;
-            }
-        } else {
-            float turnStep = nextTurnStep();
-            newYaw = rotateToward(currentYaw, desiredYaw, turnStep);
-        }
+        float newYaw = updateAim(desiredYaw);
 
         player.setYRot(newYaw);
         player.setXRot(computePitch(dy));
@@ -291,7 +261,7 @@ public class PathWalker {
         }
         float moveThreshold = sharpTurn ? CONFIG.turnStopThresholdDeg : CONFIG.walkTurnThresholdDeg;
         long nowMs = System.currentTimeMillis();
-        if (!flicking && angleDeltaAfter <= moveThreshold) {
+        if (angleDeltaAfter <= moveThreshold) {
             alignedUntilMs = nowMs + CONFIG.alignmentHoldMs;
         }
         boolean canMoveForward = angleDeltaAfter <= moveThreshold || nowMs < alignedUntilMs;
@@ -334,6 +304,14 @@ public class PathWalker {
             }
         }
         applyMovement(client, canMoveForward, jump, sprint && canMoveForward);
+    }
+
+    private static float updateAim(float targetYaw) {
+        float delta = wrapDegrees(targetYaw - aimYaw);
+        aimYawAccel = delta * CONFIG.turnAccel - aimYawVelocity * CONFIG.turnFriction;
+        aimYawVelocity += aimYawAccel;
+        aimYaw += aimYawVelocity;
+        return aimYaw;
     }
 
     private static void logFallDiagnostics(LocalPlayer player, MeshNode target, double dy, double distance, JumpDecision jumpDecision) {
@@ -1197,23 +1175,6 @@ public class PathWalker {
         saveConfig();
     }
 
-    public static void setFlickTrigger(float deg) {
-        CONFIG.flickTriggerDeg = deg;
-        saveConfig();
-    }
-
-    public static void setFlickOvershootRange(float min, float max) {
-        CONFIG.flickOvershootMinDeg = min;
-        CONFIG.flickOvershootMaxDeg = max;
-        saveConfig();
-    }
-
-    public static void setFlickDurationRange(int minMs, int maxMs) {
-        CONFIG.flickMinMs = minMs;
-        CONFIG.flickMaxMs = maxMs;
-        saveConfig();
-    }
-
     public static void setSharpTurnDeg(float deg) {
         CONFIG.sharpTurnDeg = deg;
         saveConfig();
@@ -1345,11 +1306,6 @@ public class PathWalker {
         public float jumpFacingToleranceDeg = 18.0f;
         public float jumpFacingExtraGapDeg = 18.0f;
         public float walkTurnThresholdDeg = 25.0f;
-        public float flickTriggerDeg = 70.0f;
-        public float flickOvershootMinDeg = 5.0f;
-        public float flickOvershootMaxDeg = 10.0f;
-        public int flickMinMs = 40;
-        public int flickMaxMs = 120;
         public float sharpTurnDeg = 60.0f;
         public float turnPrepDistance = 0.8f;
         public float turnStopThresholdDeg = 12.0f;
@@ -1401,6 +1357,7 @@ public class PathWalker {
         public double physicsMaxSprintSpeedFactor = 1.3;
         public double physicsGroundAccelFactorWalk = 1.0;
         public double physicsGroundAccelFactorSprint = 1.3;
+        public float turnFriction = 0.8f;
 
         public void applyFrom(Config other) {
             debugEnabled = other.debugEnabled;
@@ -1412,11 +1369,6 @@ public class PathWalker {
             jumpFacingToleranceDeg = other.jumpFacingToleranceDeg;
             jumpFacingExtraGapDeg = other.jumpFacingExtraGapDeg;
             walkTurnThresholdDeg = other.walkTurnThresholdDeg;
-            flickTriggerDeg = other.flickTriggerDeg;
-            flickOvershootMinDeg = other.flickOvershootMinDeg;
-            flickOvershootMaxDeg = other.flickOvershootMaxDeg;
-            flickMinMs = other.flickMinMs;
-            flickMaxMs = other.flickMaxMs;
             sharpTurnDeg = other.sharpTurnDeg;
             turnPrepDistance = other.turnPrepDistance;
             turnStopThresholdDeg = other.turnStopThresholdDeg;
@@ -1468,6 +1420,7 @@ public class PathWalker {
             physicsMaxSprintSpeedFactor = other.physicsMaxSprintSpeedFactor;
             physicsGroundAccelFactorWalk = other.physicsGroundAccelFactorWalk;
             physicsGroundAccelFactorSprint = other.physicsGroundAccelFactorSprint;
+            turnFriction = other.turnFriction;
         }
 
         public void normalize() {

@@ -32,7 +32,7 @@ public class ChunkMeshBuilder {
     private static final int MAX_DOWN_SEARCH = 5;
     private static final int MAX_DROP = 3;
     private static final int MAX_DIAGONAL_SEARCH = 3;
-    private static final int[][] DIRECTION_VECTORS = buildDirectionVectors(MAX_HORIZONTAL_SEARCH);
+    private static final int[][] DIRECTION_VECTORS = buildDirectionVectors(1);
 
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
         Mesh newMesh = new Mesh();
