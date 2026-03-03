@@ -1,3 +1,7 @@
+---
+apply: always
+---
+
 The source code is located in the modules folder.
 Try to avoid doing a text search across all files.
 Only modify code that needs to be changed. Try too keep the changes as small as possible
