@@ -208,10 +208,6 @@ public class PathWalker {
             }
             return;
         }
-        if (shouldCancelOffCourse(distance, player, target)) {
-            stop();
-            return;
-        }
 
         boolean sprint = shouldSprint(distanceSq);
         JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance);
@@ -325,6 +321,64 @@ public class PathWalker {
             sprint = true;
             }
         }
+
+        // Check if we need to brake with backwards movement to counter momentum
+        boolean shouldBrake = false;
+        Vec3 velocity = player.getDeltaMovement();
+        double vx = velocity.x;
+        double vz = velocity.z;
+        double forwardVel = Math.sqrt(vx * vx + vz * vz);
+
+        // Only brake in specific situations to prevent overshooting or sliding off edges
+        if (forwardVel > 0.1) {
+            // Project position ahead based on velocity
+            int ticksAhead = player.onGround() ? 4 : 6;
+            double projectedX = player.getX() + vx * ticksAhead;
+            double projectedZ = player.getZ() + vz * ticksAhead;
+            double projectedDist = Math.sqrt(
+                (targetX - projectedX) * (targetX - projectedX) +
+                (targetZ - projectedZ) * (targetZ - projectedZ)
+            );
+
+            boolean willOvershoot = projectedDist > distance;
+
+            // Calculate if velocity is taking us away from target (already past it)
+            double dirToTargetX = targetX - player.getX();
+            double dirToTargetZ = targetZ - player.getZ();
+            double dirLen = Math.sqrt(dirToTargetX * dirToTargetX + dirToTargetZ * dirToTargetZ);
+            boolean movingAwayFromTarget = false;
+            if (dirLen > 0.001) {
+                dirToTargetX /= dirLen;
+                dirToTargetZ /= dirLen;
+                double velocityDotTarget = vx * dirToTargetX + vz * dirToTargetZ;
+                movingAwayFromTarget = velocityDotTarget < -0.1; // Negative means moving away
+            }
+
+            // CASE 1: Already past target and still moving away - brake immediately
+            if (movingAwayFromTarget && forwardVel > 0.15) {
+                shouldBrake = true;
+                canMoveForward = false;
+            }
+
+            // CASE 2: Parkour turn with momentum - stopped for turning but momentum carries us off
+            // Only applies to parkour gaps where there's a risk of falling
+            if (jumpDecision.gap > 1 && !canMoveForward && willOvershoot && distance < 2.0 && forwardVel > 0.15) {
+                shouldBrake = true;
+            }
+
+            // CASE 3: Very close to target and would overshoot completely
+            if (willOvershoot && distance < 0.8 && forwardVel > 0.2) {
+                shouldBrake = true;
+                canMoveForward = false;
+            }
+
+            // CASE 4: Landing prediction - just landed with high velocity and would overshoot
+            if (player.onGround() && willOvershoot && forwardVel > 0.25 && distance < 1.5) {
+                shouldBrake = true;
+                canMoveForward = false;
+            }
+        }
+
         if (debug) {
             long now = System.currentTimeMillis();
             if (now - lastDebugMs > 200) {
@@ -343,7 +397,17 @@ public class PathWalker {
                 );
             }
         }
-        applyMovement(client, canMoveForward, jump, sprint && canMoveForward);
+
+        // Check off-course AFTER we've calculated movement state
+        if (shouldCancelOffCourse(distance, player, target, canMoveForward, shouldBrake)) {
+            if (debug) {
+                System.out.println("[PathWalker] Off course - stopping pathwalking");
+            }
+            stop();
+            return;
+        }
+
+        applyMovement(client, canMoveForward, shouldBrake, jump, sprint && canMoveForward);
     }
 
     private static float updateAim(float targetYaw) {
@@ -405,9 +469,19 @@ public class PathWalker {
         return py >= minY && py <= maxY;
     }
 
-    private static boolean shouldCancelOffCourse(double distance, LocalPlayer player, MeshNode target) {
+    private static boolean shouldCancelOffCourse(double distance, LocalPlayer player, MeshNode target, boolean canMoveForward, boolean shouldBrake) {
+        // Don't count as off-course if we're actively braking or stopped for turning
+        // These are intentional stops, not being stuck
+        if (shouldBrake || !canMoveForward) {
+            // Reset the counter but don't increment
+            offCourseTicks = Math.max(0, offCourseTicks - 2);
+            lastDistance = distance;
+            return false;
+        }
+
         if (distance > CONFIG.offCourseDistance) {
-            if (lastDistance >= 0.0 && distance > lastDistance - 0.01) {
+            // Only count as off-course if distance is significantly increasing
+            if (lastDistance >= 0.0 && distance > lastDistance + 0.1) {
                 offCourseTicks++;
             } else {
                 offCourseTicks = Math.max(0, offCourseTicks - 1);
@@ -430,8 +504,13 @@ public class PathWalker {
     }
 
     private static void applyMovement(Minecraft client, boolean forward, boolean jump, boolean sprint) {
+        applyMovement(client, forward, false, jump, sprint);
+    }
+
+    private static void applyMovement(Minecraft client, boolean forward, boolean backward, boolean jump, boolean sprint) {
         Options options = client.options;
         options.keyUp.setDown(forward);
+        options.keyDown.setDown(backward);
         options.keyJump.setDown(jump);
         options.keySprint.setDown(sprint);
         if (client.player != null) {
