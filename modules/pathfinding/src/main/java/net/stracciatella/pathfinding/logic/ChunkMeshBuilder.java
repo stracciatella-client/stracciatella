@@ -155,58 +155,22 @@ public class ChunkMeshBuilder {
         for (MeshNode node : nodes) {
             List<Neighbor> neighbors = new ArrayList<>();
 
-            // add all neighbors in all directions on same y
-            for (int[] direction : DIRECTION_VECTORS) {
-                int dx = direction[0];
-                int dz = direction[1];
-                int maxSteps = maxStepsForDirection(dx, dz, MAX_HORIZONTAL_SEARCH);
-                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY(), node.getZ());
+            // Check all positions within search radius (brute force approach for diagonal jumps)
+            int searchRadius = Math.max(MAX_HORIZONTAL_SEARCH, Math.max(MAX_UP_SEARCH, MAX_DOWN_SEARCH));
 
-                for (int i = 0; i < maxSteps; i++) {
-                    targetPos.move(dx, 0, dz);
-                    MeshNode candidate = nodeMap.get(targetPos);
-                    if (candidate != null) {
-                        if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
-                            neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
-                        }
-                        break;
-                    }
-                }
-            }
+            for (int dy = -MAX_DROP; dy <= MAX_UP_SEARCH; dy++) {
+                for (int dx = -searchRadius; dx <= searchRadius; dx++) {
+                    for (int dz = -searchRadius; dz <= searchRadius; dz++) {
+                        if (dx == 0 && dz == 0 && dy == 0) continue;
 
-            // check for all neighbors on y+1
-            for (int[] direction : DIRECTION_VECTORS) {
-                int dx = direction[0];
-                int dz = direction[1];
-                int maxSteps = maxStepsForDirection(dx, dz, MAX_UP_SEARCH);
-                BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() + 1, node.getZ());
-                for (int i = 0; i < maxSteps; i++) {
-                    targetPos.move(dx, 0, dz);
-                    MeshNode candidate = nodeMap.get(targetPos);
-                    if (candidate != null) {
-                        if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
-                            neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
-                        }
-                        break;
-                    }
-                }
-            }
+                        BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(
+                            node.getX() + dx, node.getY() + dy, node.getZ() + dz);
 
-            // temporary fix so we can only drop down up to MAX_DROP blocks at a time todo extend this logic
-            for (int drop = 1; drop <= MAX_DROP; drop++) {
-                for (int[] direction : DIRECTION_VECTORS) {
-                    int dx = direction[0];
-                    int dz = direction[1];
-                    int maxSteps = maxStepsForDirection(dx, dz, MAX_DOWN_SEARCH);
-                    BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos(node.getX(), node.getY() - drop, node.getZ());
-                    for (int i = 0; i < maxSteps; i++) {
-                        targetPos.move(dx, 0, dz);
                         MeshNode candidate = nodeMap.get(targetPos);
                         if (candidate != null) {
                             if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
                                 neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
                             }
-                            break;
                         }
                     }
                 }
@@ -228,17 +192,22 @@ public class ChunkMeshBuilder {
         int dz = Math.abs(target.getZ() - source.getZ());
         int dy = source.getY() - target.getY();
 
+        // Players can only jump up 1 block in Minecraft
+        if (dy < -1) {
+            return false;
+        }
+
         // For diagonal movements, enforce realistic jump distance limits
         if (dx > 0 && dz > 0) {
             double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
 
-            // For same level or step up, max diagonal distance is ~3 blocks
-            if (dy >= -1 && horizontalDistance > 3.0) {
+            // For same level or step up, max diagonal distance is ~4.0 blocks (sprint jump)
+            if (dy >= -1 && horizontalDistance > 4.0) {
                 return false;
             }
 
             // For drops, allow slightly more horizontal distance but still limited
-            if (dy > 0 && horizontalDistance > 4.0) {
+            if (dy > 0 && horizontalDistance > 4.5) {
                 return false;
             }
         }
