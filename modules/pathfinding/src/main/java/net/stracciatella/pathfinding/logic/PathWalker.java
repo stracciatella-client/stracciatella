@@ -293,6 +293,30 @@ public class PathWalker {
         if (jumpDecision.holdBeforeJump) {
             canMoveForward = false;
         }
+
+        // Check if we're about to overshoot due to velocity at a turn/edge
+        // Stop if we're making a turn near an edge with momentum
+        if (jumpDecision.gap > 1 && !jumpDecision.jump) {
+            Vec3 velocity = player.getDeltaMovement();
+            double forwardVel = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+
+            // Calculate if velocity will carry us past the target
+            double vx = velocity.x;
+            double vz = velocity.z;
+            double projectedX = player.getX() + vx * 3; // project 3 ticks ahead
+            double projectedZ = player.getZ() + vz * 3;
+            double projectedDist = Math.sqrt(
+                (targetX - projectedX) * (targetX - projectedX) +
+                (targetZ - projectedZ) * (targetZ - projectedZ)
+            );
+
+            // If we'll overshoot or if turning sharply with speed near edge
+            if ((projectedDist > distance && forwardVel > 0.15 && distance < 1.5) ||
+                (forwardVel > 0.2 && angleDeltaAfter > 20.0f && distance < 2.0)) {
+                canMoveForward = false;
+            }
+        }
+
         if (jumpDecision.jump && jumpDecision.gap > 1) {
             if (!jump) {
                 canMoveForward = false;
@@ -453,16 +477,29 @@ public class PathWalker {
         lastDebug.gap = gap;
         lastDebug.dy = dy;
 
-        // Special case: if gap is 0, check if we need to jump up vertically
+        // Special case: if gap is 0, check if we need to jump up vertically or if there's an edge ahead
         if (gap == 0) {
-            lastDebug.forwardAir = false;
-            lastDebug.landingSolid = true;
-            lastDebug.edgeThreshold = 0.0;
             // Check actual Y difference between player feet and target block
             double feetToTargetDy = target.getY() - player.getY();
+
+            // Check if there's air below the target (falling edge)
+            BlockPos targetBelow = new BlockPos(target.getX(), target.getY() - 1, target.getZ());
+            boolean airBelow = player.level().getBlockState(targetBelow).isAir();
+
+            lastDebug.forwardAir = airBelow;
+            lastDebug.landingSolid = true;
+            lastDebug.edgeThreshold = 0.0;
+
+            // If target is below us and there's air, we're at a falling edge - don't jump
+            if (feetToTargetDy < -0.5 && airBelow) {
+                return new JumpDecision(false, gap, false);
+            }
+
+            // If target is above us, jump to reach it
             if (feetToTargetDy >= 0.5) {
                 return new JumpDecision(true, gap, false);
             }
+
             return new JumpDecision(false, gap, false);
         }
 
