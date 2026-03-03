@@ -292,7 +292,8 @@ public class PathWalker {
 
         // Check if we're about to overshoot due to velocity at a turn/edge
         // Stop if we're making a turn near an edge with momentum
-        if (jumpDecision.gap > 1 && !jumpDecision.jump) {
+        // BUT: Don't prevent movement if we're positioned and ready to jump (jumpFacing is true)
+        if (jumpDecision.gap > 1 && !jumpDecision.jump && !jumpFacing) {
             Vec3 velocity = player.getDeltaMovement();
             double forwardVel = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
 
