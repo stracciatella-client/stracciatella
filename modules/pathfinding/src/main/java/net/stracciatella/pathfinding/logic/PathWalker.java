@@ -45,6 +45,9 @@ public class PathWalker {
     private static float aimYaw;
     private static float aimYawVelocity;
     private static float aimYawAccel;
+    private static float aimPitch;
+    private static float aimPitchVelocity;
+    private static float aimPitchAccel;
     private static long turnPauseUntilMs = 0;
     private static int jumpCooldownTicks = 0;
     private static int currentGapForJump = 0;
@@ -74,12 +77,24 @@ public class PathWalker {
         index = 0;
         active = true;
         pauseUntilMs = 0;
+
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player != null) {
+            aimYaw = player.getYRot();
+            aimPitch = player.getXRot();
+        } else {
+            aimYaw = 0.0f;
+            aimPitch = 0.0f;
+        }
+
+        aimYawVelocity = 0.0f;
+        aimYawAccel = 0.0f;
+        aimPitchVelocity = 0.0f;
+        aimPitchAccel = 0.0f;
+
         currentTurnSpeed = 0.0f;
         turnSpeedTarget = 0.0f;
         nextTurnRetargetMs = 0;
-        aimYaw = 0.0f;
-        aimYawVelocity = 0.0f;
-        aimYawAccel = 0.0f;
         turnPauseUntilMs = 0;
         jumpCooldownTicks = 0;
         edgeThresholdInitialized = false;
@@ -154,7 +169,7 @@ public class PathWalker {
             }
             return;
         }
-        LocalPlayer player = client.player;
+        LocalPlayer player = client.getInstance().player;
         if (player == null) {
             return;
         }
@@ -179,7 +194,7 @@ public class PathWalker {
 
         double dx = targetX - player.getX();
         double dz = targetZ - player.getZ();
-        double dy = targetY - player.getY();
+        double dy = targetY - player.getEyeY();
 
         double distanceSq = dx * dx + dz * dz;
         double distance = Math.sqrt(distanceSq);
@@ -239,9 +254,15 @@ public class PathWalker {
             desiredYaw += jumpAimYawOffsetDeg;
         }
         float newYaw = updateAim(desiredYaw);
+        float desiredPitch = computeDesiredPitch(dy, distance);
+        float newPitch = updatePitch(desiredPitch);
+
+        if (debug) {
+            System.out.println(String.format(Locale.US, "[PathWalker] Aim: dy=%.3f, dist=%.3f, desiredP=%.2f, currentP=%.2f, velP=%.2f, accelP=%.2f", dy, distance, desiredPitch, aimPitch, aimPitchVelocity, aimPitchAccel));
+        }
 
         player.setYRot(newYaw);
-        player.setXRot(computePitch(dy));
+        player.setXRot(newPitch);
 
         float angleDeltaAfter = Math.abs(wrapDegrees(desiredYaw - newYaw));
         if (angleDeltaAfter <= CONFIG.alignmentDeadzoneDeg) {
@@ -312,6 +333,24 @@ public class PathWalker {
         aimYawVelocity += aimYawAccel;
         aimYaw += aimYawVelocity;
         return aimYaw;
+    }
+
+    private static float updatePitch(float targetPitch) {
+        // Use exponential smoothing instead of spring physics to avoid oscillation
+        // Smoothly interpolate towards target with heavy damping for human-like movement
+        float delta = targetPitch - aimPitch;
+        if (Math.abs(delta) < 0.5f) {
+            // Close enough, just set it to avoid micro-adjustments
+            aimPitch = targetPitch;
+            aimPitchVelocity = 0.0f;
+            aimPitchAccel = 0.0f;
+            return aimPitch;
+        }
+        // Move a fraction of the distance each tick (exponential smoothing)
+        aimPitch += delta * 0.15f;
+        // Clamp to valid Minecraft range
+        aimPitch = Math.max(-90.0f, Math.min(90.0f, aimPitch));
+        return aimPitch;
     }
 
     private static void logFallDiagnostics(LocalPlayer player, MeshNode target, double dy, double distance, JumpDecision jumpDecision) {
@@ -970,16 +1009,16 @@ public class PathWalker {
         return delta <= CONFIG.jumpFacingToleranceDeg;
     }
 
-    private static float computePitch(double dy) {
-        float jitter = randomRange(CONFIG.pitchJitterMinDeg, CONFIG.pitchJitterMaxDeg);
-        if (ThreadLocalRandom.current().nextBoolean()) {
-            jitter = -jitter;
+    private static float computeDesiredPitch(double dy, double distance) {
+        // Keep pitch more neutral for human-like movement
+        // Only look significantly up/down for large vertical differences
+        if (distance > 0.1 && Math.abs(dy) > 1.0) {
+            // dy = targetY - eyeY, so positive dy means look up (negative pitch in MC)
+            float pitch = (float) -Math.toDegrees(Math.atan(dy / distance));
+            // Clamp pitch to reasonable range for walking
+            return Math.max(-15.0f, Math.min(15.0f, pitch));
         }
-        if (dy < -0.4) {
-            float base = (float) Math.min(45.0, 15.0 + Math.abs(dy) * 5.0);
-            return base + jitter;
-        }
-        return jitter;
+        return 0f;
     }
 
     private static void updateTargetOffset() {
@@ -1357,7 +1396,12 @@ public class PathWalker {
         public double physicsMaxSprintSpeedFactor = 1.3;
         public double physicsGroundAccelFactorWalk = 1.0;
         public double physicsGroundAccelFactorSprint = 1.3;
-        public float turnFriction = 0.8f;
+
+        // Friction values are tuned for critical damping (fastest response without overshooting).
+        // The formula is friction = 2 * sqrt(acceleration).
+        public float turnFriction = 1.8f; // 2 * sqrt(0.8) approx 1.79
+        public float pitchAccel = 0.2f;
+        public float pitchFriction = 0.9f; // 2 * sqrt(0.2) approx 0.89
 
         public void applyFrom(Config other) {
             debugEnabled = other.debugEnabled;
@@ -1421,6 +1465,8 @@ public class PathWalker {
             physicsGroundAccelFactorWalk = other.physicsGroundAccelFactorWalk;
             physicsGroundAccelFactorSprint = other.physicsGroundAccelFactorSprint;
             turnFriction = other.turnFriction;
+            pitchAccel = other.pitchAccel;
+            pitchFriction = other.pitchFriction;
         }
 
         public void normalize() {
@@ -1490,6 +1536,15 @@ public class PathWalker {
             }
             if (physicsGroundAccelFactorSprint <= 0.0) {
                 physicsGroundAccelFactorSprint = 1.3;
+            }
+            if (turnFriction <= 0.0f) {
+                turnFriction = 1.8f;
+            }
+            if (pitchAccel <= 0.0f) {
+                pitchAccel = 0.6f;
+            }
+            if (pitchFriction <= 0.0f) {
+                pitchFriction = 1.0f;
             }
         }
     }
