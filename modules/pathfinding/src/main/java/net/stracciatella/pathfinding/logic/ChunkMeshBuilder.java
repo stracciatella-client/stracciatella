@@ -223,15 +223,26 @@ public class ChunkMeshBuilder {
         // 2.1. air between source and target?
         // todo implement rest
 
-        // Block specific problematic jump
-        if ((source.getX() == 12 && source.getY() == 0 && source.getZ() == 4 &&
-             target.getX() == 16 && target.getY() == 0 && target.getZ() == 0) ||
-            (source.getX() == 16 && source.getY() == 0 && source.getZ() == 0 &&
-             target.getX() == 12 && target.getY() == 0 && target.getZ() == 4)) {
-            return false;
+        // Check horizontal distance constraints for diagonal jumps
+        int dx = Math.abs(target.getX() - source.getX());
+        int dz = Math.abs(target.getZ() - source.getZ());
+        int dy = source.getY() - target.getY();
+
+        // For diagonal movements, enforce realistic jump distance limits
+        if (dx > 0 && dz > 0) {
+            double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+
+            // For same level or step up, max diagonal distance is ~3 blocks
+            if (dy >= -1 && horizontalDistance > 3.0) {
+                return false;
+            }
+
+            // For drops, allow slightly more horizontal distance but still limited
+            if (dy > 0 && horizontalDistance > 4.0) {
+                return false;
+            }
         }
 
-        int dy = source.getY() - target.getY();
         if (dy == 0 || dy == -1 || (dy >= 1 && dy <= MAX_DROP)) {
             // close height
             //      air
