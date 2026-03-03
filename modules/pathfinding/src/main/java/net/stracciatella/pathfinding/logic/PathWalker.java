@@ -200,21 +200,11 @@ public class PathWalker {
         double distance = Math.sqrt(distanceSq);
         boolean sharpTurn = isSharpTurnAhead();
         if (hasReachedNode(player, target, distanceSq)) {
-            boolean pause = false;
-            if (index + 1 < currentPath.size()) {
-                int nextDy = currentPath.get(index + 1).getY() - target.getY();
-                if (nextDy != 0) {
-                    pause = true;
-                }
-            }
             index++;
             updateTargetOffset();
             if (index >= currentPath.size()) {
                 stop();
                 return;
-            }
-            if (pause) {
-                schedulePause();
             }
             return;
         }
