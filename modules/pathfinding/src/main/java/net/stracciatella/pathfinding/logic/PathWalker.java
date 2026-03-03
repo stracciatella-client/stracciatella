@@ -262,9 +262,14 @@ public class PathWalker {
         }
         boolean facing = isFacingTarget(newYaw, desiredYaw);
         boolean jumpFacing = facing;
-        if (!jumpFacing && jumpDecision.jump && jumpDecision.gap > 1) {
-            float gapTolerance = CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg;
-            jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
+        if (!jumpFacing && jumpDecision.jump) {
+            if (jumpDecision.gap > 1) {
+                float gapTolerance = CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg;
+                jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
+            } else if (jumpDecision.gap <= 1) {
+                // For step-up jumps (gap 0-1), be more lenient with facing
+                jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= 45.0f;
+            }
         }
         boolean jump = jumpFacing && jumpDecision.jump;
         if (jump) {
@@ -447,7 +452,21 @@ public class PathWalker {
         int gap = Math.max(dx, dz);
         lastDebug.gap = gap;
         lastDebug.dy = dy;
-        if (gap == 0 || (stepX == 0 && stepZ == 0)) {
+
+        // Special case: if gap is 0, check if we need to jump up vertically
+        if (gap == 0) {
+            lastDebug.forwardAir = false;
+            lastDebug.landingSolid = true;
+            lastDebug.edgeThreshold = 0.0;
+            // Check actual Y difference between player feet and target block
+            double feetToTargetDy = target.getY() - player.getY();
+            if (feetToTargetDy >= 0.5) {
+                return new JumpDecision(true, gap, false);
+            }
+            return new JumpDecision(false, gap, false);
+        }
+
+        if (stepX == 0 && stepZ == 0) {
             lastDebug.forwardAir = false;
             lastDebug.landingSolid = false;
             lastDebug.edgeThreshold = 0.0;
@@ -476,15 +495,32 @@ public class PathWalker {
         if (!landingSolid) {
             return new JumpDecision(false, gap, false);
         }
-        if (dy < -0.2 && gap <= 1) {
+
+        // Check actual Y difference between player feet and target block for step-up jumps
+        double feetToTargetDy = target.getY() - player.getY();
+
+        if (debug) {
+            System.out.println(String.format(Locale.US, "[PathWalker] Jump check: gap=%d, feetToTargetDy=%.2f, playerY=%.2f, targetY=%d, distance=%.2f, landingSolid=%b",
+                gap, feetToTargetDy, player.getY(), target.getY(), distance, landingSolid));
+        }
+
+        if (feetToTargetDy < -0.5 && gap <= 1) {
             return new JumpDecision(false, gap, false);
         }
 
-        if (gap <= 1 && dy >= 0.6 && landingSolid && distance <= CONFIG.stepUpJumpDistance) {
+        // Jump for step-up when walking up blocks (check feet-to-target Y difference)
+        // Also check if there's a block directly in front at player level (for stairs/slabs)
+        boolean blockInFront = false;
+        if (gap == 1 && stepX != 0 || stepZ != 0) {
+            BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY()), playerZ + stepZ);
+            blockInFront = !player.level().getBlockState(frontPos).isAir();
+        }
+
+        if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && landingSolid && distance <= CONFIG.stepUpJumpDistance) {
             return new JumpDecision(true, gap, false);
         }
 
-        boolean needsJump = dy > 0.6 || forwardAir || gap > 1;
+        boolean needsJump = feetToTargetDy > 0.5 || blockInFront || forwardAir || gap > 1;
         if (!needsJump) {
             return new JumpDecision(false, gap, false);
         }
@@ -1362,7 +1398,7 @@ public class PathWalker {
         public double edgeJumpTriggerDistance = 1.0;
         public double edgeJumpHoldEdge = 0.22;
         public double edgeJumpTriggerEdge = 0.08;
-        public int jumpCooldownTicks = 8;
+        public int jumpCooldownTicks = 4;
         public float pitchJitterMinDeg = 0.3f;
         public float pitchJitterMaxDeg = 1.2f;
         public float jumpAimYawMinDeg = 1.5f;
@@ -1374,7 +1410,7 @@ public class PathWalker {
         public float walkTurnMaxDeg = 60.0f;
         public double offCourseDistance = 3.5;
         public int offCourseTicks = 10;
-        public double stepUpJumpDistance = 1.4;
+        public double stepUpJumpDistance = 2.0;
         public boolean physicsCalibrated = false;
         public double physicsGravity = 0.08;
         public double physicsVerticalDrag = 0.98;
