@@ -562,24 +562,19 @@ public class PathWalker {
             // Check actual Y difference between player feet and target block
             double feetToTargetDy = target.getY() - player.getY();
 
-            // Check if there's air below the target (falling edge)
-            BlockPos targetBelow = new BlockPos(target.getX(), target.getY() - 1, target.getZ());
-            boolean airBelow = player.level().getBlockState(targetBelow).isAir();
-
-            lastDebug.forwardAir = airBelow;
-            lastDebug.landingSolid = true;
-            lastDebug.edgeThreshold = 0.0;
-
-            // If target is below us and there's air, we're at a falling edge - don't jump
-            if (feetToTargetDy < -0.5 && airBelow) {
-                return new JumpDecision(false, gap, false);
-            }
-
             // If target is above us, jump to reach it
             if (feetToTargetDy >= 0.5) {
+                lastDebug.forwardAir = false;
+                lastDebug.landingSolid = true;
+                lastDebug.edgeThreshold = 0.0;
                 return new JumpDecision(true, gap, false);
             }
 
+            // For gap 0, only prevent movement/jumping if we're literally standing on the target block
+            // Don't block jumps when approaching edges
+            lastDebug.forwardAir = false;
+            lastDebug.landingSolid = true;
+            lastDebug.edgeThreshold = 0.0;
             return new JumpDecision(false, gap, false);
         }
 
