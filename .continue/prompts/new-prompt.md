@@ -1,6 +1,5 @@
 The architecture is fabric for minecraft with the official mojang mappings.
-
-The source code is located in the modules folder.
+The source code is located in the modules folder and written in java. The build scripts are written in kotlin.
 Try to avoid doing a text search across all files.
 Only modify code that needs to be changed. Try too keep the changes as small as possible
 the minecraft coordinate format works like in other voxel games with y being the height
