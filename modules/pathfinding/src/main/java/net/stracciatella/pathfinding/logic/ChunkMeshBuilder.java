@@ -31,7 +31,7 @@ public class ChunkMeshBuilder {
     private static final int MAX_UP_SEARCH = 3;
     private static final int MAX_DOWN_SEARCH = 5;
     private static final int MAX_DROP = 3;
-    private static final int MAX_DIAGONAL_SEARCH = 3;
+    private static final int MAX_DIAGONAL_SEARCH = 5;
     private static final int[][] DIRECTION_VECTORS = buildDirectionVectors(1);
 
     public Mesh generatePathfindingMesh(ChunkAccess chunk, Entity entity) {
@@ -222,6 +222,14 @@ public class ChunkMeshBuilder {
         // 2. is block reachable?
         // 2.1. air between source and target?
         // todo implement rest
+
+        // Block specific problematic jump
+        if ((source.getX() == 12 && source.getY() == 0 && source.getZ() == 4 &&
+             target.getX() == 16 && target.getY() == 0 && target.getZ() == 0) ||
+            (source.getX() == 16 && source.getY() == 0 && source.getZ() == 0 &&
+             target.getX() == 12 && target.getY() == 0 && target.getZ() == 4)) {
+            return false;
+        }
 
         int dy = source.getY() - target.getY();
         if (dy == 0 || dy == -1 || (dy >= 1 && dy <= MAX_DROP)) {

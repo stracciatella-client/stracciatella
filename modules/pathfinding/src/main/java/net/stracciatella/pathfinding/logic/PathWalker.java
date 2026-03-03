@@ -628,7 +628,7 @@ public class PathWalker {
         // Jump for step-up when walking up blocks (check feet-to-target Y difference)
         // Also check if there's a block directly in front at player level (for stairs/slabs)
         boolean blockInFront = false;
-        if (gap == 1 && stepX != 0 || stepZ != 0) {
+        if (gap == 1 && (stepX != 0 || stepZ != 0)) {
             BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY()), playerZ + stepZ);
             blockInFront = !player.level().getBlockState(frontPos).isAir();
         }
