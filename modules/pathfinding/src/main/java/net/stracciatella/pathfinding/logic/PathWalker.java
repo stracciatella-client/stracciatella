@@ -658,7 +658,7 @@ public class PathWalker {
             // Only jump when close to the block face. Jumping from 2+ blocks away with sprint
             // momentum causes the player to fly past the target. At ~0.9 blocks from center
             // (~block face), sprint speed lands the player safely on the block.
-            if (distance <= 0.9) {
+            if (distance <= 0.95) {
                 return new JumpDecision(true, gap, false);
             }
             return new JumpDecision(false, gap, false);
