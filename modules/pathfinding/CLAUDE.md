@@ -1,0 +1,1 @@
+The pathwalker module has a lot of debug statements make sure to read the logs when editing the pathwalker

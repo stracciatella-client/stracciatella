@@ -655,7 +655,13 @@ public class PathWalker {
         }
 
         if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && landingSolid && distance <= CONFIG.stepUpJumpDistance) {
-            return new JumpDecision(true, gap, false);
+            // Only jump when close to the block face. Jumping from 2+ blocks away with sprint
+            // momentum causes the player to fly past the target. At ~0.9 blocks from center
+            // (~block face), sprint speed lands the player safely on the block.
+            if (distance <= 0.9) {
+                return new JumpDecision(true, gap, false);
+            }
+            return new JumpDecision(false, gap, false);
         }
 
         boolean needsJump = feetToTargetDy > 0.5 || blockInFront || forwardAir || gap > 1;
