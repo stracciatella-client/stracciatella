@@ -87,13 +87,13 @@ public class MeshPathfinder {
         return path;
     }
 
-    // Euclidean distance heuristic (3D)
+    // Euclidean distance heuristic scaled to match movement costs (10 per block).
+    // Must remain admissible: cheapest move is gap=1 flat = cost 10, so scale=10 is safe.
     private double heuristic(MeshNode a, MeshNode b) {
-        // Ensure MeshNode has getters: getX(), getY(), getZ()
         double dx = a.getX() - b.getX();
         double dy = a.getY() - b.getY();
         double dz = a.getZ() - b.getZ();
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+        return 10.0 * Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     // Helper class for the PriorityQueue

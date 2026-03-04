@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./gradlew :pathfinding:compileJava:*)"
+      "Bash(./gradlew :pathfinding:compileJava:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/jbr\" ./gradlew :modules:pathfinding:compileJava:*)"
     ]
   }
 }

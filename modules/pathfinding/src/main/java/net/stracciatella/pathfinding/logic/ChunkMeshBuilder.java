@@ -169,7 +169,7 @@ public class ChunkMeshBuilder {
                         MeshNode candidate = nodeMap.get(targetPos);
                         if (candidate != null) {
                             if (isBlockReachable(lookup, node.getBlockPos(), targetPos)) {
-                                neighbors.add(new Neighbor(candidate, movementCost(dx, dz)));
+                                neighbors.add(new Neighbor(candidate, movementCost(dx, dz, dy)));
                             }
                         }
                     }
@@ -309,11 +309,25 @@ public class ChunkMeshBuilder {
         return true;
     }
 
-    private static int movementCost(int dx, int dz) {
-        if (dx != 0 && dz != 0) {
-            return 2;
-        }
-        return 1;
+    private static int movementCost(int dx, int dz, int dy) {
+        int gap = Math.max(Math.abs(dx), Math.abs(dz));
+
+        // Base cost scales steeply with horizontal gap so A* strongly prefers
+        // walking (gap=1) over short jumps (gap=2-3) over long parkour (gap=4+).
+        int base;
+        if (gap <= 1)      base = 10;
+        else if (gap == 2) base = 22;
+        else if (gap == 3) base = 40;
+        else if (gap == 4) base = 65;
+        else               base = 100;
+
+        // dy > 0 means target is higher (requires jumping up — harder).
+        // dy < 0 means target is lower (drop — easier than jumping up).
+        int heightCost = dy > 0 ? dy * 5 : Math.abs(dy) * 2;
+
+        int diagonal = (dx != 0 && dz != 0) ? 3 : 0;
+
+        return base + heightCost + diagonal;
     }
 
     private static int[][] buildDirectionVectors(int maxComponent) {
