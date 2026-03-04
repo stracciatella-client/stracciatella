@@ -378,6 +378,32 @@ public class PathWalker {
                 shouldBrake = true;
                 canMoveForward = false;
             }
+
+            // CASE 5: Gap jump lateral drift prevention.
+            // When preparing for a gap jump (gap > 1), lateral velocity (perpendicular to the jump
+            // direction) can carry the player off the takeoff platform in the wrong axis before the
+            // jump edge-trigger fires. This happens when the player arrives at the takeoff node from
+            // a different direction than the jump, leaving them with cross-velocity they need to shed.
+            // Stop forward movement so ground friction decays the lateral component safely.
+            if (jumpDecision.gap > 1 && !jumpDecision.jump && player.onGround()) {
+                double jux = targetX - player.getX();
+                double juz = targetZ - player.getZ();
+                double jlen = Math.sqrt(jux * jux + juz * juz);
+                if (jlen > 0.001) {
+                    jux /= jlen;
+                    juz /= jlen;
+                    double fwdComp = vx * jux + vz * juz;
+                    double latX = vx - fwdComp * jux;
+                    double latZ = vz - fwdComp * juz;
+                    double latSq = latX * latX + latZ * latZ;
+                    if (latSq > 0.005) { // lateral velocity > ~0.07 blocks/tick
+                        canMoveForward = false;
+                        if (debug) {
+                            System.out.println("[PathWalker] gap-jump lateral brake: latVel=" + fmt(Math.sqrt(latSq)) + " gap=" + jumpDecision.gap);
+                        }
+                    }
+                }
+            }
         }
 
         if (debug) {
@@ -672,7 +698,7 @@ public class PathWalker {
             double projectedForward = Math.max(projectedDir, projectedAxis);
             double dynamicTrigger = CONFIG.edgeJumpTriggerEdge;
             if (projectedForward > 0.0) {
-                dynamicTrigger = Math.max(dynamicTrigger, Math.min(0.25, projectedForward * 1.5));
+                dynamicTrigger = Math.max(dynamicTrigger, Math.min(0.5, projectedForward * 2.0));
             }
             if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
                 System.out.println(
@@ -690,6 +716,9 @@ public class PathWalker {
                 return new JumpDecision(true, gap, false);
             }
             if (edgeDistance <= dynamicTrigger) {
+                return new JumpDecision(true, gap, false);
+            }
+            if (nextEdgeDistance <= 0.0) {
                 return new JumpDecision(true, gap, false);
             }
             if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
