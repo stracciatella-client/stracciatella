@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew :pathfinding:compileJava:*)",
-      "Bash(JAVA_HOME=\"/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/jbr\" ./gradlew :modules:pathfinding:compileJava:*)"
+      "Bash(JAVA_HOME=\"/c/Program Files/JetBrains/IntelliJ IDEA 2025.3.3/jbr\" ./gradlew :modules:pathfinding:compileJava:*)",
+      "Bash(./gradlew :pathfinding:build:*)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-21.0.7.6-hotspot\" ./gradlew :pathfinding:build:*)"
     ]
   }
 }

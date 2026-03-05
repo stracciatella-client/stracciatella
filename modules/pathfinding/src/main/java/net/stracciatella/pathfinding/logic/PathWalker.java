@@ -209,7 +209,7 @@ public class PathWalker {
             return;
         }
 
-        boolean sprint = shouldSprint(distanceSq);
+        boolean sprint = true;
         JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance);
         if (jumpDecision.jump && jumpDecision.gap <= 1) {
             sprint = false;
@@ -286,7 +286,7 @@ public class PathWalker {
         if (isMovingAway(player, targetX, targetZ)) {
             canMoveForward = false;
         }
-        if (jumpDecision.holdBeforeJump) {
+        if (jumpDecision.holdBeforeJump && jumpDecision.gap <= 2) {
             canMoveForward = false;
         }
 
@@ -669,7 +669,10 @@ public class PathWalker {
             return new JumpDecision(false, gap, false);
         }
 
-        JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
+        // For gap >= 3 or large distances, skip simulation: hold brakes the player and kills
+        // the sprint velocity needed for the jump. Use edge-based triggers instead.
+        boolean longRangeJump = gap >= 3 || distance >= 2.5;
+        JumpDecision simDecision = longRangeJump ? null : decideJumpBySimulation(player, target, sprint, gap);
         if (simDecision != null) {
             return simDecision;
         }
@@ -717,6 +720,22 @@ public class PathWalker {
                                 + " dy=" + String.format("%.2f", dy)
                                 + " gap=" + gap
                 );
+            }
+            if (longRangeJump) {
+                // Long-range jumps need to fire at the last possible moment before the edge.
+                // getDeltaMovement() is the previous tick's velocity; this tick will also apply
+                // sprint ground acceleration. Estimate the actual movement this tick to avoid
+                // overshooting the edge before the trigger fires.
+                double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
+                double groundAccel = speed * CONFIG.physicsGroundAccelFactorSprint;
+                // Apply ground friction to prevVel before adding accel: actual movement = prevVel * 0.546 + accel
+                double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + groundAccel);
+                if (estimatedNextEdgeDistance <= 0.0 || nextEdgeDistance <= 0.0
+                        || edgeDistance <= CONFIG.edgeJumpTriggerEdge
+                        || nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
+                    return new JumpDecision(true, gap, false);
+                }
+                return new JumpDecision(false, gap, false);
             }
             if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) {
                 return new JumpDecision(true, gap, false);
