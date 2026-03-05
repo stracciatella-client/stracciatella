@@ -746,10 +746,18 @@ public class PathWalker {
             // parkour module). Shrink the player's bounding box slightly and check if there
             // is still ground below. When there isn't, the player is at the very last frame
             // before falling off — the optimal moment for maximum jump distance.
-            // This is more reliable than calculated edge distances because the gap value can
-            // change as the player crosses block boundaries mid-approach.
+            //
+            // The collision check is direction-agnostic, so it can trigger from a platform
+            // edge in the WRONG axis (e.g. player overshot in Z but the gap is in X).
+            // Guard against this by also requiring the directional edge distance toward the
+            // target to be small (< 0.35). This ensures we only fire when near the gap edge.
             double currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-            boolean atEdge = isAtCollisionEdge(player);
+            boolean atCollisionEdge = isAtCollisionEdge(player);
+            // Guard: require minimum sprint speed to prevent firing after a diagonal landing
+            // where the player hasn't built momentum yet. Full post-drag sprint is ~0.153;
+            // 0.12 allows slightly below peak sprint but blocks walking speed (~0.09).
+            boolean hasSpeed = currentSpeed >= 0.12;
+            boolean atEdge = atCollisionEdge && hasSpeed;
             if (debug) {
                 if (atEdge) {
                     System.out.println(String.format(Locale.US,
@@ -757,8 +765,8 @@ public class PathWalker {
                             edgeDistance, currentSpeed, gap, distance));
                 } else if (System.currentTimeMillis() - lastDebugMs > 200) {
                     System.out.println(String.format(Locale.US,
-                            "[PathWalker] Jump decision: collision-edge HOLD edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
-                            edgeDistance, currentSpeed, gap, distance));
+                            "[PathWalker] Jump decision: collision-edge HOLD edgeDist=%.3f collEdge=%b hasSpeed=%b speed=%.3f gap=%d dist=%.2f",
+                            edgeDistance, atCollisionEdge, hasSpeed, currentSpeed, gap, distance));
                 }
             }
             return new JumpDecision(atEdge, gap, false, atEdge ? "collision-edge:fire" : "collision-edge:hold");
