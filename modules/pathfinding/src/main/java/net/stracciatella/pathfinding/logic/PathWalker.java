@@ -200,9 +200,6 @@ public class PathWalker {
 
         boolean sprint = true;
         JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance);
-        if (jumpDecision.jump && jumpDecision.gap <= 1) {
-            sprint = false;
-        }
 
         boolean stabilizeForJump = jumpDecision.gap > 1;
         if (stabilizeForJump && !jumpAimOffsetInitialized) {
@@ -528,132 +525,170 @@ public class PathWalker {
     }
 
     private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint, double distance) {
-        if (jumpCooldownTicks > 0 || !player.onGround()) {
-            return new JumpDecision(false, 0, false);
-        }
+        boolean jump = false;
+        boolean hold = false;
+        int decidedGap = 0;
+        String reason = "none";
+        boolean forwardAir = false;
+        boolean landingSolid = true;
+        double edgeThreshold = 0.0;
 
-        int playerX = (int) Math.floor(player.getX());
-        int playerZ = (int) Math.floor(player.getZ());
-        double dirX = (target.getX() + 0.5) - player.getX();
-        double dirZ = (target.getZ() + 0.5) - player.getZ();
-        int stepX = Double.compare(dirX, 0.0);
-        int stepZ = Double.compare(dirZ, 0.0);
-        if (Math.abs(dirX) > Math.abs(dirZ) * JUMP_FORWARD_AXIS_RATIO) {
-            stepZ = 0;
-        } else if (Math.abs(dirZ) > Math.abs(dirX) * JUMP_FORWARD_AXIS_RATIO) {
-            stepX = 0;
-        }
-        int gap = Math.max(Math.abs(target.getX() - playerX), Math.abs(target.getZ() - playerZ));
-        lastDebug.gap = gap;
-        lastDebug.dy = dy;
-        double rawDistance = Math.sqrt(dirX * dirX + dirZ * dirZ);
-        double feetToTargetDy = target.getY() - player.getY();
+        decide: {
+            if (jumpCooldownTicks > 0) {
+                reason = "cooldown";
+                break decide;
+            }
+            if (!player.onGround()) {
+                reason = "airborne";
+                break decide;
+            }
 
-        if (gap == 0) {
-            lastDebug.forwardAir = false;
-            lastDebug.landingSolid = true;
-            lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(feetToTargetDy >= 0.5, gap, false);
-        }
-        if (stepX == 0 && stepZ == 0) {
-            lastDebug.forwardAir = false;
-            lastDebug.landingSolid = false;
-            lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(false, gap, false);
-        }
+            int playerX = (int) Math.floor(player.getX());
+            int playerZ = (int) Math.floor(player.getZ());
+            double dirX = (target.getX() + 0.5) - player.getX();
+            double dirZ = (target.getZ() + 0.5) - player.getZ();
+            int stepX = Double.compare(dirX, 0.0);
+            int stepZ = Double.compare(dirZ, 0.0);
+            if (Math.abs(dirX) > Math.abs(dirZ) * JUMP_FORWARD_AXIS_RATIO) {
+                stepZ = 0;
+            } else if (Math.abs(dirZ) > Math.abs(dirX) * JUMP_FORWARD_AXIS_RATIO) {
+                stepX = 0;
+            }
+            int gap = Math.max(Math.abs(target.getX() - playerX), Math.abs(target.getZ() - playerZ));
+            decidedGap = gap;
+            double rawDistance = Math.sqrt(dirX * dirX + dirZ * dirZ);
+            double feetToTargetDy = target.getY() - player.getY();
 
-        int baseY = (int) Math.floor(player.getY()) - 1;
-        boolean forwardAir;
-        if (gap > 1) {
-            forwardAir = false;
-            for (int i = 1; i <= gap; i++) {
-                if (player.level().getBlockState(new BlockPos(playerX + stepX * i, baseY, playerZ + stepZ * i)).isAir()) {
-                    forwardAir = true;
-                    break;
+            if (gap == 0) {
+                if (feetToTargetDy >= 0.5) {
+                    jump = true;
+                    reason = "step-up-same-block";
+                } else {
+                    reason = "same-block-flat";
+                }
+                break decide;
+            }
+
+            if (stepX == 0 && stepZ == 0) {
+                landingSolid = false;
+                reason = "no-direction";
+                break decide;
+            }
+
+            int baseY = (int) Math.floor(player.getY()) - 1;
+            if (gap > 1) {
+                for (int i = 1; i <= gap; i++) {
+                    if (player.level().getBlockState(new BlockPos(playerX + stepX * i, baseY, playerZ + stepZ * i)).isAir()) {
+                        forwardAir = true;
+                        break;
+                    }
+                }
+            } else {
+                forwardAir = player.level().getBlockState(new BlockPos(playerX + stepX, baseY, playerZ + stepZ)).isAir();
+            }
+
+            landingSolid = !player.level().getBlockState(new BlockPos(target.getX(), target.getY(), target.getZ())).isAir();
+
+            if (!landingSolid) {
+                reason = "landing-not-solid";
+                break decide;
+            }
+
+            if (debug) {
+                System.out.println(String.format(Locale.US, "[PathWalker] Jump check: gap=%d, feetToTargetDy=%.2f, playerY=%.2f, targetY=%d, distance=%.2f",
+                    gap, feetToTargetDy, player.getY(), target.getY(), distance));
+            }
+
+            if (feetToTargetDy < -0.5 && gap <= 1) {
+                reason = "drop-no-jump";
+                break decide;
+            }
+
+            boolean blockInFront = false;
+            if (gap == 1) {
+                BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY() + 0.01), playerZ + stepZ);
+                blockInFront = !player.level().getBlockState(frontPos).isAir();
+            }
+
+            // Step-up: target is 1 block higher or there's a block face at foot level
+            // Only jump when close to the block face; rawDistance avoids target-offset interfering.
+            if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && distance <= CONFIG.stepUpJumpDistance) {
+                if (rawDistance <= 0.95) {
+                    jump = true;
+                    reason = "step-up";
+                } else {
+                    reason = "step-up-too-far";
+                }
+                break decide;
+            }
+
+            boolean needsJump = feetToTargetDy > 0.5 || blockInFront || forwardAir || gap > 1;
+            if (!needsJump) {
+                reason = "no-jump-needed";
+                break decide;
+            }
+
+            if (!edgeThresholdInitialized || currentGapForJump != gap) {
+                currentGapForJump = gap;
+                currentEdgeThreshold = edgeThresholdForGap(gap, sprint);
+                edgeThresholdInitialized = true;
+            }
+            double usedThreshold = (gap > 1 && forwardAir)
+                    ? Math.max(CONFIG.edgeJumpForwardAirMin, currentEdgeThreshold - CONFIG.edgeJumpForwardAirBias)
+                    : currentEdgeThreshold;
+            edgeThreshold = usedThreshold;
+
+            // For gap >= 3 or large distances, skip simulation — braking kills sprint velocity.
+            boolean longRangeJump = gap >= 3 || distance >= 2.5;
+            if (!longRangeJump) {
+                JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
+                if (simDecision != null) {
+                    jump = simDecision.jump;
+                    hold = simDecision.holdBeforeJump;
+                    reason = simDecision.reason;
+                    break decide;
                 }
             }
-        } else {
-            forwardAir = player.level().getBlockState(new BlockPos(playerX + stepX, baseY, playerZ + stepZ)).isAir();
+
+            // Gaps with air ahead: use edge-distance triggers (handles both long- and short-range).
+            if (gap > 1 && forwardAir) {
+                JumpDecision edgeDecision = decideJumpByEdgeDistance(player, target, gap, dy, distance, stepX, stepZ, longRangeJump);
+                jump = edgeDecision.jump;
+                hold = edgeDecision.holdBeforeJump;
+                reason = edgeDecision.reason;
+                break decide;
+            }
+
+            // Fallback: block-fraction position check
+            boolean axisBias = (stepX == 0) ^ (stepZ == 0);
+            boolean atEdge = (gap > 1)
+                    ? (axisBias
+                        ? isAtEdge(player, stepX, stepZ, usedThreshold)
+                        : isAtEdgeDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ(), usedThreshold))
+                    : isAtEdge(player, stepX, stepZ, currentEdgeThreshold);
+            if (atEdge) {
+                jump = true;
+                reason = "edge-position";
+            } else if (forwardAir && gap > 1 && distance <= CONFIG.edgeJumpHoldDistance) {
+                hold = true;
+                reason = "edge-hold";
+            } else {
+                reason = "edge-not-reached";
+            }
         }
 
-        boolean landingSolid = !player.level().getBlockState(new BlockPos(target.getX(), target.getY(), target.getZ())).isAir();
+        lastDebug.gap = decidedGap;
+        lastDebug.dy = dy;
         lastDebug.forwardAir = forwardAir;
         lastDebug.landingSolid = landingSolid;
-
-        if (!landingSolid) {
-            lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(false, gap, false);
-        }
+        lastDebug.edgeThreshold = edgeThreshold;
 
         if (debug) {
-            System.out.println(String.format(Locale.US, "[PathWalker] Jump check: gap=%d, feetToTargetDy=%.2f, playerY=%.2f, targetY=%d, distance=%.2f",
-                gap, feetToTargetDy, player.getY(), target.getY(), distance));
+            System.out.println(String.format(Locale.US, "[PathWalker] Jump result: reason=%s jump=%b hold=%b gap=%d dist=%.2f",
+                reason, jump, hold, decidedGap, distance));
         }
 
-        if (feetToTargetDy < -0.5 && gap <= 1) {
-            lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(false, gap, false);
-        }
-
-        boolean blockInFront = false;
-        if (gap == 1) {
-            BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY() + 0.01), playerZ + stepZ);
-            blockInFront = !player.level().getBlockState(frontPos).isAir();
-        }
-
-        // Step-up: target is 1 block higher or there's a block face at foot level
-        // Only jump when close to the block face; rawDistance avoids target-offset interfering.
-        if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && distance <= CONFIG.stepUpJumpDistance) {
-            lastDebug.edgeThreshold = 0.0;
-            boolean stepUpJump = rawDistance <= 0.95;
-            if (debug && stepUpJump) {
-                System.out.println(String.format(Locale.US, "[PathWalker] Jump decision: step-up jump=true rawDist=%.3f", rawDistance));
-            }
-            return new JumpDecision(stepUpJump, gap, false);
-        }
-
-        boolean needsJump = feetToTargetDy > 0.5 || blockInFront || forwardAir || gap > 1;
-        if (!needsJump) {
-            lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(false, gap, false);
-        }
-
-        if (!edgeThresholdInitialized || currentGapForJump != gap) {
-            currentGapForJump = gap;
-            currentEdgeThreshold = edgeThresholdForGap(gap, sprint);
-            edgeThresholdInitialized = true;
-        }
-        double usedThreshold = (gap > 1 && forwardAir)
-                ? Math.max(CONFIG.edgeJumpForwardAirMin, currentEdgeThreshold - CONFIG.edgeJumpForwardAirBias)
-                : currentEdgeThreshold;
-        lastDebug.edgeThreshold = usedThreshold;
-
-        // For gap >= 3 or large distances, skip simulation — braking kills sprint velocity.
-        boolean longRangeJump = gap >= 3 || distance >= 2.5;
-        if (!longRangeJump) {
-            JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
-            if (simDecision != null) {
-                if (debug && simDecision.jump) {
-                    System.out.println(String.format(Locale.US, "[PathWalker] Jump decision: simulation jump=true gap=%d dist=%.2f", gap, distance));
-                }
-                return simDecision;
-            }
-        }
-
-        // Gaps with air ahead: use edge-distance triggers (handles both long- and short-range).
-        if (gap > 1 && forwardAir) {
-            return decideJumpByEdgeDistance(player, target, gap, dy, distance, stepX, stepZ, longRangeJump);
-        }
-
-        // Fallback: block-fraction position check
-        boolean axisBias = (stepX == 0) ^ (stepZ == 0);
-        boolean atEdge = (gap > 1)
-                ? (axisBias
-                    ? isAtEdge(player, stepX, stepZ, usedThreshold)
-                    : isAtEdgeDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ(), usedThreshold))
-                : isAtEdge(player, stepX, stepZ, currentEdgeThreshold);
-        boolean hold = !atEdge && forwardAir && gap > 1 && distance <= CONFIG.edgeJumpHoldDistance;
-        return new JumpDecision(atEdge, gap, hold);
+        return new JumpDecision(jump, decidedGap, hold, reason);
     }
 
     private static JumpDecision decideJumpByEdgeDistance(
@@ -713,7 +748,7 @@ public class PathWalker {
                             edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, gap, distance));
                 }
             }
-            return new JumpDecision(fire, gap, false);
+            return new JumpDecision(fire, gap, false, "long-range:" + (fireReason != null ? fireReason : "hold"));
         }
 
         // Trigger jump if at or past the edge trigger threshold
@@ -729,7 +764,7 @@ public class PathWalker {
                         "[PathWalker] Jump decision: short-range FIRE reason=%s edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f gap=%d dist=%.2f",
                         shortFireReason, edgeDistance, nextEdgeDistance, dynamicTrigger, gap, distance));
             }
-            return new JumpDecision(true, gap, false);
+            return new JumpDecision(true, gap, false, "short-range:" + shortFireReason);
         }
 
         // Hold position when approaching the edge but not yet at the trigger
@@ -739,7 +774,7 @@ public class PathWalker {
                         "[PathWalker] Jump decision: hold edgeDist=%.3f nextEdge=%.3f gap=%d dist=%.2f",
                         edgeDistance, nextEdgeDistance, gap, distance));
             }
-            return new JumpDecision(false, gap, true);
+            return new JumpDecision(false, gap, true, "edge-hold");
         }
 
         if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
@@ -747,17 +782,17 @@ public class PathWalker {
                     "[PathWalker] Jump decision: waiting edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f gap=%d dist=%.2f",
                     edgeDistance, nextEdgeDistance, dynamicTrigger, gap, distance));
         }
-        return new JumpDecision(false, gap, false);
+        return new JumpDecision(false, gap, false, "edge-waiting");
     }
 
     private static JumpDecision decideJumpBySimulation(LocalPlayer player, MeshNode target, boolean sprint, int gap) {
         SimulationResult now = simulateJumpLanding(player, target, sprint, 0);
         if (now.lands) {
-            return new JumpDecision(true, gap, false);
+            return new JumpDecision(true, gap, false, "simulation-fire");
         }
         SimulationResult later = simulateJumpLanding(player, target, sprint, JUMP_SIM_HOLD_TICKS);
         if (later.lands) {
-            return new JumpDecision(false, gap, true);
+            return new JumpDecision(false, gap, true, "simulation-hold");
         }
         return null;
     }
@@ -1683,7 +1718,7 @@ public class PathWalker {
         }
     }
 
-    private record JumpDecision(boolean jump, int gap, boolean holdBeforeJump) {}
+    private record JumpDecision(boolean jump, int gap, boolean holdBeforeJump, String reason) {}
 
     private record SimulationResult(boolean lands) {}
 
@@ -2020,6 +2055,7 @@ public class PathWalker {
                             + " dy=" + String.format("%.2f", dy)
                             + " jump=" + jumpDecision.jump
                             + " hold=" + jumpDecision.holdBeforeJump
+                            + " reason=" + jumpDecision.reason
                             + " forwardAir=" + forwardAir
                             + " landingSolid=" + landingSolid
                             + " edgeTh=" + String.format("%.2f", edgeThreshold)
