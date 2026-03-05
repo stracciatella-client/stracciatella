@@ -378,6 +378,15 @@ public class PathWalker {
             }
         }
 
+        // For long-range gap jumps (>= 3), maintain sprint momentum during the approach phase.
+        // The edge-distance trigger system fires the jump at the correct position.
+        // Stopping to "prepare" kills the sprint speed needed to clear the gap.
+        if (!jump && jumpDecision.gap >= 3 && player.onGround() && facing) {
+            canMoveForward = true;
+            shouldBrake = false;
+            sprint = true;
+        }
+
         // If jump is committed, override any braking or movement suppression that occurred above.
         // For long-range gaps this preserves the sprint speed needed to clear the gap.
         // For step-up jumps this ensures the player moves into the block while jumping.
