@@ -740,11 +740,19 @@ public class PathWalker {
             double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
             double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + speed * CONFIG.physicsGroundAccelFactorSprint);
             String fireReason = null;
-            if (estimatedNextEdgeDistance <= 0.0) fireReason = "estimatedNext<=0";
-            else if (nextEdgeDistance <= 0.0) fireReason = "nextEdge<=0";
-            else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
-            else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "nextEdgeTrigger";
-            else if (edgeDistance <= dynamicTrigger) fireReason = "dynTrigger";
+            if (gap >= 4) {
+                // For 4+ block gaps, jump as late as possible - only fire when the next tick
+                // would put us past the edge. This maximises ground sprint distance.
+                if (estimatedNextEdgeDistance <= 0.05) fireReason = "estimatedNext<=0";
+                else if (nextEdgeDistance <= 0.05) fireReason = "nextEdge<=0";
+                else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
+            } else {
+                if (estimatedNextEdgeDistance <= 0.0) fireReason = "estimatedNext<=0";
+                else if (nextEdgeDistance <= 0.0) fireReason = "nextEdge<=0";
+                else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
+                else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "nextEdgeTrigger";
+                else if (edgeDistance <= dynamicTrigger) fireReason = "dynTrigger";
+            }
             boolean fire = fireReason != null;
             if (debug) {
                 if (fire) {
