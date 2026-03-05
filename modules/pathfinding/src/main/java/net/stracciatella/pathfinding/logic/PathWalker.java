@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 
@@ -735,34 +736,49 @@ public class PathWalker {
         }
 
         if (longRangeJump) {
-            // Long-range: fire at last moment before edge, accounting for this tick's acceleration.
+            double currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+
+            if (gap >= 4) {
+                // For 4+ block gaps, use collision-based edge detection (like Meteor Client's
+                // parkour module). Shrink the player's bounding box slightly and check if there
+                // is still ground below. When there isn't, the player is at the very last frame
+                // before falling off — the optimal moment for maximum jump distance.
+                boolean atEdge = isAtCollisionEdge(player);
+                if (debug) {
+                    if (atEdge) {
+                        System.out.println(String.format(Locale.US,
+                                "[PathWalker] Jump decision: collision-edge FIRE edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
+                                edgeDistance, currentSpeed, gap, distance));
+                    } else if (System.currentTimeMillis() - lastDebugMs > 200) {
+                        System.out.println(String.format(Locale.US,
+                                "[PathWalker] Jump decision: collision-edge HOLD edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
+                                edgeDistance, currentSpeed, gap, distance));
+                    }
+                }
+                return new JumpDecision(atEdge, gap, false, atEdge ? "collision-edge:fire" : "collision-edge:hold");
+            }
+
+            // Long-range gap < 4: fire at last moment before edge, accounting for this tick's acceleration.
             // getDeltaMovement() is last tick's velocity; actual movement = prevVel * 0.546 + groundAccel.
             double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
             double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + speed * CONFIG.physicsGroundAccelFactorSprint);
+
             String fireReason = null;
-            if (gap >= 4) {
-                // For 4+ block gaps, jump as late as possible - only fire when the next tick
-                // would put us past the edge. This maximises ground sprint distance.
-                if (estimatedNextEdgeDistance <= 0.05) fireReason = "estimatedNext<=0";
-                else if (nextEdgeDistance <= 0.05) fireReason = "nextEdge<=0";
-                else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
-            } else {
-                if (estimatedNextEdgeDistance <= 0.0) fireReason = "estimatedNext<=0";
-                else if (nextEdgeDistance <= 0.0) fireReason = "nextEdge<=0";
-                else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
-                else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "nextEdgeTrigger";
-                else if (edgeDistance <= dynamicTrigger) fireReason = "dynTrigger";
-            }
+            if (estimatedNextEdgeDistance <= 0.0) fireReason = "estimatedNext<=0";
+            else if (nextEdgeDistance <= 0.0) fireReason = "nextEdge<=0";
+            else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
+            else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "nextEdgeTrigger";
+            else if (edgeDistance <= dynamicTrigger) fireReason = "dynTrigger";
             boolean fire = fireReason != null;
             if (debug) {
                 if (fire) {
                     System.out.println(String.format(Locale.US,
-                            "[PathWalker] Jump decision: long-range FIRE reason=%s edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f gap=%d dist=%.2f",
-                            fireReason, edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, gap, distance));
+                            "[PathWalker] Jump decision: long-range FIRE reason=%s edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f speed=%.3f gap=%d dist=%.2f",
+                            fireReason, edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, currentSpeed, gap, distance));
                 } else if (System.currentTimeMillis() - lastDebugMs > 200) {
                     System.out.println(String.format(Locale.US,
-                            "[PathWalker] Jump decision: long-range HOLD edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f gap=%d dist=%.2f",
-                            edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, gap, distance));
+                            "[PathWalker] Jump decision: long-range HOLD edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f speed=%.3f gap=%d dist=%.2f",
+                            edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, currentSpeed, gap, distance));
                 }
             }
             return new JumpDecision(fire, gap, false, "long-range:" + (fireReason != null ? fireReason : "hold"));
@@ -1077,6 +1093,16 @@ public class PathWalker {
             return;
         }
         CALIBRATION.update(client, player);
+    }
+
+    private static boolean isAtCollisionEdge(LocalPlayer player) {
+        // Collision-based edge detection inspired by Meteor Client's parkour module.
+        // Shrink the player's bounding box by a tiny amount and shift it down 0.5 blocks.
+        // If there are no block collisions in this adjusted box, the player's feet are at
+        // the very edge of the block — the last possible frame to jump for maximum distance.
+        AABB box = player.getBoundingBox();
+        AABB shrunk = box.deflate(0.001, 0.0, 0.001).move(0.0, -0.5, 0.0);
+        return player.level().noCollision(player, shrunk);
     }
 
     private static boolean isAtEdge(LocalPlayer player, int stepX, int stepZ, double threshold) {
