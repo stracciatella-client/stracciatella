@@ -39,15 +39,10 @@ public class PathWalker {
     private static final double JUMP_FORWARD_AXIS_RATIO = 1.5;
     private static final int LEARN_MAX_GAP = 4;
     private static final int JUMP_SIM_HOLD_TICKS = 2;
-    private static float currentTurnSpeed = 0.0f;
-    private static float turnSpeedTarget = 0.0f;
-    private static long nextTurnRetargetMs = 0;
     private static float aimYaw;
     private static float aimYawVelocity;
     private static float aimYawAccel;
     private static float aimPitch;
-    private static float aimPitchVelocity;
-    private static float aimPitchAccel;
     private static long turnPauseUntilMs = 0;
     private static int jumpCooldownTicks = 0;
     private static int currentGapForJump = 0;
@@ -89,12 +84,6 @@ public class PathWalker {
 
         aimYawVelocity = 0.0f;
         aimYawAccel = 0.0f;
-        aimPitchVelocity = 0.0f;
-        aimPitchAccel = 0.0f;
-
-        currentTurnSpeed = 0.0f;
-        turnSpeedTarget = 0.0f;
-        nextTurnRetargetMs = 0;
         turnPauseUntilMs = 0;
         jumpCooldownTicks = 0;
         edgeThresholdInitialized = false;
@@ -243,19 +232,10 @@ public class PathWalker {
         float desiredPitch = computeDesiredPitch(dy, distance);
         float newPitch = updatePitch(desiredPitch);
 
-        if (debug) {
-            System.out.println(String.format(Locale.US, "[PathWalker] Aim: dy=%.3f, dist=%.3f, desiredP=%.2f, currentP=%.2f, velP=%.2f, accelP=%.2f", dy, distance, desiredPitch, aimPitch, aimPitchVelocity, aimPitchAccel));
-        }
-
         player.setYRot(newYaw);
         player.setXRot(newPitch);
 
         float angleDeltaAfter = Math.abs(wrapDegrees(desiredYaw - newYaw));
-        if (angleDeltaAfter <= CONFIG.alignmentDeadzoneDeg) {
-            currentTurnSpeed = 0.0f;
-            turnSpeedTarget = 0.0f;
-            nextTurnRetargetMs = System.currentTimeMillis() + CONFIG.turnJitterMinMs;
-        }
         boolean facing = isFacingTarget(newYaw, desiredYaw);
         boolean jumpFacing = facing;
         if (!jumpFacing && jumpDecision.jump) {
@@ -314,13 +294,8 @@ public class PathWalker {
             }
         }
 
-        if (jumpDecision.jump && jumpDecision.gap > 1) {
-            if (!jump) {
-                canMoveForward = false;
-            } else {
-            canMoveForward = true;
-            sprint = true;
-            }
+        if (jumpDecision.jump && jumpDecision.gap > 1 && !jump) {
+            canMoveForward = false;
         }
 
         // Check if we need to brake with backwards movement to counter momentum
@@ -423,8 +398,6 @@ public class PathWalker {
                 lastDebugMs = now;
                 lastDebug.print(player, target, distance, angleDeltaAfter, canMoveForward, facing, jumpDecision);
             }
-        }
-        if (debug) {
             logFallDiagnostics(player, target, dy, distance, jumpDecision);
             if (jumpDecision.jump && !jump) {
                 System.out.println(
@@ -463,8 +436,6 @@ public class PathWalker {
         if (Math.abs(delta) < 0.5f) {
             // Close enough, just set it to avoid micro-adjustments
             aimPitch = targetPitch;
-            aimPitchVelocity = 0.0f;
-            aimPitchAccel = 0.0f;
             return aimPitch;
         }
         // Move a fraction of the distance each tick (exponential smoothing)
@@ -554,18 +525,6 @@ public class PathWalker {
         if (client.player != null) {
             client.player.setSprinting(sprint);
         }
-    }
-
-    private static boolean shouldSprint(double distanceSq) {
-        double distance = Math.sqrt(distanceSq);
-        if (distance >= CONFIG.sprintDistance) {
-            return true;
-        }
-        if (distance <= CONFIG.walkDistance) {
-            return false;
-        }
-        double chance = randomRange(CONFIG.sprintChanceMin, CONFIG.sprintChanceMax);
-        return ThreadLocalRandom.current().nextDouble() < chance;
     }
 
     private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint, double distance) {
@@ -708,7 +667,6 @@ public class PathWalker {
             boolean axisBias = (stepX == 0) ^ (stepZ == 0);
             double edgeProgressDir = edgeProgressDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ());
             double edgeProgressAxis = axisBias ? edgeProgressAxis(player, stepX, stepZ) : edgeProgressAxisDiagonal(player, stepX, stepZ);
-            double edgeProgress = Math.max(edgeProgressDir, edgeProgressAxis);
             double edgeDistanceDir = 0.5 - edgeProgressDir;
             double edgeDistanceAxis = 0.5 - edgeProgressAxis;
             double edgeDistance = Math.min(edgeDistanceDir, edgeDistanceAxis);
@@ -1177,16 +1135,6 @@ public class PathWalker {
         return randomRange(min, max);
     }
 
-    private static float rotateToward(float current, float target, float maxStep) {
-        float delta = wrapDegrees(target - current);
-        if (delta > maxStep) {
-            delta = maxStep;
-        } else if (delta < -maxStep) {
-            delta = -maxStep;
-        }
-        return current + delta;
-    }
-
     private static float wrapDegrees(float angle) {
         float wrapped = angle % 360.0f;
         if (wrapped >= 180.0f) {
@@ -1196,19 +1144,6 @@ public class PathWalker {
             wrapped += 360.0f;
         }
         return wrapped;
-    }
-
-    private static float nextTurnStep() {
-        long now = System.currentTimeMillis();
-        if (now >= nextTurnRetargetMs) {
-            turnSpeedTarget = randomRange(CONFIG.turnMinDeg, CONFIG.turnMaxDeg);
-            int jitter = randomRange(CONFIG.turnJitterMinMs, CONFIG.turnJitterMaxMs);
-            nextTurnRetargetMs = now + Math.max(10, jitter);
-        }
-        float delta = turnSpeedTarget - currentTurnSpeed;
-        float step = Math.abs(delta) < CONFIG.turnAccel ? delta : Math.copySign(CONFIG.turnAccel, delta);
-        currentTurnSpeed += step;
-        return currentTurnSpeed;
     }
 
     private static boolean isFacingTarget(float currentYaw, float targetYaw) {
@@ -1358,10 +1293,6 @@ public class PathWalker {
 
     private static String fmt(double value) {
         return String.format(Locale.US, "%.3f", value);
-    }
-
-    private static void schedulePause() {
-        pauseUntilMs = System.currentTimeMillis() + randomRange(CONFIG.pauseMinMs, CONFIG.pauseMaxMs);
     }
 
     public static void setTurnRange(float min, float max) {
@@ -1879,7 +1810,6 @@ public class PathWalker {
         private boolean initialized;
         private boolean lastOnGround;
         private boolean lastForwardDown;
-        private boolean lastSprintDown;
         private float lastYaw;
         private double lastVy;
         private double lastForwardSpeed;
@@ -1901,7 +1831,6 @@ public class PathWalker {
             initialized = false;
             lastOnGround = false;
             lastForwardDown = false;
-            lastSprintDown = false;
             lastYaw = 0.0f;
             lastVy = 0.0;
             lastForwardSpeed = 0.0;
@@ -1994,7 +1923,6 @@ public class PathWalker {
             initialized = true;
             lastOnGround = onGround;
             lastForwardDown = forwardDown;
-            lastSprintDown = sprintDown;
             lastYaw = yaw;
             lastVy = velocity.y;
             lastForwardSpeed = forwardSpeed;
