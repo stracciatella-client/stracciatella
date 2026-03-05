@@ -605,7 +605,11 @@ public class PathWalker {
         // Only jump when close to the block face; rawDistance avoids target-offset interfering.
         if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && distance <= CONFIG.stepUpJumpDistance) {
             lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(rawDistance <= 0.95, gap, false);
+            boolean stepUpJump = rawDistance <= 0.95;
+            if (debug && stepUpJump) {
+                System.out.println(String.format(Locale.US, "[PathWalker] Jump decision: step-up jump=true rawDist=%.3f", rawDistance));
+            }
+            return new JumpDecision(stepUpJump, gap, false);
         }
 
         boolean needsJump = feetToTargetDy > 0.5 || blockInFront || forwardAir || gap > 1;
@@ -629,6 +633,9 @@ public class PathWalker {
         if (!longRangeJump) {
             JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
             if (simDecision != null) {
+                if (debug && simDecision.jump) {
+                    System.out.println(String.format(Locale.US, "[PathWalker] Jump decision: simulation jump=true gap=%d dist=%.2f", gap, distance));
+                }
                 return simDecision;
             }
         }
@@ -688,26 +695,58 @@ public class PathWalker {
             // getDeltaMovement() is last tick's velocity; actual movement = prevVel * 0.546 + groundAccel.
             double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
             double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + speed * CONFIG.physicsGroundAccelFactorSprint);
-            boolean fire = estimatedNextEdgeDistance <= 0.0 || nextEdgeDistance <= 0.0
-                    || edgeDistance <= CONFIG.edgeJumpTriggerEdge
-                    || nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge;
+            String fireReason = null;
+            if (estimatedNextEdgeDistance <= 0.0) fireReason = "estimatedNext<=0";
+            else if (nextEdgeDistance <= 0.0) fireReason = "nextEdge<=0";
+            else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
+            else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "nextEdgeTrigger";
+            else if (edgeDistance <= dynamicTrigger) fireReason = "dynTrigger";
+            boolean fire = fireReason != null;
+            if (debug) {
+                if (fire) {
+                    System.out.println(String.format(Locale.US,
+                            "[PathWalker] Jump decision: long-range FIRE reason=%s edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f gap=%d dist=%.2f",
+                            fireReason, edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, gap, distance));
+                } else if (System.currentTimeMillis() - lastDebugMs > 200) {
+                    System.out.println(String.format(Locale.US,
+                            "[PathWalker] Jump decision: long-range HOLD edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f gap=%d dist=%.2f",
+                            edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, gap, distance));
+                }
+            }
             return new JumpDecision(fire, gap, false);
         }
 
         // Trigger jump if at or past the edge trigger threshold
-        if (edgeDistance <= CONFIG.edgeJumpTriggerEdge
-                || edgeDistance <= dynamicTrigger
-                || nextEdgeDistance <= 0.0
-                || nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge
-                || distance <= CONFIG.edgeJumpTriggerDistance) {
+        String shortFireReason = null;
+        if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) shortFireReason = "edgeTrigger";
+        else if (edgeDistance <= dynamicTrigger) shortFireReason = "dynTrigger";
+        else if (nextEdgeDistance <= 0.0) shortFireReason = "nextEdge<=0";
+        else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) shortFireReason = "nextEdgeTrigger";
+        else if (distance <= CONFIG.edgeJumpTriggerDistance) shortFireReason = "distTrigger";
+        if (shortFireReason != null) {
+            if (debug) {
+                System.out.println(String.format(Locale.US,
+                        "[PathWalker] Jump decision: short-range FIRE reason=%s edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f gap=%d dist=%.2f",
+                        shortFireReason, edgeDistance, nextEdgeDistance, dynamicTrigger, gap, distance));
+            }
             return new JumpDecision(true, gap, false);
         }
 
         // Hold position when approaching the edge but not yet at the trigger
         if (dy >= -0.2 && (edgeDistance <= CONFIG.edgeJumpHoldEdge || nextEdgeDistance <= CONFIG.edgeJumpHoldEdge)) {
+            if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
+                System.out.println(String.format(Locale.US,
+                        "[PathWalker] Jump decision: hold edgeDist=%.3f nextEdge=%.3f gap=%d dist=%.2f",
+                        edgeDistance, nextEdgeDistance, gap, distance));
+            }
             return new JumpDecision(false, gap, true);
         }
 
+        if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
+            System.out.println(String.format(Locale.US,
+                    "[PathWalker] Jump decision: waiting edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f gap=%d dist=%.2f",
+                    edgeDistance, nextEdgeDistance, dynamicTrigger, gap, distance));
+        }
         return new JumpDecision(false, gap, false);
     }
 
