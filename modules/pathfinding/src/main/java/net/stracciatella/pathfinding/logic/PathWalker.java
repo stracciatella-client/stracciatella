@@ -736,52 +736,26 @@ public class PathWalker {
         }
 
         if (longRangeJump) {
+            // Use collision-based edge detection for all long-range jumps (like Meteor Client's
+            // parkour module). Shrink the player's bounding box slightly and check if there
+            // is still ground below. When there isn't, the player is at the very last frame
+            // before falling off — the optimal moment for maximum jump distance.
+            // This is more reliable than calculated edge distances because the gap value can
+            // change as the player crosses block boundaries mid-approach.
             double currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-
-            if (gap >= 4) {
-                // For 4+ block gaps, use collision-based edge detection (like Meteor Client's
-                // parkour module). Shrink the player's bounding box slightly and check if there
-                // is still ground below. When there isn't, the player is at the very last frame
-                // before falling off — the optimal moment for maximum jump distance.
-                boolean atEdge = isAtCollisionEdge(player);
-                if (debug) {
-                    if (atEdge) {
-                        System.out.println(String.format(Locale.US,
-                                "[PathWalker] Jump decision: collision-edge FIRE edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
-                                edgeDistance, currentSpeed, gap, distance));
-                    } else if (System.currentTimeMillis() - lastDebugMs > 200) {
-                        System.out.println(String.format(Locale.US,
-                                "[PathWalker] Jump decision: collision-edge HOLD edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
-                                edgeDistance, currentSpeed, gap, distance));
-                    }
-                }
-                return new JumpDecision(atEdge, gap, false, atEdge ? "collision-edge:fire" : "collision-edge:hold");
-            }
-
-            // Long-range gap < 4: fire at last moment before edge, accounting for this tick's acceleration.
-            // getDeltaMovement() is last tick's velocity; actual movement = prevVel * 0.546 + groundAccel.
-            double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
-            double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + speed * CONFIG.physicsGroundAccelFactorSprint);
-
-            String fireReason = null;
-            if (estimatedNextEdgeDistance <= 0.0) fireReason = "estimatedNext<=0";
-            else if (nextEdgeDistance <= 0.0) fireReason = "nextEdge<=0";
-            else if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "edgeTrigger";
-            else if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) fireReason = "nextEdgeTrigger";
-            else if (edgeDistance <= dynamicTrigger) fireReason = "dynTrigger";
-            boolean fire = fireReason != null;
+            boolean atEdge = isAtCollisionEdge(player);
             if (debug) {
-                if (fire) {
+                if (atEdge) {
                     System.out.println(String.format(Locale.US,
-                            "[PathWalker] Jump decision: long-range FIRE reason=%s edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f speed=%.3f gap=%d dist=%.2f",
-                            fireReason, edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, currentSpeed, gap, distance));
+                            "[PathWalker] Jump decision: collision-edge FIRE edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
+                            edgeDistance, currentSpeed, gap, distance));
                 } else if (System.currentTimeMillis() - lastDebugMs > 200) {
                     System.out.println(String.format(Locale.US,
-                            "[PathWalker] Jump decision: long-range HOLD edgeDist=%.3f nextEdge=%.3f dynTrig=%.3f estNext=%.3f speed=%.3f gap=%d dist=%.2f",
-                            edgeDistance, nextEdgeDistance, dynamicTrigger, estimatedNextEdgeDistance, currentSpeed, gap, distance));
+                            "[PathWalker] Jump decision: collision-edge HOLD edgeDist=%.3f speed=%.3f gap=%d dist=%.2f",
+                            edgeDistance, currentSpeed, gap, distance));
                 }
             }
-            return new JumpDecision(fire, gap, false, "long-range:" + (fireReason != null ? fireReason : "hold"));
+            return new JumpDecision(atEdge, gap, false, atEdge ? "collision-edge:fire" : "collision-edge:hold");
         }
 
         // Trigger jump if at or past the edge trigger threshold
