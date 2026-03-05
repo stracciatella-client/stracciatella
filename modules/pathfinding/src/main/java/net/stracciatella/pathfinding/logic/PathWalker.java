@@ -406,6 +406,17 @@ public class PathWalker {
             }
         }
 
+        // If jump is committed, override any braking or movement suppression that occurred above.
+        // For long-range gaps this preserves the sprint speed needed to clear the gap.
+        // For step-up jumps this ensures the player moves into the block while jumping.
+        if (jump) {
+            canMoveForward = true;
+            shouldBrake = false;
+            if (jumpDecision.gap > 1) {
+                sprint = true;
+            }
+        }
+
         if (debug) {
             long now = System.currentTimeMillis();
             if (now - lastDebugMs > 200) {
@@ -434,7 +445,7 @@ public class PathWalker {
             return;
         }
 
-        applyMovement(client, canMoveForward, shouldBrake, jump, sprint && canMoveForward);
+        applyMovement(client, canMoveForward, shouldBrake, jump, sprint);
     }
 
     private static float updateAim(float targetYaw) {
@@ -582,6 +593,7 @@ public class PathWalker {
         int gap = Math.max(dx, dz);
         lastDebug.gap = gap;
         lastDebug.dy = dy;
+        double rawDistance = Math.sqrt(dirX * dirX + dirZ * dirZ);
 
         // Special case: if gap is 0, check if we need to jump up vertically or if there's an edge ahead
         if (gap == 0) {
@@ -650,7 +662,7 @@ public class PathWalker {
         // Also check if there's a block directly in front at player level (for stairs/slabs)
         boolean blockInFront = false;
         if (gap == 1 && (stepX != 0 || stepZ != 0)) {
-            BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY()), playerZ + stepZ);
+            BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY() + 0.01), playerZ + stepZ);
             blockInFront = !player.level().getBlockState(frontPos).isAir();
         }
 
@@ -658,7 +670,10 @@ public class PathWalker {
             // Only jump when close to the block face. Jumping from 2+ blocks away with sprint
             // momentum causes the player to fly past the target. At ~0.9 blocks from center
             // (~block face), sprint speed lands the player safely on the block.
-            if (distance <= 0.95) {
+            // Use rawDistance (actual block center, no target offset) so an offset-adjusted
+            // target position doesn't prevent the jump from firing when the player is right
+            // against the block face.
+            if (rawDistance <= 0.95) {
                 return new JumpDecision(true, gap, false);
             }
             return new JumpDecision(false, gap, false);
