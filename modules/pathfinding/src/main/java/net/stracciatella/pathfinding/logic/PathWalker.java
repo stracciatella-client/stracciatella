@@ -204,7 +204,13 @@ public class PathWalker {
 
         boolean stabilizeForJump = jumpDecision.gap > 1;
         if (stabilizeForJump && !jumpAimOffsetInitialized) {
-            jumpAimYawOffsetDeg = randomRange(CONFIG.jumpAimYawMinDeg, CONFIG.jumpAimYawMaxDeg);
+            if (jumpDecision.gap >= 4) {
+                // For long-range jumps, minimize aim offset — even small angular
+                // deviations translate to large lateral drift over 4+ blocks.
+                jumpAimYawOffsetDeg = randomRange(0.5f, 1.5f);
+            } else {
+                jumpAimYawOffsetDeg = randomRange(CONFIG.jumpAimYawMinDeg, CONFIG.jumpAimYawMaxDeg);
+            }
             if (ThreadLocalRandom.current().nextBoolean()) {
                 jumpAimYawOffsetDeg = -jumpAimYawOffsetDeg;
             }
