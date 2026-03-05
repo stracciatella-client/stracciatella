@@ -402,7 +402,7 @@ public class PathWalker {
             long now = System.currentTimeMillis();
             if (now - lastDebugMs > 200) {
                 lastDebugMs = now;
-                lastDebug.print(player, target, distance, angleDeltaAfter, canMoveForward, facing, jumpDecision);
+                lastDebug.print(player, target, distance, angleDeltaAfter, canMoveForward, facing, jumpDecision, sprint);
             }
             logFallDiagnostics(player, target, dy, distance, jumpDecision);
             if (jumpDecision.jump && !jump) {
@@ -2060,7 +2060,9 @@ public class PathWalker {
         int gap;
         double dy;
 
-        void print(LocalPlayer player, MeshNode target, double distance, float angleDeltaAfter, boolean canMoveForward, boolean facing, JumpDecision jumpDecision) {
+        void print(LocalPlayer player, MeshNode target, double distance, float angleDeltaAfter, boolean canMoveForward, boolean facing, JumpDecision jumpDecision, boolean sprint) {
+            Vec3 vel = player.getDeltaMovement();
+            double speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
             System.out.println(
                     "[PathWalker] pos=" + player.blockPosition()
                             + " target=" + target.getBlockPos()
@@ -2068,6 +2070,9 @@ public class PathWalker {
                             + " angleDelta=" + String.format("%.1f", angleDeltaAfter)
                             + " canMove=" + canMoveForward
                             + " facing=" + facing
+                            + " sprint=" + sprint
+                            + " isSprinting=" + player.isSprinting()
+                            + " speed=" + String.format("%.3f", speed)
                             + " gap=" + gap
                             + " dy=" + String.format("%.2f", dy)
                             + " jump=" + jumpDecision.jump
