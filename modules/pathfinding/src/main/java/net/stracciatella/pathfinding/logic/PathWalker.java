@@ -528,127 +528,90 @@ public class PathWalker {
     }
 
     private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint, double distance) {
-        if (jumpCooldownTicks > 0) {
+        if (jumpCooldownTicks > 0 || !player.onGround()) {
             return new JumpDecision(false, 0, false);
         }
-        if (!player.onGround()) {
-            return new JumpDecision(false, 0, false);
-        }
+
         int playerX = (int) Math.floor(player.getX());
         int playerZ = (int) Math.floor(player.getZ());
         double dirX = (target.getX() + 0.5) - player.getX();
         double dirZ = (target.getZ() + 0.5) - player.getZ();
         int stepX = Double.compare(dirX, 0.0);
         int stepZ = Double.compare(dirZ, 0.0);
-        double absDirX = Math.abs(dirX);
-        double absDirZ = Math.abs(dirZ);
-        if (absDirX > absDirZ * JUMP_FORWARD_AXIS_RATIO) {
+        if (Math.abs(dirX) > Math.abs(dirZ) * JUMP_FORWARD_AXIS_RATIO) {
             stepZ = 0;
-        } else if (absDirZ > absDirX * JUMP_FORWARD_AXIS_RATIO) {
+        } else if (Math.abs(dirZ) > Math.abs(dirX) * JUMP_FORWARD_AXIS_RATIO) {
             stepX = 0;
         }
-        int dx = Math.abs(target.getX() - playerX);
-        int dz = Math.abs(target.getZ() - playerZ);
-        int gap = Math.max(dx, dz);
+        int gap = Math.max(Math.abs(target.getX() - playerX), Math.abs(target.getZ() - playerZ));
         lastDebug.gap = gap;
         lastDebug.dy = dy;
         double rawDistance = Math.sqrt(dirX * dirX + dirZ * dirZ);
+        double feetToTargetDy = target.getY() - player.getY();
 
-        // Special case: if gap is 0, check if we need to jump up vertically or if there's an edge ahead
         if (gap == 0) {
-            // Check actual Y difference between player feet and target block
-            double feetToTargetDy = target.getY() - player.getY();
-
-            // If target is above us, jump to reach it
-            if (feetToTargetDy >= 0.5) {
-                lastDebug.forwardAir = false;
-                lastDebug.landingSolid = true;
-                lastDebug.edgeThreshold = 0.0;
-                return new JumpDecision(true, gap, false);
-            }
-
-            // For gap 0, only prevent movement/jumping if we're literally standing on the target block
-            // Don't block jumps when approaching edges
             lastDebug.forwardAir = false;
             lastDebug.landingSolid = true;
             lastDebug.edgeThreshold = 0.0;
-            return new JumpDecision(false, gap, false);
+            return new JumpDecision(feetToTargetDy >= 0.5, gap, false);
         }
-
         if (stepX == 0 && stepZ == 0) {
             lastDebug.forwardAir = false;
             lastDebug.landingSolid = false;
             lastDebug.edgeThreshold = 0.0;
             return new JumpDecision(false, gap, false);
         }
-        BlockPos aheadBelow = new BlockPos(playerX + stepX, (int) Math.floor(player.getY()) - 1, playerZ + stepZ);
-        boolean forwardAir = player.level().getBlockState(aheadBelow).isAir();
+
+        int baseY = (int) Math.floor(player.getY()) - 1;
+        boolean forwardAir;
         if (gap > 1) {
             forwardAir = false;
-            int baseY = (int) Math.floor(player.getY()) - 1;
             for (int i = 1; i <= gap; i++) {
-                BlockPos scan = new BlockPos(playerX + stepX * i, baseY, playerZ + stepZ * i);
-                if (player.level().getBlockState(scan).isAir()) {
+                if (player.level().getBlockState(new BlockPos(playerX + stepX * i, baseY, playerZ + stepZ * i)).isAir()) {
                     forwardAir = true;
                     break;
                 }
             }
+        } else {
+            forwardAir = player.level().getBlockState(new BlockPos(playerX + stepX, baseY, playerZ + stepZ)).isAir();
         }
 
-        BlockPos landingBlock = new BlockPos(target.getX(), target.getY(), target.getZ());
-        boolean landingSolid = !player.level().getBlockState(landingBlock).isAir();
-
+        boolean landingSolid = !player.level().getBlockState(new BlockPos(target.getX(), target.getY(), target.getZ())).isAir();
         lastDebug.forwardAir = forwardAir;
         lastDebug.landingSolid = landingSolid;
 
         if (!landingSolid) {
+            lastDebug.edgeThreshold = 0.0;
             return new JumpDecision(false, gap, false);
         }
 
-        // Check actual Y difference between player feet and target block for step-up jumps
-        double feetToTargetDy = target.getY() - player.getY();
-
         if (debug) {
-            System.out.println(String.format(Locale.US, "[PathWalker] Jump check: gap=%d, feetToTargetDy=%.2f, playerY=%.2f, targetY=%d, distance=%.2f, landingSolid=%b",
-                gap, feetToTargetDy, player.getY(), target.getY(), distance, landingSolid));
+            System.out.println(String.format(Locale.US, "[PathWalker] Jump check: gap=%d, feetToTargetDy=%.2f, playerY=%.2f, targetY=%d, distance=%.2f",
+                gap, feetToTargetDy, player.getY(), target.getY(), distance));
         }
 
         if (feetToTargetDy < -0.5 && gap <= 1) {
+            lastDebug.edgeThreshold = 0.0;
             return new JumpDecision(false, gap, false);
         }
 
-        // Jump for step-up when walking up blocks (check feet-to-target Y difference)
-        // Also check if there's a block directly in front at player level (for stairs/slabs)
         boolean blockInFront = false;
-        if (gap == 1 && (stepX != 0 || stepZ != 0)) {
+        if (gap == 1) {
             BlockPos frontPos = new BlockPos(playerX + stepX, (int) Math.floor(player.getY() + 0.01), playerZ + stepZ);
             blockInFront = !player.level().getBlockState(frontPos).isAir();
         }
 
-        if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && landingSolid && distance <= CONFIG.stepUpJumpDistance) {
-            // Only jump when close to the block face. Jumping from 2+ blocks away with sprint
-            // momentum causes the player to fly past the target. At ~0.9 blocks from center
-            // (~block face), sprint speed lands the player safely on the block.
-            // Use rawDistance (actual block center, no target offset) so an offset-adjusted
-            // target position doesn't prevent the jump from firing when the player is right
-            // against the block face.
-            if (rawDistance <= 0.95) {
-                return new JumpDecision(true, gap, false);
-            }
-            return new JumpDecision(false, gap, false);
+        // Step-up: target is 1 block higher or there's a block face at foot level
+        // Only jump when close to the block face; rawDistance avoids target-offset interfering.
+        if (gap <= 1 && (feetToTargetDy >= 0.5 || blockInFront) && distance <= CONFIG.stepUpJumpDistance) {
+            lastDebug.edgeThreshold = 0.0;
+            return new JumpDecision(rawDistance <= 0.95, gap, false);
         }
 
         boolean needsJump = feetToTargetDy > 0.5 || blockInFront || forwardAir || gap > 1;
         if (!needsJump) {
+            lastDebug.edgeThreshold = 0.0;
             return new JumpDecision(false, gap, false);
-        }
-
-        // For gap >= 3 or large distances, skip simulation: hold brakes the player and kills
-        // the sprint velocity needed for the jump. Use edge-based triggers instead.
-        boolean longRangeJump = gap >= 3 || distance >= 2.5;
-        JumpDecision simDecision = longRangeJump ? null : decideJumpBySimulation(player, target, sprint, gap);
-        if (simDecision != null) {
-            return simDecision;
         }
 
         if (!edgeThresholdInitialized || currentGapForJump != gap) {
@@ -656,102 +619,96 @@ public class PathWalker {
             currentEdgeThreshold = edgeThresholdForGap(gap, sprint);
             edgeThresholdInitialized = true;
         }
-
-        double usedThreshold = currentEdgeThreshold;
-        if (gap > 1 && forwardAir) {
-            usedThreshold = Math.max(CONFIG.edgeJumpForwardAirMin, currentEdgeThreshold - CONFIG.edgeJumpForwardAirBias);
-        }
+        double usedThreshold = (gap > 1 && forwardAir)
+                ? Math.max(CONFIG.edgeJumpForwardAirMin, currentEdgeThreshold - CONFIG.edgeJumpForwardAirBias)
+                : currentEdgeThreshold;
         lastDebug.edgeThreshold = usedThreshold;
 
-        if (gap > 1 && forwardAir) {
-            boolean axisBias = (stepX == 0) ^ (stepZ == 0);
-            double edgeProgressDir = edgeProgressDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ());
-            double edgeProgressAxis = axisBias ? edgeProgressAxis(player, stepX, stepZ) : edgeProgressAxisDiagonal(player, stepX, stepZ);
-            double edgeDistanceDir = 0.5 - edgeProgressDir;
-            double edgeDistanceAxis = 0.5 - edgeProgressAxis;
-            double edgeDistance = Math.min(edgeDistanceDir, edgeDistanceAxis);
-            Vec3 velocity = player.getDeltaMovement();
-            double projectedDir = projectedProgressDirectional(velocity, target.getX() - player.getX(), target.getZ() - player.getZ());
-            double projectedAxis = axisBias
-                    ? (stepX != 0 ? velocity.x * Math.signum(stepX) : velocity.z * Math.signum(stepZ))
-                    : projectedProgressAxisDiagonal(velocity, stepX, stepZ);
-            double nextProgress = Math.max(edgeProgressDir + projectedDir, edgeProgressAxis + projectedAxis);
-            double nextEdgeDistance = 0.5 - nextProgress;
-            double projectedForward = Math.max(projectedDir, projectedAxis);
-            double dynamicTrigger = CONFIG.edgeJumpTriggerEdge;
-            if (projectedForward > 0.0) {
-                dynamicTrigger = Math.max(dynamicTrigger, Math.min(0.5, projectedForward * 2.0));
-            }
-            if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
-                System.out.println(
-                        "[PathWalker] edgeDist=" + String.format("%.3f", edgeDistance)
-                                + " edgeAxis=" + String.format("%.3f", edgeDistanceAxis)
-                                + " edgeDir=" + String.format("%.3f", edgeDistanceDir)
-                                + " nextEdgeDist=" + String.format("%.3f", nextEdgeDistance)
-                                + " dynTrigger=" + String.format("%.3f", dynamicTrigger)
-                                + " dist=" + String.format("%.2f", distance)
-                                + " dy=" + String.format("%.2f", dy)
-                                + " gap=" + gap
-                );
-            }
-            if (longRangeJump) {
-                // Long-range jumps need to fire at the last possible moment before the edge.
-                // getDeltaMovement() is the previous tick's velocity; this tick will also apply
-                // sprint ground acceleration. Estimate the actual movement this tick to avoid
-                // overshooting the edge before the trigger fires.
-                double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
-                double groundAccel = speed * CONFIG.physicsGroundAccelFactorSprint;
-                // Apply ground friction to prevVel before adding accel: actual movement = prevVel * 0.546 + accel
-                double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + groundAccel);
-                if (estimatedNextEdgeDistance <= 0.0 || nextEdgeDistance <= 0.0
-                        || edgeDistance <= CONFIG.edgeJumpTriggerEdge
-                        || nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
-                    return new JumpDecision(true, gap, false);
-                }
-                return new JumpDecision(false, gap, false);
-            }
-            if (edgeDistance <= CONFIG.edgeJumpTriggerEdge) {
-                return new JumpDecision(true, gap, false);
-            }
-            if (edgeDistance <= dynamicTrigger) {
-                return new JumpDecision(true, gap, false);
-            }
-            if (nextEdgeDistance <= 0.0) {
-                return new JumpDecision(true, gap, false);
-            }
-            if (nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge) {
-                return new JumpDecision(true, gap, false);
-            }
-            if (dy >= -0.2) {
-                if (edgeDistance <= CONFIG.edgeJumpHoldEdge) {
-                    return new JumpDecision(false, gap, true);
-                }
-                if (nextEdgeDistance <= CONFIG.edgeJumpHoldEdge) {
-                    return new JumpDecision(false, gap, true);
-                }
+        // For gap >= 3 or large distances, skip simulation — braking kills sprint velocity.
+        boolean longRangeJump = gap >= 3 || distance >= 2.5;
+        if (!longRangeJump) {
+            JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
+            if (simDecision != null) {
+                return simDecision;
             }
         }
-        if (gap > 1 && forwardAir && distance <= CONFIG.edgeJumpTriggerDistance) {
+
+        // Gaps with air ahead: use edge-distance triggers (handles both long- and short-range).
+        if (gap > 1 && forwardAir) {
+            return decideJumpByEdgeDistance(player, target, gap, dy, distance, stepX, stepZ, longRangeJump);
+        }
+
+        // Fallback: block-fraction position check
+        boolean axisBias = (stepX == 0) ^ (stepZ == 0);
+        boolean atEdge = (gap > 1)
+                ? (axisBias
+                    ? isAtEdge(player, stepX, stepZ, usedThreshold)
+                    : isAtEdgeDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ(), usedThreshold))
+                : isAtEdge(player, stepX, stepZ, currentEdgeThreshold);
+        boolean hold = !atEdge && forwardAir && gap > 1 && distance <= CONFIG.edgeJumpHoldDistance;
+        return new JumpDecision(atEdge, gap, hold);
+    }
+
+    private static JumpDecision decideJumpByEdgeDistance(
+            LocalPlayer player, MeshNode target, int gap, double dy, double distance,
+            int stepX, int stepZ, boolean longRangeJump) {
+        boolean axisBias = (stepX == 0) ^ (stepZ == 0);
+        double edgeProgressDir = edgeProgressDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ());
+        double edgeProgressAxis = axisBias ? edgeProgressAxis(player, stepX, stepZ) : edgeProgressAxisDiagonal(player, stepX, stepZ);
+        double edgeDistanceDir = 0.5 - edgeProgressDir;
+        double edgeDistanceAxis = 0.5 - edgeProgressAxis;
+        double edgeDistance = Math.min(edgeDistanceDir, edgeDistanceAxis);
+        Vec3 velocity = player.getDeltaMovement();
+        double projectedDir = projectedProgressDirectional(velocity, target.getX() - player.getX(), target.getZ() - player.getZ());
+        double projectedAxis = axisBias
+                ? (stepX != 0 ? velocity.x * Math.signum(stepX) : velocity.z * Math.signum(stepZ))
+                : projectedProgressAxisDiagonal(velocity, stepX, stepZ);
+        double nextEdgeDistance = 0.5 - Math.max(edgeProgressDir + projectedDir, edgeProgressAxis + projectedAxis);
+        double projectedForward = Math.max(projectedDir, projectedAxis);
+        double dynamicTrigger = CONFIG.edgeJumpTriggerEdge;
+        if (projectedForward > 0.0) {
+            dynamicTrigger = Math.max(dynamicTrigger, Math.min(0.5, projectedForward * 2.0));
+        }
+
+        if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
+            System.out.println(
+                    "[PathWalker] edgeDist=" + String.format("%.3f", edgeDistance)
+                            + " edgeAxis=" + String.format("%.3f", edgeDistanceAxis)
+                            + " edgeDir=" + String.format("%.3f", edgeDistanceDir)
+                            + " nextEdgeDist=" + String.format("%.3f", nextEdgeDistance)
+                            + " dynTrigger=" + String.format("%.3f", dynamicTrigger)
+                            + " dist=" + String.format("%.2f", distance)
+                            + " dy=" + String.format("%.2f", dy)
+                            + " gap=" + gap
+            );
+        }
+
+        if (longRangeJump) {
+            // Long-range: fire at last moment before edge, accounting for this tick's acceleration.
+            // getDeltaMovement() is last tick's velocity; actual movement = prevVel * 0.546 + groundAccel.
+            double speed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            double estimatedNextEdgeDistance = edgeDistance - (projectedForward * 0.546 + speed * CONFIG.physicsGroundAccelFactorSprint);
+            boolean fire = estimatedNextEdgeDistance <= 0.0 || nextEdgeDistance <= 0.0
+                    || edgeDistance <= CONFIG.edgeJumpTriggerEdge
+                    || nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge;
+            return new JumpDecision(fire, gap, false);
+        }
+
+        // Trigger jump if at or past the edge trigger threshold
+        if (edgeDistance <= CONFIG.edgeJumpTriggerEdge
+                || edgeDistance <= dynamicTrigger
+                || nextEdgeDistance <= 0.0
+                || nextEdgeDistance <= CONFIG.edgeJumpTriggerEdge
+                || distance <= CONFIG.edgeJumpTriggerDistance) {
             return new JumpDecision(true, gap, false);
         }
 
-        boolean atEdge;
-        if (gap > 1) {
-            boolean axisBias = (stepX == 0) ^ (stepZ == 0);
-            if (axisBias) {
-                atEdge = isAtEdge(player, stepX, stepZ, usedThreshold);
-            } else {
-                atEdge = isAtEdgeDirectional(player, target.getX() - player.getX(), target.getZ() - player.getZ(), usedThreshold);
-            }
-        } else {
-            atEdge = isAtEdge(player, stepX, stepZ, currentEdgeThreshold);
-        }
-        if (!atEdge) {
-            boolean hold = forwardAir && gap > 1 && distance <= CONFIG.edgeJumpHoldDistance;
-            return new JumpDecision(false, gap, hold);
+        // Hold position when approaching the edge but not yet at the trigger
+        if (dy >= -0.2 && (edgeDistance <= CONFIG.edgeJumpHoldEdge || nextEdgeDistance <= CONFIG.edgeJumpHoldEdge)) {
+            return new JumpDecision(false, gap, true);
         }
 
-        return new JumpDecision(true, gap, false);
+        return new JumpDecision(false, gap, false);
     }
 
     private static JumpDecision decideJumpBySimulation(LocalPlayer player, MeshNode target, boolean sprint, int gap) {
