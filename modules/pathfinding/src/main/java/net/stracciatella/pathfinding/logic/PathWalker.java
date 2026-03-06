@@ -36,7 +36,7 @@ public class PathWalker {
     private static double targetOffsetZ = 0.0;
     private static final double ARRIVAL_RADIUS = 0.18;
     private static final double BRAKE_RADIUS = 0.6;
-    private static final double ARRIVAL_MARGIN = 0.05;
+    private static final double ARRIVAL_MARGIN = 0.15;
     private static final double JUMP_FORWARD_AXIS_RATIO = 1.5;
     private static final int LEARN_MAX_GAP = 4;
     private static final int JUMP_SIM_HOLD_TICKS = 2;
@@ -1239,9 +1239,24 @@ public class PathWalker {
             return;
         }
         double angle = ThreadLocalRandom.current().nextDouble() * Math.PI * 2.0;
-        double radius = randomRange(CONFIG.offsetMin, CONFIG.offsetMax);
+        double radius;
+        if (isLongRangeApproach()) {
+            radius = ThreadLocalRandom.current().nextDouble() * 0.05;
+        } else {
+            radius = randomRange(CONFIG.offsetMin, CONFIG.offsetMax);
+        }
         targetOffsetX = Math.cos(angle) * radius;
         targetOffsetZ = Math.sin(angle) * radius;
+    }
+
+    private static boolean isLongRangeApproach() {
+        if (index <= 0 || index >= currentPath.size()) {
+            return false;
+        }
+        MeshNode current = currentPath.get(index);
+        MeshNode prev = currentPath.get(index - 1);
+        int gap = Math.max(Math.abs(current.getX() - prev.getX()), Math.abs(current.getZ() - prev.getZ()));
+        return gap >= 3;
     }
 
     private static boolean shouldSuppressOffsetForCurrentNode() {
