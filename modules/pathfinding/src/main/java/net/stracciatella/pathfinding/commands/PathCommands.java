@@ -214,16 +214,6 @@ public class PathCommands {
                             sendWalkConfigMenu(context.getSource().getPlayer());
                             return 1;
                         }))
-                        .then(literal("turn")
-                                .then(argument("min", FloatArgumentType.floatArg(0.0f))
-                                        .then(argument("max", FloatArgumentType.floatArg(0.0f))
-                                                .executes(context -> {
-                                                    float min = FloatArgumentType.getFloat(context, "min");
-                                                    float max = FloatArgumentType.getFloat(context, "max");
-                                                    PathWalker.setTurnRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Turn range set to " + min + " - " + max + " deg"));
-                                                    return 1;
-                                                }))))
                         .then(literal("offset")
                                 .then(argument("min", DoubleArgumentType.doubleArg(0.0))
                                         .then(argument("max", DoubleArgumentType.doubleArg(0.0))
@@ -232,36 +222,6 @@ public class PathCommands {
                                                     double max = DoubleArgumentType.getDouble(context, "max");
                                                     PathWalker.setOffsetRange(min, max);
                                                     context.getSource().sendFeedback(Component.literal("Offset range set to " + min + " - " + max));
-                                                    return 1;
-                                                }))))
-                        .then(literal("pause")
-                                .then(argument("minMs", IntegerArgumentType.integer(0))
-                                        .then(argument("maxMs", IntegerArgumentType.integer(0))
-                                                .executes(context -> {
-                                                    int min = IntegerArgumentType.getInteger(context, "minMs");
-                                                    int max = IntegerArgumentType.getInteger(context, "maxMs");
-                                                    PathWalker.setPauseRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Pause range set to " + min + " - " + max + " ms"));
-                                                    return 1;
-                                                }))))
-                        .then(literal("distance")
-                                .then(argument("walk", DoubleArgumentType.doubleArg(0.0))
-                                        .then(argument("sprint", DoubleArgumentType.doubleArg(0.0))
-                                                .executes(context -> {
-                                                    double walk = DoubleArgumentType.getDouble(context, "walk");
-                                                    double sprint = DoubleArgumentType.getDouble(context, "sprint");
-                                                    PathWalker.setDistanceThresholds(walk, sprint);
-                                                    context.getSource().sendFeedback(Component.literal("Distance thresholds set to walk=" + walk + " sprint=" + sprint));
-                                                    return 1;
-                                                }))))
-                        .then(literal("sprintchance")
-                                .then(argument("min", DoubleArgumentType.doubleArg(0.0, 1.0))
-                                        .then(argument("max", DoubleArgumentType.doubleArg(0.0, 1.0))
-                                                .executes(context -> {
-                                                    double min = DoubleArgumentType.getDouble(context, "min");
-                                                    double max = DoubleArgumentType.getDouble(context, "max");
-                                                    PathWalker.setSprintChanceRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Sprint chance range set to " + min + " - " + max));
                                                     return 1;
                                                 }))))
                         .then(literal("edgejump")
@@ -282,16 +242,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Turn acceleration set to " + accel + " deg/tick^2"));
                                             return 1;
                                         })))
-                        .then(literal("turnjitter")
-                                .then(argument("minMs", IntegerArgumentType.integer(0))
-                                        .then(argument("maxMs", IntegerArgumentType.integer(0))
-                                                .executes(context -> {
-                                                    int min = IntegerArgumentType.getInteger(context, "minMs");
-                                                    int max = IntegerArgumentType.getInteger(context, "maxMs");
-                                                    PathWalker.setTurnJitterRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Turn jitter range set to " + min + " - " + max + " ms"));
-                                                    return 1;
-                                                }))))
                         .then(literal("jumptolerance")
                                 .then(argument("deg", FloatArgumentType.floatArg(0.0f))
                                         .executes(context -> {
@@ -316,14 +266,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Sharp turn threshold set to " + deg + " deg"));
                                             return 1;
                                         })))
-                        .then(literal("turnprep")
-                                .then(argument("distance", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float distance = FloatArgumentType.getFloat(context, "distance");
-                                            PathWalker.setTurnPrepDistance(distance);
-                                            context.getSource().sendFeedback(Component.literal("Turn prep distance set to " + distance));
-                                            return 1;
-                                        })))
                         .then(literal("turnstop")
                                 .then(argument("deg", FloatArgumentType.floatArg(0.0f))
                                         .executes(context -> {
@@ -332,16 +274,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Turn stop threshold set to " + deg + " deg"));
                                             return 1;
                                         })))
-                        .then(literal("turnpause")
-                                .then(argument("minMs", IntegerArgumentType.integer(0))
-                                        .then(argument("maxMs", IntegerArgumentType.integer(0))
-                                                .executes(context -> {
-                                                    int min = IntegerArgumentType.getInteger(context, "minMs");
-                                                    int max = IntegerArgumentType.getInteger(context, "maxMs");
-                                                    PathWalker.setTurnPauseRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Turn pause range set to " + min + " - " + max + " ms"));
-                                                    return 1;
-                                                }))))
                         .then(literal("edgejumpscale")
                                 .then(argument("value", DoubleArgumentType.doubleArg(0.0))
                                         .executes(context -> {
@@ -434,14 +366,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Alignment hold set to " + ms + " ms"));
                                             return 1;
                                         })))
-                        .then(literal("aligndeadzone")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setAlignmentDeadzoneDeg(deg);
-                                            context.getSource().sendFeedback(Component.literal("Alignment deadzone set to " + deg + " deg"));
-                                            return 1;
-                                        })))
                         .then(literal("walkturnmax")
                                 .then(argument("deg", FloatArgumentType.floatArg(0.0f))
                                         .executes(context -> {
@@ -458,16 +382,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Jump cooldown set to " + ticks + " ticks"));
                                             return 1;
                                         })))
-                        .then(literal("pitchjitter")
-                                .then(argument("min", FloatArgumentType.floatArg(0.0f))
-                                        .then(argument("max", FloatArgumentType.floatArg(0.0f))
-                                                .executes(context -> {
-                                                    float min = FloatArgumentType.getFloat(context, "min");
-                                                    float max = FloatArgumentType.getFloat(context, "max");
-                                                    PathWalker.setPitchJitterRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Pitch jitter range set to " + min + " - " + max + " deg"));
-                                                    return 1;
-                                                }))))
                         .then(literal("jumpaimyaw")
                                 .then(argument("min", FloatArgumentType.floatArg(0.0f))
                                         .then(argument("max", FloatArgumentType.floatArg(0.0f))
@@ -559,20 +473,13 @@ public class PathCommands {
             return;
         }
         sendMenuHeader(player, "Path Walker Config");
-        sendMenuLine(player, rangeLine("turn", PathWalker.CONFIG.turnMinDeg, PathWalker.CONFIG.turnMaxDeg, 0.5, "/path walkconfig turn", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("offset", PathWalker.CONFIG.offsetMin, PathWalker.CONFIG.offsetMax, 0.05, "/path walkconfig offset", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, rangeLineInt("pause", PathWalker.CONFIG.pauseMinMs, PathWalker.CONFIG.pauseMaxMs, 50, "/path walkconfig pause", 0));
-        sendMenuLine(player, rangeLine("distance", PathWalker.CONFIG.walkDistance, PathWalker.CONFIG.sprintDistance, 0.25, "/path walkconfig distance", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, rangeLine("sprintchance", PathWalker.CONFIG.sprintChanceMin, PathWalker.CONFIG.sprintChanceMax, 0.05, "/path walkconfig sprintchance", 0.0, 1.0));
         sendMenuLine(player, rangeLine("edgejump", PathWalker.CONFIG.edgeJumpMin, PathWalker.CONFIG.edgeJumpMax, 0.01, "/path walkconfig edgejump", 0.0, 1.0));
         sendMenuLine(player, valueLine("turnaccel", PathWalker.CONFIG.turnAccel, 0.1, "/path walkconfig turnaccel", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, rangeLineInt("turnjitter", PathWalker.CONFIG.turnJitterMinMs, PathWalker.CONFIG.turnJitterMaxMs, 20, "/path walkconfig turnjitter", 0));
         sendMenuLine(player, valueLine("jumptolerance", PathWalker.CONFIG.jumpFacingToleranceDeg, 1.0, "/path walkconfig jumptolerance", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("walkturn", PathWalker.CONFIG.walkTurnThresholdDeg, 1.0, "/path walkconfig walkturn", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("sharpturn", PathWalker.CONFIG.sharpTurnDeg, 2.0, "/path walkconfig sharpturn", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, valueLine("turnprep", PathWalker.CONFIG.turnPrepDistance, 0.1, "/path walkconfig turnprep", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("turnstop", PathWalker.CONFIG.turnStopThresholdDeg, 1.0, "/path walkconfig turnstop", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, rangeLineInt("turnpause", PathWalker.CONFIG.turnPauseMinMs, PathWalker.CONFIG.turnPauseMaxMs, 20, "/path walkconfig turnpause", 0));
         sendMenuLine(player, valueLine("edgejumpscale", PathWalker.CONFIG.edgeJumpScale, 0.005, "/path walkconfig edgejumpscale", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("edgejumpshort", PathWalker.CONFIG.edgeJumpShortMin, PathWalker.CONFIG.edgeJumpShortMax, 0.01, "/path walkconfig edgejumpshort", 0.0, 1.0));
         sendMenuLine(player, rangeLine("edgejumpmid", PathWalker.CONFIG.edgeJumpMidMin, PathWalker.CONFIG.edgeJumpMidMax, 0.01, "/path walkconfig edgejumpmid", 0.0, 1.0));
@@ -584,10 +491,8 @@ public class PathCommands {
         sendMenuLine(player, valueLine("edgejumptrigger", PathWalker.CONFIG.edgeJumpTriggerDistance, 0.1, "/path walkconfig edgejumptrigger", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("edgejumptriggeredge", PathWalker.CONFIG.edgeJumpTriggerEdge, 0.01, "/path walkconfig edgejumptriggeredge", 0.0, 0.5));
         sendMenuLine(player, valueLineInt("alignhold", PathWalker.CONFIG.alignmentHoldMs, 50, "/path walkconfig alignhold", 0));
-        sendMenuLine(player, valueLine("aligndeadzone", PathWalker.CONFIG.alignmentDeadzoneDeg, 0.5, "/path walkconfig aligndeadzone", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("walkturnmax", PathWalker.CONFIG.walkTurnMaxDeg, 2.0, "/path walkconfig walkturnmax", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLineInt("jumpcooldown", PathWalker.CONFIG.jumpCooldownTicks, 1, "/path walkconfig jumpcooldown", 0));
-        sendMenuLine(player, rangeLine("pitchjitter", PathWalker.CONFIG.pitchJitterMinDeg, PathWalker.CONFIG.pitchJitterMaxDeg, 0.1, "/path walkconfig pitchjitter", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("jumpaimyaw", PathWalker.CONFIG.jumpAimYawMinDeg, PathWalker.CONFIG.jumpAimYawMaxDeg, 0.5, "/path walkconfig jumpaimyaw", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLineInt("jumpsimticks", PathWalker.CONFIG.jumpSimTicks, 1, "/path walkconfig jumpsimticks", 5));
         sendMenuLine(player, valueLine("jumplanding", PathWalker.CONFIG.jumpLandingMargin, 0.05, "/path walkconfig jumplanding", 0.0, Double.POSITIVE_INFINITY));

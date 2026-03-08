@@ -31,7 +31,6 @@ public class PathWalker {
     private static List<MeshNode> currentPath = Collections.emptyList();
     private static int index = 0;
     private static boolean active = false;
-    private static long pauseUntilMs = 0;
     private static double targetOffsetX = 0.0;
     private static double targetOffsetZ = 0.0;
     private static final double ARRIVAL_RADIUS = 0.18;
@@ -44,7 +43,6 @@ public class PathWalker {
     private static float aimYawVelocity;
     private static float aimYawAccel;
     private static float aimPitch;
-    private static long turnPauseUntilMs = 0;
     private static int jumpCooldownTicks = 0;
     private static int currentGapForJump = 0;
     private static double currentEdgeThreshold = 0.0;
@@ -72,8 +70,6 @@ public class PathWalker {
         currentPath = path;
         index = 0;
         active = true;
-        pauseUntilMs = 0;
-
         LocalPlayer player = Minecraft.getInstance().player;
         if (player != null) {
             aimYaw = player.getYRot();
@@ -85,7 +81,6 @@ public class PathWalker {
 
         aimYawVelocity = 0.0f;
         aimYawAccel = 0.0f;
-        turnPauseUntilMs = 0;
         jumpCooldownTicks = 0;
         edgeThresholdInitialized = false;
         jumpAimOffsetInitialized = false;
@@ -138,7 +133,6 @@ public class PathWalker {
         active = false;
         currentPath = Collections.emptyList();
         index = 0;
-        pauseUntilMs = 0;
         Minecraft client = Minecraft.getInstance();
         LocalPlayer player = client.player;
         if (player != null) {
@@ -167,10 +161,6 @@ public class PathWalker {
         updateCalibration(client, player);
         if (jumpCooldownTicks > 0) {
             jumpCooldownTicks--;
-        }
-        if (System.currentTimeMillis() < pauseUntilMs || System.currentTimeMillis() < turnPauseUntilMs) {
-            applyMovement(client, false, false, false);
-            return;
         }
         if (index >= currentPath.size()) {
             stop();
@@ -1342,15 +1332,6 @@ public class PathWalker {
         return min + (max - min) * ThreadLocalRandom.current().nextDouble();
     }
 
-    private static int randomRange(int min, int max) {
-        if (max < min) {
-            int tmp = min;
-            min = max;
-            max = tmp;
-        }
-        return ThreadLocalRandom.current().nextInt(min, max + 1);
-    }
-
     private static double forwardSpeed(Vec3 velocity, float yawDeg) {
         double yawRad = Math.toRadians(yawDeg);
         double dirX = -Math.sin(yawRad);
@@ -1372,33 +1353,9 @@ public class PathWalker {
         return String.format(Locale.US, "%.3f", value);
     }
 
-    public static void setTurnRange(float min, float max) {
-        CONFIG.turnMinDeg = min;
-        CONFIG.turnMaxDeg = max;
-        saveConfig();
-    }
-
     public static void setOffsetRange(double min, double max) {
         CONFIG.offsetMin = min;
         CONFIG.offsetMax = max;
-        saveConfig();
-    }
-
-    public static void setPauseRange(int min, int max) {
-        CONFIG.pauseMinMs = min;
-        CONFIG.pauseMaxMs = max;
-        saveConfig();
-    }
-
-    public static void setDistanceThresholds(double walkDistance, double sprintDistance) {
-        CONFIG.walkDistance = walkDistance;
-        CONFIG.sprintDistance = sprintDistance;
-        saveConfig();
-    }
-
-    public static void setSprintChanceRange(double min, double max) {
-        CONFIG.sprintChanceMin = min;
-        CONFIG.sprintChanceMax = max;
         saveConfig();
     }
 
@@ -1410,12 +1367,6 @@ public class PathWalker {
 
     public static void setTurnAccel(float accel) {
         CONFIG.turnAccel = accel;
-        saveConfig();
-    }
-
-    public static void setTurnJitterRange(int minMs, int maxMs) {
-        CONFIG.turnJitterMinMs = minMs;
-        CONFIG.turnJitterMaxMs = maxMs;
         saveConfig();
     }
 
@@ -1434,19 +1385,8 @@ public class PathWalker {
         saveConfig();
     }
 
-    public static void setTurnPrepDistance(float distance) {
-        CONFIG.turnPrepDistance = distance;
-        saveConfig();
-    }
-
     public static void setTurnStopThreshold(float deg) {
         CONFIG.turnStopThresholdDeg = deg;
-        saveConfig();
-    }
-
-    public static void setTurnPauseRange(int minMs, int maxMs) {
-        CONFIG.turnPauseMinMs = minMs;
-        CONFIG.turnPauseMaxMs = maxMs;
         saveConfig();
     }
 
@@ -1474,12 +1414,6 @@ public class PathWalker {
 
     public static void setJumpCooldownTicks(int ticks) {
         CONFIG.jumpCooldownTicks = ticks;
-        saveConfig();
-    }
-
-    public static void setPitchJitterRange(float min, float max) {
-        CONFIG.pitchJitterMinDeg = min;
-        CONFIG.pitchJitterMaxDeg = max;
         saveConfig();
     }
 
@@ -1534,11 +1468,6 @@ public class PathWalker {
         saveConfig();
     }
 
-    public static void setAlignmentDeadzoneDeg(float deg) {
-        CONFIG.alignmentDeadzoneDeg = deg;
-        saveConfig();
-    }
-
     public static void setWalkTurnMaxDeg(float deg) {
         CONFIG.walkTurnMaxDeg = deg;
         saveConfig();
@@ -1552,27 +1481,14 @@ public class PathWalker {
 
     public static class Config {
         public boolean debugEnabled = false;
-        public float turnMinDeg = 6.0f;
-        public float turnMaxDeg = 12.0f;
         public float turnAccel = 0.8f;
-        public int turnJitterMinMs = 120;
-        public int turnJitterMaxMs = 260;
         public float jumpFacingToleranceDeg = 18.0f;
         public float jumpFacingExtraGapDeg = 18.0f;
         public float walkTurnThresholdDeg = 25.0f;
         public float sharpTurnDeg = 60.0f;
-        public float turnPrepDistance = 0.8f;
         public float turnStopThresholdDeg = 12.0f;
-        public int turnPauseMinMs = 80;
-        public int turnPauseMaxMs = 180;
         public double offsetMin = 0.05;
         public double offsetMax = 0.25;
-        public int pauseMinMs = 150;
-        public int pauseMaxMs = 350;
-        public double walkDistance = 1.5;
-        public double sprintDistance = 4.0;
-        public double sprintChanceMin = 0.35;
-        public double sprintChanceMax = 0.7;
         public double edgeJumpMin = 0.9;
         public double edgeJumpMax = 1.0;
         public double edgeJumpScale = 0.02;
@@ -1588,14 +1504,11 @@ public class PathWalker {
         public double edgeJumpHoldEdge = 0.22;
         public double edgeJumpTriggerEdge = 0.08;
         public int jumpCooldownTicks = 4;
-        public float pitchJitterMinDeg = 0.3f;
-        public float pitchJitterMaxDeg = 1.2f;
         public float jumpAimYawMinDeg = 1.5f;
         public float jumpAimYawMaxDeg = 4.0f;
         public int jumpSimTicks = 40;
         public double jumpLandingMargin = 0.3;
         public int alignmentHoldMs = 250;
-        public float alignmentDeadzoneDeg = 2.5f;
         public float walkTurnMaxDeg = 60.0f;
         public double offCourseDistance = 3.5;
         public int offCourseTicks = 10;
@@ -1615,32 +1528,17 @@ public class PathWalker {
         // Friction values are tuned for critical damping (fastest response without overshooting).
         // The formula is friction = 2 * sqrt(acceleration).
         public float turnFriction = 1.8f; // 2 * sqrt(0.8) approx 1.79
-        public float pitchAccel = 0.2f;
-        public float pitchFriction = 0.9f; // 2 * sqrt(0.2) approx 0.89
 
         public void applyFrom(Config other) {
             debugEnabled = other.debugEnabled;
-            turnMinDeg = other.turnMinDeg;
-            turnMaxDeg = other.turnMaxDeg;
             turnAccel = other.turnAccel;
-            turnJitterMinMs = other.turnJitterMinMs;
-            turnJitterMaxMs = other.turnJitterMaxMs;
             jumpFacingToleranceDeg = other.jumpFacingToleranceDeg;
             jumpFacingExtraGapDeg = other.jumpFacingExtraGapDeg;
             walkTurnThresholdDeg = other.walkTurnThresholdDeg;
             sharpTurnDeg = other.sharpTurnDeg;
-            turnPrepDistance = other.turnPrepDistance;
             turnStopThresholdDeg = other.turnStopThresholdDeg;
-            turnPauseMinMs = other.turnPauseMinMs;
-            turnPauseMaxMs = other.turnPauseMaxMs;
             offsetMin = other.offsetMin;
             offsetMax = other.offsetMax;
-            pauseMinMs = other.pauseMinMs;
-            pauseMaxMs = other.pauseMaxMs;
-            walkDistance = other.walkDistance;
-            sprintDistance = other.sprintDistance;
-            sprintChanceMin = other.sprintChanceMin;
-            sprintChanceMax = other.sprintChanceMax;
             edgeJumpMin = other.edgeJumpMin;
             edgeJumpMax = other.edgeJumpMax;
             edgeJumpScale = other.edgeJumpScale;
@@ -1656,14 +1554,11 @@ public class PathWalker {
             edgeJumpHoldEdge = other.edgeJumpHoldEdge;
             edgeJumpTriggerEdge = other.edgeJumpTriggerEdge;
             jumpCooldownTicks = other.jumpCooldownTicks;
-            pitchJitterMinDeg = other.pitchJitterMinDeg;
-            pitchJitterMaxDeg = other.pitchJitterMaxDeg;
             jumpAimYawMinDeg = other.jumpAimYawMinDeg;
             jumpAimYawMaxDeg = other.jumpAimYawMaxDeg;
             jumpSimTicks = other.jumpSimTicks;
             jumpLandingMargin = other.jumpLandingMargin;
             alignmentHoldMs = other.alignmentHoldMs;
-            alignmentDeadzoneDeg = other.alignmentDeadzoneDeg;
             walkTurnMaxDeg = other.walkTurnMaxDeg;
             offCourseDistance = other.offCourseDistance;
             offCourseTicks = other.offCourseTicks;
@@ -1680,8 +1575,6 @@ public class PathWalker {
             physicsGroundAccelFactorWalk = other.physicsGroundAccelFactorWalk;
             physicsGroundAccelFactorSprint = other.physicsGroundAccelFactorSprint;
             turnFriction = other.turnFriction;
-            pitchAccel = other.pitchAccel;
-            pitchFriction = other.pitchFriction;
         }
 
         public void normalize() {
@@ -1702,9 +1595,6 @@ public class PathWalker {
             }
             if (alignmentHoldMs < 0) {
                 alignmentHoldMs = 0;
-            }
-            if (alignmentDeadzoneDeg < 0.0f) {
-                alignmentDeadzoneDeg = 0.0f;
             }
             if (jumpFacingExtraGapDeg < 0.0f) {
                 jumpFacingExtraGapDeg = 0.0f;
@@ -1754,12 +1644,6 @@ public class PathWalker {
             }
             if (turnFriction <= 0.0f) {
                 turnFriction = 1.8f;
-            }
-            if (pitchAccel <= 0.0f) {
-                pitchAccel = 0.6f;
-            }
-            if (pitchFriction <= 0.0f) {
-                pitchFriction = 1.0f;
             }
         }
     }
