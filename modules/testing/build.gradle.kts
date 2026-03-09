@@ -34,12 +34,18 @@ dependencies {
 }
 
 // Convenience task — launches the game client with auto-test flag.
-// Tests run automatically when the player joins a world.
+// Creates/joins a flat test world automatically, runs all tests, prints results.
+// Usage: ./gradlew runMinecraftTests
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.name == "runMinecraftTests" }) {
+        allTasks.filterIsInstance<JavaExec>().filter { it.name == "runStracciatellaLight" }.forEach {
+            it.jvmArgs("-Dstracciatella.testing.autorun=true")
+        }
+    }
+}
+
 tasks.register("runMinecraftTests") {
     group = "verification"
     description = "Launches the Minecraft client with auto-test mode enabled"
-    dependsOn(":runClient")
-    doFirst {
-        System.setProperty("stracciatella.testing.autorun", "true")
-    }
+    dependsOn(":runStracciatellaLight")
 }
