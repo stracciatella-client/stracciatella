@@ -70,6 +70,6 @@ public class MovementController {
      * Teleport the player to a position using a client command.
      */
     public static void teleport(LocalPlayer player, BlockPos pos) {
-        player.connection.sendUnsignedCommand("tp " + player.getName().getString() + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ());
+        player.connection.sendCommand("tp " + player.getName().getString() + " " + pos.getX() + " " + pos.getY() + " " + pos.getZ());
     }
 }

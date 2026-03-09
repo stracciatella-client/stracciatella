@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(./gradlew :modules:testing:compileJava:*)",
+      "Bash(jar tf:*)",
+      "Bash(export:*)",
+      "Bash(\"$JAVA_HOME/bin/javap.exe\":*)",
+      "Bash(./gradlew build:*)",
+      "Bash(javap:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

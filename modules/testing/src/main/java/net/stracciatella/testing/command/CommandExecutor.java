@@ -15,7 +15,7 @@ public class CommandExecutor {
     public static void executeCommand(String command) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player != null) {
-            player.connection.sendUnsignedCommand(command);
+            player.connection.sendCommand(command);
         }
     }
 
