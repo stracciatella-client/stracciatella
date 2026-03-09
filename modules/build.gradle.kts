@@ -12,3 +12,4 @@ fun module(path: String) {
 module("core")
 module("fullscreen")
 module("anonymous-modlist")
+module("testing")
