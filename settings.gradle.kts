@@ -29,6 +29,7 @@ includeModule("core")
 includeModule("fullscreen")
 includeModule("anonymous-modlist")
 includeModule("pathfinding")
+includeModule("testing")
 
 fun includeModule(path: String) {
     include("modules:$path")

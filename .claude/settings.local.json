@@ -6,6 +6,14 @@
       "Bash(./gradlew :pathfinding:build:*)",
       "Bash(JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-21.0.7.6-hotspot\" ./gradlew :pathfinding:build:*)",
       "Bash(./gradlew :modules:pathfinding:compileJava:*)"
+      "Bash(ls:*)",
+      "Bash(./gradlew :modules:testing:compileJava:*)",
+      "Bash(jar tf:*)",
+      "Bash(export:*)",
+      "Bash(\"$JAVA_HOME/bin/javap.exe\":*)",
+      "Bash(./gradlew build:*)",
+      "Bash(javap:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }
