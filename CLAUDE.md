@@ -1,3 +1,4 @@
+Whenever you are changing something in a module make sure to review the claude md for that module and update it so it stays up to date
 Use your tools in simple ways like always only reading 1 file at a time
 The architecture is fabric for minecraft with the official mojang mappings.
 The source code is located in the modules folder and written in java. The build scripts are written in kotlin.

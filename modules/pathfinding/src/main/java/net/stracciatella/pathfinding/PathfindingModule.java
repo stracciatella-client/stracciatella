@@ -17,6 +17,8 @@ import net.stracciatella.module.Module;
 import net.stracciatella.pathfinding.commands.PathCommands;
 import net.stracciatella.pathfinding.display.PathDisplay;
 import net.stracciatella.pathfinding.logic.PathWalker;
+import net.stracciatella.pathfinding.test.PathWalkerTests;
+import net.stracciatella.testing.runner.TestRunner;
 import org.joml.Matrix4f;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 
@@ -30,6 +32,7 @@ public class PathfindingModule implements Module {
         PathCommands commands = new PathCommands();
         commands.register();
         ClientTickEvents.END_CLIENT_TICK.register(PathWalker::tick);
+        TestRunner.instance().registerSuite(PathWalkerTests.class);
     }
 
 
