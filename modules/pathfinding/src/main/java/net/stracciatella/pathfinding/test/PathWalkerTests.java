@@ -7,52 +7,109 @@ import net.stracciatella.testing.api.MinecraftTest;
 import net.stracciatella.testing.api.TestContext;
 import net.stracciatella.testing.api.TestSuite;
 import net.stracciatella.testing.api.TickHandler;
-import net.stracciatella.testing.movement.MovementController;
+import net.stracciatella.testing.command.CommandExecutor;
 import net.stracciatella.testing.movement.MovementTracker;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Tests for the PathWalker. Builds MeshNode paths and verifies the walker
- * reaches each destination autonomously.
+ * Tests for the PathWalker. Each test defines a parkour course as relative block
+ * positions, which are placed in the air at a unique world location. The test
+ * clears a 5-block radius around all blocks, places the solid blocks, teleports
+ * the player to the start, and runs the PathWalker to the end.
+ *
+ * Phase flow:
+ *   Phase 0: Teleport to course center (loads chunks), wait 5 ticks
+ *   Phase 1: Clear area + place blocks + teleport to start, wait 10 ticks
+ *   Phase 2: Start PathWalker, monitor for arrival or fall
  */
 @TestSuite(name = "PathWalker Tests")
 public class PathWalkerTests implements TickHandler {
+    private static final int CLEAR_RADIUS = 5;
+
     private MovementTracker tracker;
     private TestContext activeCtx;
-    private BlockPos target;
+    private BlockPos worldStart;
+    private BlockPos worldEnd;
+    private List<BlockPos> worldBlocks;
+    private List<MeshNode> path;
     private int phase;
     private int waitTicks;
 
-    @MinecraftTest(name = "PathWalker straight line walk", timeoutTicks = 400, order = 1)
-    public void straightLineWalk(TestContext ctx) {
-        activeCtx = ctx;
-        tracker = new MovementTracker();
-        phase = 0;
-        waitTicks = 0;
+    // Each test location is offset in X to avoid overlap. Y=10 puts courses in the air.
+    // All positions in the test methods are relative (0,0,0 is the start block).
 
-        BlockPos start = ctx.playerBlockPos();
-        target = start.north(8);
-
-        // Teleport to ensure clean start position
-        MovementController.teleport(ctx.player(), start);
-        phase = 1;
+    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 600, order = 1)
+    public void gap1(TestContext ctx) {
+        // 3 walk blocks, 1 air gap, 3 walk blocks — heading north (-Z)
+        runCourse(ctx, new BlockPos(100, 10, 100),
+                new BlockPos(0, 0, 0),   // start
+                new BlockPos(0, 0, -6),  // end
+                new BlockPos[]{
+                        // platform before gap
+                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
+                        // 1 air gap at z=-3
+                        // platform after gap
+                        bp(0, 0, -4), bp(0, 0, -5), bp(0, 0, -6),
+                });
     }
 
-    @MinecraftTest(name = "PathWalker L-shaped path", timeoutTicks = 600, order = 2)
-    public void lShapedPath(TestContext ctx) {
+    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 600, order = 2)
+    public void gap2(TestContext ctx) {
+        // 3 walk blocks, 2 air gap, 3 walk blocks
+        runCourse(ctx, new BlockPos(150, 10, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(0, 0, -7),
+                new BlockPos[]{
+                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
+                        // 2 air gap at z=-3, z=-4
+                        bp(0, 0, -5), bp(0, 0, -6), bp(0, 0, -7),
+                });
+    }
+
+    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 800, order = 3)
+    public void gap3(TestContext ctx) {
+        // 3 walk blocks, 3 air gap, 3 walk blocks
+        runCourse(ctx, new BlockPos(200, 10, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(0, 0, -8),
+                new BlockPos[]{
+                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
+                        // 3 air gap at z=-3, z=-4, z=-5
+                        bp(0, 0, -6), bp(0, 0, -7), bp(0, 0, -8),
+                });
+    }
+
+    /**
+     * Sets up and runs a parkour course test.
+     *
+     * @param ctx        test context
+     * @param origin     world position where relative (0,0,0) maps to
+     * @param relStart   relative start position (player teleports on top of this block)
+     * @param relEnd     relative end position (PathWalker target)
+     * @param relBlocks  relative positions of all solid blocks to place
+     */
+    private void runCourse(TestContext ctx, BlockPos origin, BlockPos relStart, BlockPos relEnd, BlockPos[] relBlocks) {
         activeCtx = ctx;
         tracker = new MovementTracker();
-        phase = 0;
         waitTicks = 0;
+        phase = 0;
 
-        BlockPos start = ctx.playerBlockPos();
-        BlockPos corner = start.north(5);
-        target = corner.east(5);
+        worldStart = origin.offset(relStart);
+        worldEnd = origin.offset(relEnd);
 
-        MovementController.teleport(ctx.player(), start);
-        phase = 10;
+        worldBlocks = new ArrayList<>();
+        path = new ArrayList<>();
+        for (BlockPos rel : relBlocks) {
+            BlockPos world = origin.offset(rel);
+            worldBlocks.add(world);
+            path.add(new MeshNode(world.getX(), world.getY(), world.getZ()));
+        }
+
+        // Teleport to course center to load chunks
+        BlockPos center = origin.offset(relEnd.getX() / 2, 0, relEnd.getZ() / 2);
+        CommandExecutor.executeCommand("tp @s " + center.getX() + " " + (origin.getY() + 5) + " " + center.getZ());
     }
 
     @Override
@@ -63,73 +120,81 @@ public class PathWalkerTests implements TickHandler {
         tracker.recordTick(ctx.player());
         waitTicks++;
 
-        // --- Straight line walk ---
-        if (phase == 1) {
-            if (waitTicks >= 3) {
-                BlockPos start = ctx.playerBlockPos();
-                PathWalker.start(buildStraightPath(start, target));
-                phase = 2;
-            }
-        } else if (phase == 2) {
-            if (!PathWalker.isActive()) {
-                if (tracker.isAtBlock(target)) {
-                    activeCtx.complete();
-                } else {
-                    activeCtx.fail("PathWalker stopped but player not at target " + target
-                            + ", actual: " + ctx.playerBlockPos());
-                }
-            }
-            if (tracker.fellBelow(ctx.playerBlockPos().getY() - 3)) {
-                PathWalker.stop();
-                activeCtx.fail("Player fell off the path");
-            }
+        // Phase 0: wait for chunks to load
+        if (phase == 0 && waitTicks >= 5) {
+            buildCourse();
+            // Teleport player on top of start block
+            CommandExecutor.executeCommand("tp @s "
+                    + worldStart.getX() + " " + (worldStart.getY() + 1) + " " + worldStart.getZ());
+            waitTicks = 0;
+            phase = 1;
         }
 
-        // --- L-shaped path ---
-        if (phase == 10) {
-            if (waitTicks >= 3) {
-                BlockPos start = ctx.playerBlockPos();
-                BlockPos corner = start.north(5);
+        // Phase 1: wait for player to settle
+        else if (phase == 1 && waitTicks >= 10) {
+            PathWalker.start(path);
+            phase = 2;
+        }
 
-                List<MeshNode> path = new ArrayList<>();
-                for (int i = 0; i <= 5; i++) {
-                    BlockPos pos = start.north(i);
-                    path.add(new MeshNode(pos.getX(), pos.getY(), pos.getZ()));
-                }
-                for (int i = 1; i <= 5; i++) {
-                    BlockPos pos = corner.east(i);
-                    path.add(new MeshNode(pos.getX(), pos.getY(), pos.getZ()));
-                }
-
-                PathWalker.start(path);
-                phase = 11;
-            }
-        } else if (phase == 11) {
+        // Phase 2: monitor PathWalker
+        else if (phase == 2) {
+            if (checkFall(ctx)) return;
             if (!PathWalker.isActive()) {
-                if (tracker.isAtBlock(target)) {
+                // Check arrival — target is at feet level (block above the solid end block)
+                BlockPos feetTarget = worldEnd.above();
+                if (tracker.isAtBlock(feetTarget)) {
                     activeCtx.complete();
                 } else {
-                    activeCtx.fail("PathWalker stopped but player not at target " + target
+                    activeCtx.fail("PathWalker stopped but player not at target " + feetTarget
                             + ", actual: " + ctx.playerBlockPos());
                 }
-            }
-            if (tracker.fellBelow(ctx.playerBlockPos().getY() - 3)) {
-                PathWalker.stop();
-                activeCtx.fail("Player fell off the path");
             }
         }
     }
 
-    private List<MeshNode> buildStraightPath(BlockPos from, BlockPos to) {
-        List<MeshNode> path = new ArrayList<>();
-        int dx = Integer.signum(to.getX() - from.getX());
-        int dz = Integer.signum(to.getZ() - from.getZ());
-        BlockPos current = from;
-        while (!current.equals(to)) {
-            path.add(new MeshNode(current.getX(), current.getY(), current.getZ()));
-            current = current.offset(dx, 0, dz);
+    /** Clears a 5-block radius around all course blocks, then places the solid blocks. */
+    private void buildCourse() {
+        // Find bounding box of all blocks
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (BlockPos b : worldBlocks) {
+            minX = Math.min(minX, b.getX());
+            minY = Math.min(minY, b.getY());
+            minZ = Math.min(minZ, b.getZ());
+            maxX = Math.max(maxX, b.getX());
+            maxY = Math.max(maxY, b.getY());
+            maxZ = Math.max(maxZ, b.getZ());
         }
-        path.add(new MeshNode(to.getX(), to.getY(), to.getZ()));
-        return path;
+
+        // Clear area: bounding box expanded by CLEAR_RADIUS in all directions
+        fill(minX - CLEAR_RADIUS, minY - CLEAR_RADIUS, minZ - CLEAR_RADIUS,
+                maxX + CLEAR_RADIUS, maxY + CLEAR_RADIUS, maxZ + CLEAR_RADIUS, "air");
+
+        // Place solid blocks
+        for (BlockPos b : worldBlocks) {
+            CommandExecutor.executeCommand("setblock " + b.getX() + " " + b.getY() + " " + b.getZ() + " stone");
+        }
+    }
+
+    private boolean checkFall(TestContext ctx) {
+        double playerY = ctx.player().position().y;
+        // If player drops more than 2 blocks below the course, they fell
+        int minY = worldBlocks.stream().mapToInt(BlockPos::getY).min().orElse(0);
+        if (playerY < minY - 2) {
+            PathWalker.stop();
+            activeCtx.fail("Player fell at " + ctx.playerBlockPos()
+                    + " (y=" + String.format("%.2f", playerY) + ")");
+            return true;
+        }
+        return false;
+    }
+
+    private static void fill(int x1, int y1, int z1, int x2, int y2, int z2, String block) {
+        CommandExecutor.executeCommand("fill " + x1 + " " + y1 + " " + z1
+                + " " + x2 + " " + y2 + " " + z2 + " " + block);
+    }
+
+    private static BlockPos bp(int x, int y, int z) {
+        return new BlockPos(x, y, z);
     }
 }
