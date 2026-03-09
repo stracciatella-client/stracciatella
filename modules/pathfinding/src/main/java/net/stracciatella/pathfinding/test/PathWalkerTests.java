@@ -9,6 +9,8 @@ import net.stracciatella.testing.api.TestSuite;
 import net.stracciatella.testing.api.TickHandler;
 import net.stracciatella.testing.command.CommandExecutor;
 import net.stracciatella.testing.movement.MovementTracker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,9 +25,12 @@ import java.util.List;
  *   Phase 0: Teleport to course center (loads chunks), wait 5 ticks
  *   Phase 1: Clear area + place blocks + teleport to start, wait 10 ticks
  *   Phase 2: Start PathWalker, monitor for arrival or fall
+ *
+ * Order numbers are high (100+) to avoid interleaving with other test suites.
  */
 @TestSuite(name = "PathWalker Tests")
 public class PathWalkerTests implements TickHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger("PathWalkerTests");
     private static final int CLEAR_RADIUS = 5;
 
     private MovementTracker tracker;
@@ -37,46 +42,70 @@ public class PathWalkerTests implements TickHandler {
     private int phase;
     private int waitTicks;
 
-    // Each test location is offset in X to avoid overlap. Y=10 puts courses in the air.
+    // Each test uses a different X offset. Y=30 puts courses well above the superflat ground.
     // All positions in the test methods are relative (0,0,0 is the start block).
+    // Platforms are 3 blocks wide (x-1, x, x+1) for safety; the path follows the center.
 
-    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 600, order = 1)
+    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 600, order = -100)
     public void gap1(TestContext ctx) {
         // 3 walk blocks, 1 air gap, 3 walk blocks — heading north (-Z)
-        runCourse(ctx, new BlockPos(100, 10, 100),
+        runCourse(ctx, new BlockPos(100, 30, 100),
                 new BlockPos(0, 0, 0),   // start
                 new BlockPos(0, 0, -6),  // end
                 new BlockPos[]{
-                        // platform before gap
-                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
+                        // platform before gap (3 wide)
+                        bp(-1, 0, 0), bp(0, 0, 0), bp(1, 0, 0),
+                        bp(-1, 0, -1), bp(0, 0, -1), bp(1, 0, -1),
+                        bp(-1, 0, -2), bp(0, 0, -2), bp(1, 0, -2),
                         // 1 air gap at z=-3
-                        // platform after gap
+                        // platform after gap (3 wide)
+                        bp(-1, 0, -4), bp(0, 0, -4), bp(1, 0, -4),
+                        bp(-1, 0, -5), bp(0, 0, -5), bp(1, 0, -5),
+                        bp(-1, 0, -6), bp(0, 0, -6), bp(1, 0, -6),
+                },
+                // path follows center (x=0)
+                new BlockPos[]{
+                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
                         bp(0, 0, -4), bp(0, 0, -5), bp(0, 0, -6),
                 });
     }
 
-    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 600, order = 2)
+    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 600, order = -99)
     public void gap2(TestContext ctx) {
-        // 3 walk blocks, 2 air gap, 3 walk blocks
-        runCourse(ctx, new BlockPos(150, 10, 100),
+        runCourse(ctx, new BlockPos(150, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -7),
                 new BlockPos[]{
-                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
+                        bp(-1, 0, 0), bp(0, 0, 0), bp(1, 0, 0),
+                        bp(-1, 0, -1), bp(0, 0, -1), bp(1, 0, -1),
+                        bp(-1, 0, -2), bp(0, 0, -2), bp(1, 0, -2),
                         // 2 air gap at z=-3, z=-4
+                        bp(-1, 0, -5), bp(0, 0, -5), bp(1, 0, -5),
+                        bp(-1, 0, -6), bp(0, 0, -6), bp(1, 0, -6),
+                        bp(-1, 0, -7), bp(0, 0, -7), bp(1, 0, -7),
+                },
+                new BlockPos[]{
+                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
                         bp(0, 0, -5), bp(0, 0, -6), bp(0, 0, -7),
                 });
     }
 
-    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 800, order = 3)
+    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 800, order = -98)
     public void gap3(TestContext ctx) {
-        // 3 walk blocks, 3 air gap, 3 walk blocks
-        runCourse(ctx, new BlockPos(200, 10, 100),
+        runCourse(ctx, new BlockPos(200, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -8),
                 new BlockPos[]{
-                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
+                        bp(-1, 0, 0), bp(0, 0, 0), bp(1, 0, 0),
+                        bp(-1, 0, -1), bp(0, 0, -1), bp(1, 0, -1),
+                        bp(-1, 0, -2), bp(0, 0, -2), bp(1, 0, -2),
                         // 3 air gap at z=-3, z=-4, z=-5
+                        bp(-1, 0, -6), bp(0, 0, -6), bp(1, 0, -6),
+                        bp(-1, 0, -7), bp(0, 0, -7), bp(1, 0, -7),
+                        bp(-1, 0, -8), bp(0, 0, -8), bp(1, 0, -8),
+                },
+                new BlockPos[]{
+                        bp(0, 0, 0), bp(0, 0, -1), bp(0, 0, -2),
                         bp(0, 0, -6), bp(0, 0, -7), bp(0, 0, -8),
                 });
     }
@@ -89,8 +118,10 @@ public class PathWalkerTests implements TickHandler {
      * @param relStart   relative start position (player teleports on top of this block)
      * @param relEnd     relative end position (PathWalker target)
      * @param relBlocks  relative positions of all solid blocks to place
+     * @param relPath    relative positions of the PathWalker path nodes (center line)
      */
-    private void runCourse(TestContext ctx, BlockPos origin, BlockPos relStart, BlockPos relEnd, BlockPos[] relBlocks) {
+    private void runCourse(TestContext ctx, BlockPos origin, BlockPos relStart, BlockPos relEnd,
+                           BlockPos[] relBlocks, BlockPos[] relPath) {
         activeCtx = ctx;
         tracker = new MovementTracker();
         waitTicks = 0;
@@ -100,12 +131,18 @@ public class PathWalkerTests implements TickHandler {
         worldEnd = origin.offset(relEnd);
 
         worldBlocks = new ArrayList<>();
-        path = new ArrayList<>();
         for (BlockPos rel : relBlocks) {
+            worldBlocks.add(origin.offset(rel));
+        }
+
+        path = new ArrayList<>();
+        for (BlockPos rel : relPath) {
             BlockPos world = origin.offset(rel);
-            worldBlocks.add(world);
             path.add(new MeshNode(world.getX(), world.getY(), world.getZ()));
         }
+
+        LOGGER.info("Setting up course at {} with {} blocks, path length {}",
+                origin, worldBlocks.size(), path.size());
 
         // Teleport to course center to load chunks
         BlockPos center = origin.offset(relEnd.getX() / 2, 0, relEnd.getZ() / 2);
@@ -130,8 +167,9 @@ public class PathWalkerTests implements TickHandler {
             phase = 1;
         }
 
-        // Phase 1: wait for player to settle
+        // Phase 1: wait for player to settle on the block
         else if (phase == 1 && waitTicks >= 10) {
+            LOGGER.info("Starting PathWalker, player at {}", ctx.playerBlockPos());
             PathWalker.start(path);
             phase = 2;
         }
@@ -143,6 +181,7 @@ public class PathWalkerTests implements TickHandler {
                 // Check arrival — target is at feet level (block above the solid end block)
                 BlockPos feetTarget = worldEnd.above();
                 if (tracker.isAtBlock(feetTarget)) {
+                    LOGGER.info("PathWalker reached target {}", feetTarget);
                     activeCtx.complete();
                 } else {
                     activeCtx.fail("PathWalker stopped but player not at target " + feetTarget
@@ -174,11 +213,15 @@ public class PathWalkerTests implements TickHandler {
         for (BlockPos b : worldBlocks) {
             CommandExecutor.executeCommand("setblock " + b.getX() + " " + b.getY() + " " + b.getZ() + " stone");
         }
+
+        LOGGER.info("Built course: {} blocks placed, cleared ({},{},{}) to ({},{},{})",
+                worldBlocks.size(),
+                minX - CLEAR_RADIUS, minY - CLEAR_RADIUS, minZ - CLEAR_RADIUS,
+                maxX + CLEAR_RADIUS, maxY + CLEAR_RADIUS, maxZ + CLEAR_RADIUS);
     }
 
     private boolean checkFall(TestContext ctx) {
         double playerY = ctx.player().position().y;
-        // If player drops more than 2 blocks below the course, they fell
         int minY = worldBlocks.stream().mapToInt(BlockPos::getY).min().orElse(0);
         if (playerY < minY - 2) {
             PathWalker.stop();

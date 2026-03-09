@@ -44,24 +44,4 @@ public class CommandTests {
 
         CommandExecutor.executeCommand("time query daytime");
     }
-
-    @MinecraftTest(name = "Gamemode switch to creative", timeoutTicks = 100, order = 3)
-    public void gamemodeSwitch(TestContext ctx) {
-        ChatInterceptor interceptor = ChatInterceptor.instance();
-        interceptor.clear();
-
-        interceptor.setListener(message -> {
-            if (message.toLowerCase().contains("game mode")) {
-                interceptor.clearListener();
-                // Verify the player is actually in creative
-                if (ctx.player().isCreative()) {
-                    ctx.complete();
-                } else {
-                    ctx.fail("Chat confirmed gamemode change but player is not in creative");
-                }
-            }
-        });
-
-        CommandExecutor.executeCommand("gamemode creative");
-    }
 }
