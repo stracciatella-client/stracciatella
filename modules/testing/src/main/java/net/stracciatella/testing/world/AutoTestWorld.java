@@ -9,8 +9,11 @@ import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
+import net.minecraft.world.level.storage.LevelStorageSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 /**
  * Automatically creates or joins the test world when autorun is enabled.
@@ -27,13 +30,19 @@ public class AutoTestWorld {
 
         Minecraft mc = Minecraft.getInstance();
 
+        // Always delete old test world to ensure a clean state
         if (mc.getLevelSource().levelExists(WORLD_NAME)) {
-            LOGGER.info("[Testing] Opening existing test world '{}'", WORLD_NAME);
-            mc.createWorldOpenFlows().openWorld(WORLD_NAME, () -> {
-                LOGGER.warn("[Testing] Failed to open test world");
-                triggered = false;
-            });
-        } else {
+            LOGGER.info("[Testing] Deleting existing test world '{}'", WORLD_NAME);
+            try {
+                LevelStorageSource.LevelStorageAccess access = mc.getLevelSource().createAccess(WORLD_NAME);
+                access.deleteLevel();
+                access.close();
+            } catch (IOException e) {
+                LOGGER.error("[Testing] Failed to delete test world", e);
+            }
+        }
+
+        {
             LOGGER.info("[Testing] Creating new flat test world '{}'", WORLD_NAME);
             LevelSettings settings = new LevelSettings(
                     WORLD_NAME,

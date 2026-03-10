@@ -96,7 +96,15 @@ public class TestRunner {
             if (mc.player != null && !pendingTests.isEmpty()) {
                 autoRunTriggered = true;
                 LOGGER.info("Auto-run triggered by system property");
-                start(() -> LOGGER.info("Auto-run complete"));
+                start(() -> {
+                    boolean allPassed = results.stream().allMatch(r -> r.status() == TestResult.Status.PASSED);
+                    if (allPassed) {
+                        LOGGER.info("All tests PASSED — shutting down");
+                    } else {
+                        LOGGER.error("Some tests FAILED — shutting down");
+                    }
+                    Minecraft.getInstance().stop();
+                });
             }
         }
 
