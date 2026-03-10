@@ -118,11 +118,11 @@ public class PathWalkerTests implements TickHandler {
         if (phase == 2) {
             if (checkFall(ctx)) return;
 
-            // Check arrival: within ARRIVAL_RADIUS of goal block center
+            // Check arrival: on ground and within ARRIVAL_RADIUS of goal block center
             double hDist = horizontalDistance(ctx.playerPos(), worldEnd.getX() + 0.5, worldEnd.getZ() + 0.5);
-            if (hDist < ARRIVAL_RADIUS) {
+            if (ctx.player().onGround() && hDist < ARRIVAL_RADIUS) {
                 PathWalker.stop();
-                LOGGER.info("PathWalker reached goal (distance: {})", String.format("%.2f", hDist));
+                LOGGER.info("PathWalker reached goal (distance: {}, onGround: true)", String.format("%.2f", hDist));
                 activeCtx.complete();
                 return;
             }
