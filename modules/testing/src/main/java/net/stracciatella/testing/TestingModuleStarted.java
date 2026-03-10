@@ -5,13 +5,11 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.network.chat.Component;
 import net.stracciatella.testing.example.CommandTests;
-import net.stracciatella.testing.example.ParkourTests;
 import net.stracciatella.testing.runner.TestRunner;
 
 public class TestingModuleStarted {
     public TestingModuleStarted() {
         // Register example test suites
-        TestRunner.instance().registerSuite(ParkourTests.class);
         TestRunner.instance().registerSuite(CommandTests.class);
 
         // Register the /stracciatella-test client command

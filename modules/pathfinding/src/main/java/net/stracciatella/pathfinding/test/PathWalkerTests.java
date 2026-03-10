@@ -56,6 +56,13 @@ public class PathWalkerTests implements TickHandler {
                 new BlockPos(0, 0, -4));
     }
 
+    @MinecraftTest(name = "PathWalker 4-block gap", timeoutTicks = 800, order = -97)
+    public void gap4(TestContext ctx) {
+        runCourse(ctx, new BlockPos(250, 30, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(0, 0, -5));
+    }
+
     private void runCourse(TestContext ctx, BlockPos origin, BlockPos relStart, BlockPos relEnd) {
         activeCtx = ctx;
         phase = 0;
