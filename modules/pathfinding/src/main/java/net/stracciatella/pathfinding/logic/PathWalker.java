@@ -442,10 +442,10 @@ public class PathWalker {
             }
         }
 
-        // For long-range gap jumps (>= 3), maintain sprint momentum during the approach phase.
+        // For long-range gap jumps (>= 4), maintain sprint momentum during the approach phase.
         // The edge-distance trigger system fires the jump at the correct position.
         // Stopping to "prepare" kills the sprint speed needed to clear the gap.
-        if (!jump && jumpDecision.gap >= 3 && player.onGround() && facing) {
+        if (!jump && jumpDecision.gap >= 4 && player.onGround() && facing) {
             canMoveForward = true;
             shouldBrake = false;
             sprint = true;
@@ -540,6 +540,12 @@ public class PathWalker {
     }
 
     private static boolean hasReachedNode(LocalPlayer player, MeshNode target, double distanceSq) {
+        // Nodes represent walkable positions — only count as reached when on the ground.
+        // Without this, the player can "reach" a node while flying over it mid-jump,
+        // causing PathWalker to advance or stop before the player has actually landed.
+        if (!player.onGround()) {
+            return false;
+        }
         if (distanceSq <= ARRIVAL_RADIUS * ARRIVAL_RADIUS) {
             return true;
         }
@@ -721,14 +727,15 @@ public class PathWalker {
                     : currentEdgeThreshold;
             edgeThreshold = usedThreshold;
 
-            // For gap >= 3 or large distances, skip simulation — braking kills sprint velocity.
+            // For gap >= 4 or large distances, skip simulation — braking kills sprint velocity.
             // Use nodeGap (gap between path nodes) to classify the jump, not the position-based
             // gap which shrinks as the player approaches. A 4-block jump (nodeGap=5) should always
             // use collision-edge detection even when the player has walked close enough that the
             // position-based gap reads 4 or 3.
+            // Gap 3 (2 air blocks) uses simulation — collision-edge sprint-jump overshoots.
             int effectiveGap = Math.max(gap, nodeGap);
             decidedGap = effectiveGap;
-            boolean longRangeJump = effectiveGap >= 3 || distance >= 2.5;
+            boolean longRangeJump = effectiveGap >= 4 || distance >= 3.5;
             if (!longRangeJump) {
                 JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
                 if (simDecision != null) {
