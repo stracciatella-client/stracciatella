@@ -21,6 +21,9 @@
     ],
     "preLaunch": [
       "net.stracciatella.init.StracciatellaPreLaunch"
+    ],
+    "fabric-client-gametest": [
+      "net.stracciatella.testing.GameTestEntrypoint"
     ]
   },
   "languageAdapters": {

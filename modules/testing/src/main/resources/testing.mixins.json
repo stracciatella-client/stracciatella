@@ -2,8 +2,6 @@
   "required": true,
   "package": "net.stracciatella.testing.mixin",
   "client": [
-    "ClientTickMixin",
-    "ChatListenerMixin",
-    "TitleScreenMixin"
+    "ChatListenerMixin"
   ]
 }

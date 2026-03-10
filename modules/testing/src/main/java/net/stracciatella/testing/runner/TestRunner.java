@@ -1,10 +1,8 @@
 package net.stracciatella.testing.runner;
 
-import net.minecraft.client.Minecraft;
 import net.stracciatella.testing.api.MinecraftTest;
 import net.stracciatella.testing.api.TestContext;
 import net.stracciatella.testing.api.TestSuite;
-import net.stracciatella.testing.api.TickHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,15 +16,8 @@ public class TestRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger("TestRunner");
     private static final TestRunner INSTANCE = new TestRunner();
 
-    private final List<RegisteredTest> pendingTests = new ArrayList<>();
+    private final List<RegisteredTest> registeredTests = new ArrayList<>();
     private final List<TestResult> results = new CopyOnWriteArrayList<>();
-    private RegisteredTest currentTest;
-    private TestContext currentContext;
-    private int currentTickCount;
-    private boolean running;
-    private boolean finished;
-    private boolean autoRunTriggered;
-    private Runnable onAllComplete;
 
     private TestRunner() {
     }
@@ -68,112 +59,58 @@ public class TestRunner {
             method.setAccessible(true);
             int repeat = Math.max(1, annotation.repeat());
             for (int i = 1; i <= repeat; i++) {
-                pendingTests.add(new RegisteredTest(suiteName, instance, method, annotation, i));
+                registeredTests.add(new RegisteredTest(suiteName, instance, method, annotation, i));
             }
         }
 
         LOGGER.info("Registered test suite '{}' with {} tests", suiteName,
-                pendingTests.stream().filter(t -> t.suiteName().equals(suiteName)).count());
+                registeredTests.stream().filter(t -> t.suiteName().equals(suiteName)).count());
     }
 
     /**
-     * Start running all registered tests sequentially.
+     * Run all registered tests synchronously on the gametest thread.
+     * Each test method is invoked with the given context; success = normal return,
+     * failure = any thrown exception.
      */
-    public void start(Runnable onAllComplete) {
-        this.onAllComplete = onAllComplete;
-        pendingTests.sort(Comparator.comparingInt(t -> t.annotation().order()));
-        running = true;
-        finished = false;
+    public void runAll(TestContext ctx) {
+        List<RegisteredTest> tests = new ArrayList<>(registeredTests);
+        tests.sort(Comparator.comparingInt(t -> t.annotation().order()));
         results.clear();
-        LOGGER.info("Starting {} tests", pendingTests.size());
-        advanceToNext();
-    }
 
-    /**
-     * Called every client tick by the mixin. Drives the test execution.
-     */
-    public void onClientTick() {
-        // Auto-run when player joins world if system property is set
-        if (!autoRunTriggered && !running && "true".equals(System.getProperty("stracciatella.testing.autorun"))) {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.player != null && !pendingTests.isEmpty()) {
-                autoRunTriggered = true;
-                LOGGER.info("Auto-run triggered by system property");
-                start(() -> {
-                    boolean allPassed = results.stream().allMatch(r -> r.status() == TestResult.Status.PASSED);
-                    if (allPassed) {
-                        LOGGER.info("All tests PASSED — shutting down");
-                    } else {
-                        LOGGER.error("Some tests FAILED — shutting down");
-                    }
-                    Minecraft.getInstance().stop();
-                });
-            }
-        }
+        LOGGER.info("Starting {} tests", tests.size());
 
-        if (!running || currentTest == null) return;
+        for (RegisteredTest test : tests) {
+            LOGGER.info("Running: [{}] {}", test.suiteName(), test.displayName());
 
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
+            int timeoutTicks = test.annotation().timeoutTicks();
+            ctx.setTimeoutTicks(timeoutTicks);
 
-        currentTickCount++;
-
-        // Check timeout
-        int timeout = currentTest.annotation().timeoutTicks();
-        if (timeout > 0 && currentTickCount >= timeout) {
-            recordResult(TestResult.Status.TIMED_OUT, "Timed out after " + timeout + " ticks");
-            advanceToNext();
-            return;
-        }
-
-        // Tick the suite if it implements TickHandler
-        if (currentTest.suiteInstance() instanceof TickHandler handler && currentContext != null && !currentContext.isFinished()) {
+            long startTime = System.currentTimeMillis();
             try {
-                handler.onTick(currentContext);
+                test.method().invoke(test.suiteInstance(), ctx);
+                long elapsed = System.currentTimeMillis() - startTime;
+                results.add(new TestResult(test.suiteName(), test.displayName(),
+                        TestResult.Status.PASSED, "", elapsed));
             } catch (Exception e) {
-                recordResult(TestResult.Status.ERROR, "TickHandler error: " + e.getMessage());
-                advanceToNext();
+                long elapsed = System.currentTimeMillis() - startTime;
+                Throwable cause = e.getCause() != null ? e.getCause() : e;
+                String message = cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
+
+                TestResult.Status status;
+                if (message.contains("timed out") || message.contains("Timed out")) {
+                    status = TestResult.Status.TIMED_OUT;
+                } else if (cause instanceof AssertionError) {
+                    status = TestResult.Status.FAILED;
+                } else {
+                    status = TestResult.Status.ERROR;
+                }
+
+                results.add(new TestResult(test.suiteName(), test.displayName(),
+                        status, message, elapsed));
             }
         }
 
-        // Check if the test completed itself via context
-        if (currentContext != null && currentContext.isFinished()) {
-            advanceToNext();
-        }
-    }
-
-    private void advanceToNext() {
-        if (pendingTests.isEmpty()) {
-            running = false;
-            finished = true;
-            printReport();
-            if (onAllComplete != null) onAllComplete.run();
-            return;
-        }
-
-        currentTest = pendingTests.remove(0);
-        currentTickCount = 0;
-
-        Minecraft mc = Minecraft.getInstance();
-        currentContext = new TestContext(mc, () -> {
-            recordResult(TestResult.Status.PASSED, "");
-        }, reason -> {
-            recordResult(TestResult.Status.FAILED, reason);
-        });
-
-        LOGGER.info("Running: [{}] {}", currentTest.suiteName(), currentTest.displayName());
-
-        try {
-            currentTest.method().invoke(currentTest.suiteInstance(), currentContext);
-        } catch (Exception e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            recordResult(TestResult.Status.ERROR, cause.getClass().getSimpleName() + ": " + cause.getMessage());
-            advanceToNext();
-        }
-    }
-
-    private void recordResult(TestResult.Status status, String message) {
-        results.add(new TestResult(currentTest.suiteName(), currentTest.displayName(), status, message, currentTickCount));
+        printReport();
     }
 
     private void printReport() {
@@ -186,7 +123,7 @@ public class TestRunner {
                 case TIMED_OUT -> "TIMEOUT";
                 case ERROR -> "ERROR";
             };
-            String line = String.format("[%s] %s > %s (%d ticks)", icon, result.suiteName(), result.testName(), result.durationTicks());
+            String line = String.format("[%s] %s > %s (%dms)", icon, result.suiteName(), result.testName(), result.durationMs());
             if (!result.message().isEmpty()) {
                 line += " - " + result.message();
             }
@@ -201,14 +138,11 @@ public class TestRunner {
         LOGGER.info("==================================");
         LOGGER.info("Total: {} | Passed: {} | Failed: {}", passed + failed, passed, failed);
         LOGGER.info("==================================");
-    }
 
-    public boolean isRunning() {
-        return running;
-    }
-
-    public boolean isFinished() {
-        return finished;
+        boolean allPassed = results.stream().allMatch(r -> r.status() == TestResult.Status.PASSED);
+        if (!allPassed) {
+            throw new AssertionError(failed + " test(s) failed");
+        }
     }
 
     public List<TestResult> results() {
