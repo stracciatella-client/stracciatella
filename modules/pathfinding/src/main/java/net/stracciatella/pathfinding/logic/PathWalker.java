@@ -61,6 +61,10 @@ public class PathWalker {
     private static final CalibrationState CALIBRATION = new CalibrationState();
     private static double lastDistance = -1.0;
     private static int offCourseTicks = 0;
+    // Retreat state for max-range jumps (gap >= 5): walk backward to the far edge
+    // of the block before sprinting forward, maximizing runway distance.
+    // Phase 0 = not started, 1 = retreating to back edge, 2 = retreat done.
+    private static int maxJumpPhase = 0;
 
     public static void start(List<MeshNode> path) {
         if (path == null || path.isEmpty()) {
@@ -87,6 +91,7 @@ public class PathWalker {
         alignedUntilMs = 0;
         lastDistance = -1.0;
         offCourseTicks = 0;
+        maxJumpPhase = 0;
         updateTargetOffset();
     }
 
@@ -182,6 +187,7 @@ public class PathWalker {
         if (hasReachedNode(player, target, distanceSq)) {
             index++;
             updateTargetOffset();
+            maxJumpPhase = 0;
             if (index >= currentPath.size()) {
                 stop();
                 return;
@@ -190,13 +196,74 @@ public class PathWalker {
         }
 
         boolean sprint = true;
-        JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance);
+        int nodeGap = computeNodeGap();
+
+        // For max-range jumps (gap >= 5), retreat to the back edge of the block first
+        // to maximize sprint runway. A 4-block jump requires near-terminal sprint speed
+        // (0.153 b/t post-drag) + the sprint-jump boost (+0.2). Starting from block
+        // center only gives 0.5 blocks of runway — not enough to reach terminal speed.
+        // Walking backward to the far edge provides ~1.0 block of runway.
+        if (nodeGap >= 5 && player.onGround() && maxJumpPhase < 2) {
+            float desiredYaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
+            float newYaw = updateAim(desiredYaw);
+            player.setYRot(newYaw);
+            player.setXRot(computeDesiredPitch(dy, distance));
+            boolean facing = isFacingTarget(newYaw, desiredYaw);
+
+            if (!facing) {
+                // Turn to face target first before retreating
+                applyMovement(client, false, false, false, false);
+                return;
+            }
+
+            if (maxJumpPhase == 0) {
+                maxJumpPhase = 1;
+            }
+
+            if (maxJumpPhase == 1) {
+                // Calculate how far back we are from block center (away from target)
+                double awayX = -dx / distance;
+                double awayZ = -dz / distance;
+                double blockCenterX = Math.floor(player.getX()) + 0.5;
+                double blockCenterZ = Math.floor(player.getZ()) + 0.5;
+                double localX = player.getX() - blockCenterX;
+                double localZ = player.getZ() - blockCenterZ;
+                double backProgress = localX * awayX + localZ * awayZ;
+
+                if (backProgress >= 0.4) {
+                    // At back edge — transition to sprint approach
+                    maxJumpPhase = 2;
+                    if (debug) {
+                        System.out.println(String.format(Locale.US,
+                                "[PathWalker] Retreat complete, backProgress=%.3f, starting sprint approach",
+                                backProgress));
+                    }
+                    // Fall through to normal sprint + collision-edge jump
+                } else {
+                    // Walk backward while facing target to reach back edge
+                    applyMovement(client, false, true, false, false);
+                    if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
+                        lastDebugMs = System.currentTimeMillis();
+                        System.out.println(String.format(Locale.US,
+                                "[PathWalker] Retreating: backProgress=%.3f pos=(%.3f, %.3f)",
+                                backProgress, player.getX(), player.getZ()));
+                    }
+                    return;
+                }
+            }
+        }
+
+        JumpDecision jumpDecision = shouldJumpNow(player, target, dy, sprint, distance, nodeGap);
 
         boolean stabilizeForJump = jumpDecision.gap > 1;
         if (stabilizeForJump && !jumpAimOffsetInitialized) {
-            if (jumpDecision.gap >= 4) {
+            if (jumpDecision.gap >= 5) {
+                // For maximum-range jumps (4 air blocks), zero aim offset — any
+                // lateral drift wastes forward velocity on a jump with zero margin.
+                jumpAimYawOffsetDeg = 0.0f;
+            } else if (jumpDecision.gap >= 4) {
                 // For long-range jumps, minimize aim offset — even small angular
-                // deviations translate to large lateral drift over 4+ blocks.
+                // deviations translate to large lateral drift over 3+ blocks.
                 jumpAimYawOffsetDeg = randomRange(0.5f, 1.5f);
             } else {
                 jumpAimYawOffsetDeg = randomRange(CONFIG.jumpAimYawMinDeg, CONFIG.jumpAimYawMaxDeg);
@@ -384,6 +451,16 @@ public class PathWalker {
             sprint = true;
         }
 
+        // During a max-range jump's airborne phase, always hold forward+sprint.
+        // Releasing either input even for a single tick causes enough velocity decay
+        // (air drag 0.91×) to miss the landing. The aim spring can briefly suppress
+        // canMoveForward via angle checks, but airborne trajectory must not be interrupted.
+        if (nodeGap >= 5 && !player.onGround() && maxJumpPhase == 2) {
+            canMoveForward = true;
+            shouldBrake = false;
+            sprint = true;
+        }
+
         // If jump is committed, override any braking or movement suppression that occurred above.
         // For long-range gaps this preserves the sprint speed needed to clear the gap.
         // For step-up jumps this ensures the player moves into the block while jumping.
@@ -530,7 +607,7 @@ public class PathWalker {
         }
     }
 
-    private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint, double distance) {
+    private static JumpDecision shouldJumpNow(LocalPlayer player, MeshNode target, double dy, boolean sprint, double distance, int nodeGap) {
         boolean jump = false;
         boolean hold = false;
         int decidedGap = 0;
@@ -645,7 +722,13 @@ public class PathWalker {
             edgeThreshold = usedThreshold;
 
             // For gap >= 3 or large distances, skip simulation — braking kills sprint velocity.
-            boolean longRangeJump = gap >= 3 || distance >= 2.5;
+            // Use nodeGap (gap between path nodes) to classify the jump, not the position-based
+            // gap which shrinks as the player approaches. A 4-block jump (nodeGap=5) should always
+            // use collision-edge detection even when the player has walked close enough that the
+            // position-based gap reads 4 or 3.
+            int effectiveGap = Math.max(gap, nodeGap);
+            decidedGap = effectiveGap;
+            boolean longRangeJump = effectiveGap >= 3 || distance >= 2.5;
             if (!longRangeJump) {
                 JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
                 if (simDecision != null) {
@@ -658,7 +741,7 @@ public class PathWalker {
 
             // Gaps with air ahead: use edge-distance triggers (handles both long- and short-range).
             if (gap > 1 && forwardAir) {
-                JumpDecision edgeDecision = decideJumpByEdgeDistance(player, target, gap, dy, distance, stepX, stepZ, longRangeJump);
+                JumpDecision edgeDecision = decideJumpByEdgeDistance(player, target, effectiveGap, dy, distance, stepX, stepZ, longRangeJump);
                 jump = edgeDecision.jump;
                 hold = edgeDecision.holdBeforeJump;
                 reason = edgeDecision.reason;
@@ -743,11 +826,28 @@ public class PathWalker {
             // target to be small (< 0.35). This ensures we only fire when near the gap edge.
             double currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
             boolean atCollisionEdge = isAtCollisionEdge(player);
+            // Predictive check: if current position isn't at the edge, check if NEXT tick's
+            // position would be. Since key inputs are processed on the following tick, we need
+            // to fire the jump while the player is still on the block. Without this, on small
+            // platforms (single block) the player can go from "on block" to "past block" in one
+            // tick, missing the jump window entirely.
+            // Skip predictive for max-range jumps (gap >= 5): jumping one tick later gives
+            // an extra tick of ground sprint acceleration, and at terminal sprint speed
+            // (~0.153 b/t) the player cannot skip past the collision edge in a single tick.
+            if (!atCollisionEdge && gap < 5 && currentSpeed > 0.05) {
+                atCollisionEdge = isAtCollisionEdgePredictive(player, velocity);
+            }
             // Guard: require minimum sprint speed to prevent firing after a diagonal landing
             // where the player hasn't built momentum yet. Full post-drag sprint is ~0.153;
             // 0.12 allows slightly below peak sprint but blocks walking speed (~0.09).
-            boolean hasSpeed = currentSpeed >= 0.12;
+            // For max-range jumps (gap >= 5), require near-terminal sprint speed — the
+            // +0.2 sprint-jump boost only clears 4 blocks with sufficient initial velocity.
+            double minSpeed = gap >= 5 ? 0.14 : 0.12;
+            boolean hasSpeed = currentSpeed >= minSpeed;
             boolean atEdge = atCollisionEdge && hasSpeed;
+            // For max-range jumps (gap >= 5), the retreat phase positions the player at
+            // the back edge first, providing a full 1-block runway to reach terminal sprint
+            // speed. Collision-edge timing is then optimal — jump at the very last moment.
             if (debug) {
                 if (atEdge) {
                     System.out.println(String.format(Locale.US,
@@ -1083,6 +1183,15 @@ public class PathWalker {
         return player.level().noCollision(player, shrunk);
     }
 
+    private static boolean isAtCollisionEdgePredictive(LocalPlayer player, Vec3 velocity) {
+        // Project the bounding box forward by one tick's velocity, then apply the same
+        // edge check. This fires the jump one tick earlier — essential on small platforms
+        // (e.g. single block) where discrete movement steps can skip past the edge.
+        AABB box = player.getBoundingBox().move(velocity.x, 0.0, velocity.z);
+        AABB shrunk = box.deflate(0.001, 0.0, 0.001).move(0.0, -0.5, 0.0);
+        return player.level().noCollision(player, shrunk);
+    }
+
     private static boolean isAtEdge(LocalPlayer player, int stepX, int stepZ, double threshold) {
         double fracX = player.getX() - Math.floor(player.getX());
         double fracZ = player.getZ() - Math.floor(player.getZ());
@@ -1230,13 +1339,35 @@ public class PathWalker {
         }
         double angle = ThreadLocalRandom.current().nextDouble() * Math.PI * 2.0;
         double radius;
-        if (isLongRangeApproach()) {
+        if (isMaxRangeApproach()) {
+            // 4-block jumps (gap=5) have zero margin — any offset costs distance.
+            radius = 0.0;
+        } else if (isLongRangeApproach()) {
             radius = ThreadLocalRandom.current().nextDouble() * 0.05;
         } else {
             radius = randomRange(CONFIG.offsetMin, CONFIG.offsetMax);
         }
         targetOffsetX = Math.cos(angle) * radius;
         targetOffsetZ = Math.sin(angle) * radius;
+    }
+
+    private static boolean isMaxRangeApproach() {
+        if (index <= 0 || index >= currentPath.size()) {
+            return false;
+        }
+        MeshNode current = currentPath.get(index);
+        MeshNode prev = currentPath.get(index - 1);
+        int gap = Math.max(Math.abs(current.getX() - prev.getX()), Math.abs(current.getZ() - prev.getZ()));
+        return gap >= 5;
+    }
+
+    private static int computeNodeGap() {
+        if (index <= 0 || index >= currentPath.size()) {
+            return 0;
+        }
+        MeshNode current = currentPath.get(index);
+        MeshNode prev = currentPath.get(index - 1);
+        return Math.max(Math.abs(current.getX() - prev.getX()), Math.abs(current.getZ() - prev.getZ()));
     }
 
     private static boolean isLongRangeApproach() {

@@ -7,6 +7,7 @@
 - If code for a specific thing already exists, edit it instead of adding new code
 - Always fix the logic: if a certain use case is given, assume other same cases are also to be fixed
 - Try to avoid doing a text search across all files
+- **Never modify tests to make them pass.** If a test fails, fix the production code, not the test. Tests define the expected behavior.
 
 ## Coordinates
 - The minecraft coordinate format: **Y is height**, Z is forward/back. **Z IS NOT THE HEIGHT, Y IS**
