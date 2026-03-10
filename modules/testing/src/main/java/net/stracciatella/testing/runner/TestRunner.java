@@ -1,5 +1,6 @@
 package net.stracciatella.testing.runner;
 
+import net.minecraft.client.Minecraft;
 import net.stracciatella.testing.api.MinecraftTest;
 import net.stracciatella.testing.api.TestContext;
 import net.stracciatella.testing.api.TestSuite;
@@ -18,6 +19,9 @@ public class TestRunner {
 
     private final List<RegisteredTest> registeredTests = new ArrayList<>();
     private final List<TestResult> results = new CopyOnWriteArrayList<>();
+    private volatile boolean running;
+    private volatile boolean autoRunTriggered;
+    private TestContext activeContext;
 
     private TestRunner() {
     }
@@ -68,14 +72,70 @@ public class TestRunner {
     }
 
     /**
-     * Run all registered tests synchronously on the gametest thread.
-     * Each test method is invoked with the given context; success = normal return,
-     * failure = any thrown exception.
+     * Start running all registered tests on a dedicated thread.
+     *
+     * @param onComplete called on the test thread when all tests finish
      */
-    public void runAll(TestContext ctx) {
+    public void start(Runnable onComplete) {
+        if (running) return;
+        running = true;
+
+        TestContext ctx = new TestContext();
+        activeContext = ctx;
+
+        Thread testThread = new Thread(() -> {
+            try {
+                runAll(ctx);
+            } finally {
+                running = false;
+                activeContext = null;
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            }
+        }, "Test Runner");
+        testThread.setDaemon(true);
+        testThread.start();
+    }
+
+    /**
+     * Called every client tick by the mixin. Signals the test thread and handles auto-run.
+     */
+    public void onClientTick() {
+        // Auto-run when player joins world if system property is set
+        if (!autoRunTriggered && !running && "true".equals(System.getProperty("stracciatella.testing.autorun"))) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && !registeredTests.isEmpty()) {
+                autoRunTriggered = true;
+                LOGGER.info("Auto-run triggered by system property");
+                start(() -> {
+                    boolean allPassed = results.stream().allMatch(r -> r.status() == TestResult.Status.PASSED);
+                    if (allPassed) {
+                        LOGGER.info("All tests PASSED — shutting down");
+                    } else {
+                        LOGGER.error("Some tests FAILED — shutting down");
+                    }
+                    Minecraft.getInstance().stop();
+                });
+            }
+        }
+
+        // Signal the test thread that a tick has completed
+        if (activeContext != null) {
+            activeContext.onClientTick();
+        }
+    }
+
+    /**
+     * Run all registered tests synchronously on the calling thread.
+     */
+    private void runAll(TestContext ctx) {
         List<RegisteredTest> tests = new ArrayList<>(registeredTests);
         tests.sort(Comparator.comparingInt(t -> t.annotation().order()));
         results.clear();
+
+        // Wait for player to be in world
+        ctx.waitFor(mc -> mc.player != null, 6000);
 
         LOGGER.info("Starting {} tests", tests.size());
 
@@ -97,7 +157,7 @@ public class TestRunner {
                 String message = cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
 
                 TestResult.Status status;
-                if (message.contains("timed out") || message.contains("Timed out")) {
+                if (message.contains("Timed out") || message.contains("timed out")) {
                     status = TestResult.Status.TIMED_OUT;
                 } else if (cause instanceof AssertionError) {
                     status = TestResult.Status.FAILED;
@@ -115,7 +175,8 @@ public class TestRunner {
 
     private void printReport() {
         LOGGER.info("========== TEST RESULTS ==========");
-        int passed = 0, failed = 0;
+        int passed = 0;
+        int failed = 0;
         for (TestResult result : results) {
             String icon = switch (result.status()) {
                 case PASSED -> "PASS";
@@ -138,11 +199,10 @@ public class TestRunner {
         LOGGER.info("==================================");
         LOGGER.info("Total: {} | Passed: {} | Failed: {}", passed + failed, passed, failed);
         LOGGER.info("==================================");
+    }
 
-        boolean allPassed = results.stream().allMatch(r -> r.status() == TestResult.Status.PASSED);
-        if (!allPassed) {
-            throw new AssertionError(failed + " test(s) failed");
-        }
+    public boolean isRunning() {
+        return running;
     }
 
     public List<TestResult> results() {

@@ -33,19 +33,19 @@ dependencies {
     implementation(libs.junit.jupiter)
 }
 
-// Convenience task — launches the game in client gametest mode.
-// Creates a flat test world automatically, runs all tests, prints results.
+// Convenience task — launches the game client with auto-test flag.
+// Creates/joins a flat test world automatically, runs all tests, prints results.
 // Usage: ./gradlew runMinecraftTests
 gradle.taskGraph.whenReady {
     if (allTasks.any { it.name == "runMinecraftTests" }) {
         allTasks.filterIsInstance<JavaExec>().filter { it.name == "runStracciatellaLight" }.forEach {
-            it.jvmArgs("-Dfabric.client.gametest", "-Dfabric.client.gametest.disableNetworkSynchronizer=true")
+            it.jvmArgs("-Dstracciatella.testing.autorun=true")
         }
     }
 }
 
 tasks.register("runMinecraftTests") {
     group = "verification"
-    description = "Launches the Minecraft client in gametest mode"
+    description = "Launches the Minecraft client with auto-test mode enabled"
     dependsOn(":runStracciatellaLight")
 }

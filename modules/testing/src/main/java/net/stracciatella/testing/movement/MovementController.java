@@ -1,6 +1,6 @@
 package net.stracciatella.testing.movement;
 
-import net.fabricmc.fabric.api.client.gametest.v1.TestInput;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -8,13 +8,13 @@ import net.stracciatella.testing.api.TestContext;
 
 /**
  * Controls the local player's movement inputs for testing.
- * Uses the Fabric GameTest {@link TestInput} API for key simulation.
+ * Simulates keyboard inputs (forward, sprint, jump) on the client side.
  */
 public class MovementController {
 
     /**
      * Set the player's look direction toward a target position.
-     * Must be called within {@link TestContext#runOnClient}.
+     * Must be called on the render thread (e.g. inside {@link TestContext#runOnClient}).
      */
     public static void lookAt(LocalPlayer player, Vec3 target) {
         double dx = target.x - player.getX();
@@ -29,64 +29,44 @@ public class MovementController {
 
     /**
      * Set the player's look direction toward a target block position (center of block top).
-     * Must be called within {@link TestContext#runOnClient}.
+     * Must be called on the render thread.
      */
     public static void lookAtBlock(LocalPlayer player, BlockPos target) {
         lookAt(player, Vec3.atBottomCenterOf(target).add(0, 1.0, 0));
     }
 
     /**
-     * Hold the forward movement key.
+     * Press forward movement key. Must be called on the render thread.
      */
-    public static void pressForward(TestInput input) {
-        input.holdKey(options -> options.keyUp);
+    public static void pressForward(boolean press) {
+        Minecraft.getInstance().options.keyUp.setDown(press);
     }
 
     /**
-     * Release the forward movement key.
+     * Press sprint key. Must be called on the render thread.
      */
-    public static void releaseForward(TestInput input) {
-        input.releaseKey(options -> options.keyUp);
+    public static void pressSprint(boolean press) {
+        Minecraft.getInstance().options.keySprint.setDown(press);
     }
 
     /**
-     * Hold the sprint key.
+     * Press jump key. Must be called on the render thread.
      */
-    public static void pressSprint(TestInput input) {
-        input.holdKey(options -> options.keySprint);
+    public static void pressJump(boolean press) {
+        Minecraft.getInstance().options.keyJump.setDown(press);
     }
 
     /**
-     * Release the sprint key.
+     * Release all movement keys. Must be called on the render thread.
      */
-    public static void releaseSprint(TestInput input) {
-        input.releaseKey(options -> options.keySprint);
-    }
-
-    /**
-     * Hold the jump key.
-     */
-    public static void pressJump(TestInput input) {
-        input.holdKey(options -> options.keyJump);
-    }
-
-    /**
-     * Release the jump key.
-     */
-    public static void releaseJump(TestInput input) {
-        input.releaseKey(options -> options.keyJump);
-    }
-
-    /**
-     * Release all movement keys.
-     */
-    public static void releaseAll(TestInput input) {
-        input.releaseKey(options -> options.keyUp);
-        input.releaseKey(options -> options.keyDown);
-        input.releaseKey(options -> options.keyLeft);
-        input.releaseKey(options -> options.keyRight);
-        input.releaseKey(options -> options.keyJump);
-        input.releaseKey(options -> options.keySprint);
+    public static void releaseAll() {
+        var opts = Minecraft.getInstance().options;
+        opts.keyUp.setDown(false);
+        opts.keyDown.setDown(false);
+        opts.keyLeft.setDown(false);
+        opts.keyRight.setDown(false);
+        opts.keyJump.setDown(false);
+        opts.keySprint.setDown(false);
     }
 
     /**

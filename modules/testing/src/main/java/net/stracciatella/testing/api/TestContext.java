@@ -1,30 +1,27 @@
 package net.stracciatella.testing.api;
 
-import net.fabricmc.fabric.api.client.gametest.v1.TestInput;
-import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * Wrapper around {@link ClientGameTestContext} providing convenience methods
- * for writing Minecraft integration tests.
- * <p>
- * Tests run on the gametest thread. Use {@link #runOnClient} or {@link #computeOnClient}
- * to access game state on the render thread. {@link #waitTick()}, {@link #waitTicks(int)},
- * and {@link #waitFor(Predicate)} block the gametest thread until conditions are met.
+ * Provides blocking test utilities that run on a dedicated test thread.
+ * Use {@link #waitTick()}, {@link #waitFor(Predicate)}, and {@link #runOnClient}
+ * to synchronize with the render thread.
  */
 public class TestContext {
-    private final ClientGameTestContext gameTest;
+    private final CountDownLatch[] tickLatch = {new CountDownLatch(1)};
     private int remainingTicks;
 
-    public TestContext(ClientGameTestContext gameTest) {
-        this.gameTest = gameTest;
+    public TestContext() {
         this.remainingTicks = Integer.MAX_VALUE;
     }
 
@@ -36,26 +33,24 @@ public class TestContext {
     }
 
     /**
-     * Get the underlying Fabric gametest context.
+     * Called by the tick mixin on the render thread each client tick.
+     * Signals the test thread that a tick has completed.
      */
-    public ClientGameTestContext gameTest() {
-        return gameTest;
+    public void onClientTick() {
+        tickLatch[0].countDown();
     }
 
     /**
-     * Get the test input handler for simulating keyboard/mouse input.
-     */
-    public TestInput input() {
-        return gameTest.getInput();
-    }
-
-    // --- Waiting ---
-
-    /**
-     * Wait one client tick.
+     * Wait one client tick. Blocks the test thread until the next tick completes.
      */
     public void waitTick() {
-        gameTest.waitTick();
+        try {
+            tickLatch[0].await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Test thread interrupted", e);
+        }
+        tickLatch[0] = new CountDownLatch(1);
         remainingTicks--;
     }
 
@@ -63,61 +58,105 @@ public class TestContext {
      * Wait the given number of client ticks.
      */
     public void waitTicks(int ticks) {
-        gameTest.waitTicks(ticks);
-        remainingTicks -= ticks;
+        for (int i = 0; i < ticks; i++) {
+            waitTick();
+        }
     }
 
     /**
      * Wait until the predicate returns true, checking each tick.
-     * Uses the remaining tick budget from the test's timeout.
+     * Uses the remaining tick budget as timeout. Throws on timeout.
      *
      * @return the number of ticks waited
      */
     public int waitFor(Predicate<Minecraft> predicate) {
-        int timeout = Math.max(1, remainingTicks);
-        int waited = gameTest.waitFor(predicate, timeout);
-        remainingTicks -= waited;
-        return waited;
+        return waitFor(predicate, Math.max(1, remainingTicks));
     }
 
     /**
      * Wait until the predicate returns true, with a specific timeout.
+     * The predicate runs on the render thread.
      *
      * @return the number of ticks waited
      */
     public int waitFor(Predicate<Minecraft> predicate, int timeout) {
-        int waited = gameTest.waitFor(predicate, timeout);
-        remainingTicks -= waited;
-        return waited;
+        for (int i = 0; i < timeout; i++) {
+            waitTick();
+            boolean result = computeOnClient(predicate::test);
+            if (result) {
+                remainingTicks -= i + 1;
+                return i + 1;
+            }
+        }
+        throw new AssertionError("Timed out after " + timeout + " ticks");
     }
-
-    // --- Client thread access ---
 
     /**
      * Run an action on the render thread and wait for it to complete.
      */
     public void runOnClient(Runnable action) {
-        gameTest.runOnClient(mc -> action.run());
+        Minecraft mc = Minecraft.getInstance();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        mc.execute(() -> {
+            try {
+                action.run();
+                future.complete(null);
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+            }
+        });
+        try {
+            future.get();
+        } catch (Exception e) {
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            if (cause instanceof RuntimeException re) throw re;
+            if (cause instanceof Error err) throw err;
+            throw new RuntimeException(cause);
+        }
     }
 
     /**
      * Run an action on the render thread with access to the Minecraft instance.
      */
     public void runOnClient(java.util.function.Consumer<Minecraft> action) {
-        gameTest.runOnClient(action::accept);
+        runOnClient(() -> action.accept(Minecraft.getInstance()));
     }
 
     /**
      * Compute a value on the render thread.
      */
     public <T> T computeOnClient(Function<Minecraft, T> function) {
-        return gameTest.computeOnClient(function::apply);
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Throwable> error = new AtomicReference<>();
+        Minecraft mc = Minecraft.getInstance();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        mc.execute(() -> {
+            try {
+                result.set(function.apply(mc));
+                future.complete(null);
+            } catch (Throwable t) {
+                error.set(t);
+                future.complete(null);
+            }
+        });
+        try {
+            future.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        if (error.get() != null) {
+            Throwable t = error.get();
+            if (t instanceof RuntimeException re) throw re;
+            if (t instanceof Error err) throw err;
+            throw new RuntimeException(t);
+        }
+        return result.get();
     }
 
     // --- Convenience accessors (run on render thread) ---
 
     public Minecraft minecraft() {
-        return computeOnClient(mc -> mc);
+        return Minecraft.getInstance();
     }
 
     public LocalPlayer player() {
@@ -143,7 +182,7 @@ public class TestContext {
      * Waits one tick after sending for the command to process.
      */
     public void runCommand(String command) {
-        gameTest.runOnClient(mc -> {
+        runOnClient(mc -> {
             if (mc.player != null) {
                 mc.player.connection.sendCommand(command);
             }
