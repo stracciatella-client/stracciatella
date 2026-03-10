@@ -34,7 +34,7 @@ public class PathWalkerTests implements TickHandler {
     private BlockPos worldEnd;
     private int phase;
 
-    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 600, order = -100)
+    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 600, order = -100, repeat = 5)
     public void gap1(TestContext ctx) {
         // 1 start block, 1 air gap, 1 goal block — heading north (-Z)
         runCourse(ctx, new BlockPos(100, 30, 100),
@@ -42,21 +42,21 @@ public class PathWalkerTests implements TickHandler {
                 new BlockPos(0, 0, -2));
     }
 
-    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 600, order = -99)
+    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 600, order = -99, repeat = 5)
     public void gap2(TestContext ctx) {
         runCourse(ctx, new BlockPos(150, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -3));
     }
 
-    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 800, order = -98)
+    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 800, order = -98, repeat = 5)
     public void gap3(TestContext ctx) {
         runCourse(ctx, new BlockPos(200, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -4));
     }
 
-    @MinecraftTest(name = "PathWalker 4-block gap", timeoutTicks = 800, order = -97)
+    @MinecraftTest(name = "PathWalker 4-block gap", timeoutTicks = 800, order = -97, repeat = 5)
     public void gap4(TestContext ctx) {
         runCourse(ctx, new BlockPos(250, 30, 100),
                 new BlockPos(0, 0, 0),

@@ -66,7 +66,10 @@ public class TestRunner {
             }
 
             method.setAccessible(true);
-            pendingTests.add(new RegisteredTest(suiteName, instance, method, annotation));
+            int repeat = Math.max(1, annotation.repeat());
+            for (int i = 1; i <= repeat; i++) {
+                pendingTests.add(new RegisteredTest(suiteName, instance, method, annotation, i));
+            }
         }
 
         LOGGER.info("Registered test suite '{}' with {} tests", suiteName,

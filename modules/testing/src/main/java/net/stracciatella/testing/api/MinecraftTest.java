@@ -26,4 +26,9 @@ public @interface MinecraftTest {
      * Order of execution. Lower values run first.
      */
     int order() default 0;
+
+    /**
+     * Number of times to repeat this test. Each iteration runs as a separate test.
+     */
+    int repeat() default 1;
 }

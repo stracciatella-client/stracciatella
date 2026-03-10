@@ -13,7 +13,7 @@ import net.stracciatella.testing.command.CommandExecutor;
 @TestSuite(name = "Command Tests")
 public class CommandTests {
 
-    @MinecraftTest(name = "Seed command returns seed", timeoutTicks = 100, order = 1)
+    @MinecraftTest(name = "Seed command returns seed", timeoutTicks = 100, order = 1, repeat = 5)
     public void seedCommand(TestContext ctx) {
         ChatInterceptor interceptor = ChatInterceptor.instance();
         interceptor.clear();
@@ -29,7 +29,7 @@ public class CommandTests {
         CommandExecutor.executeCommand("seed");
     }
 
-    @MinecraftTest(name = "Time query returns daytime", timeoutTicks = 100, order = 2)
+    @MinecraftTest(name = "Time query returns daytime", timeoutTicks = 100, order = 2, repeat = 5)
     public void timeQuery(TestContext ctx) {
         ChatInterceptor interceptor = ChatInterceptor.instance();
         interceptor.clear();
