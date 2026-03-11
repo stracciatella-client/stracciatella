@@ -8,7 +8,7 @@
       "Bash(jar tf:*)",
       "Bash(\"$JAVA_HOME/bin/javap.exe\":*)",
       "Bash(./gradlew build:*)",
-      "Bash(javap:*)",
+      "Bash(javap:*)"
     ]
   }
 }
