@@ -105,7 +105,6 @@ modules/<name>/
 ## Logs
 - Located in `run/logs/`, mainly use the newest one (`latest.log`)
 - Always check the latest logs for context on what was happening during the last execution
-- Only read the last 100 lines unless you need to investigate more
 
 ## Module Goals
 

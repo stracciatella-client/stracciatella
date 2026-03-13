@@ -13,4 +13,11 @@ public class ClientTickMixin {
     private void onClientTick(CallbackInfo ci) {
         TestRunner.instance().onClientTick();
     }
+
+    @Inject(at = @At("HEAD"), method = "pauseGame", cancellable = true)
+    private void onPauseGame(boolean pauseOnly, CallbackInfo ci) {
+        if (TestRunner.instance().isRunning()) {
+            ci.cancel();
+        }
+    }
 }
