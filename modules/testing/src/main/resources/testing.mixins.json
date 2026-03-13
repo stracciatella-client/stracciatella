@@ -4,6 +4,7 @@
   "client": [
     "ClientTickMixin",
     "ChatListenerMixin",
+    "MouseHandlerMixin",
     "TitleScreenMixin"
   ]
 }

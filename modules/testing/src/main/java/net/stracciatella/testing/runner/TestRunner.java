@@ -137,6 +137,9 @@ public class TestRunner {
         // Wait for player to be in world
         ctx.waitFor(mc -> mc.player != null, 6000);
 
+        // Release mouse grab so cursor is free during tests
+        ctx.runOnClient(mc -> mc.mouseHandler.releaseMouse());
+
         LOGGER.info("Starting {} tests", tests.size());
 
         for (RegisteredTest test : tests) {
