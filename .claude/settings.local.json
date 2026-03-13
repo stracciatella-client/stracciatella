@@ -2,8 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew runMinecraftTests*)",
-      "Bash(./gradlew :modules:*:build*)",
-      "Bash(./gradlew :modules:*:compileJava*)",
+      "Bash(./gradlew :modules:([^:]*):build*)",
+      "Bash(./gradlew :modules:([^:]*):compileJava*)",
       "Bash(ls *)",
       "Bash(javap *)",
       "Bash(\"$JAVA_HOME/bin/javap.exe\" *)"
