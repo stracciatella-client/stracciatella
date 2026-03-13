@@ -1,14 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./gradlew :pathfinding:compileJava:*)",
-      "Bash(./gradlew :pathfinding:build:*)",
-      "Bash(ls:*)",
-      "Bash(./gradlew :modules:testing:compileJava:*)",
-      "Bash(jar tf:*)",
-      "Bash(\"$JAVA_HOME/bin/javap.exe\":*)",
-      "Bash(./gradlew build:*)",
-      "Bash(javap:*)"
+      "Bash(./gradlew runMinecraftTests*)",
+      "Bash(./gradlew :modules:*:build*)",
+      "Bash(./gradlew :modules:*:compileJava*)",
+      "Bash(ls *)",
+      "Bash(javap *)",
+      "Bash(\"$JAVA_HOME/bin/javap.exe\" *)"
     ]
   }
 }
