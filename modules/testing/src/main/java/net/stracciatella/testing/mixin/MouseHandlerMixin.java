@@ -15,4 +15,11 @@ public class MouseHandlerMixin {
             ci.cancel();
         }
     }
+
+    @Inject(at = @At("HEAD"), method = "grabMouse", cancellable = true)
+    private void onGrabMouse(CallbackInfo ci) {
+        if (TestRunner.instance().isRunning()) {
+            ci.cancel();
+        }
+    }
 }
