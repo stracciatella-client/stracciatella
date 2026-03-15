@@ -41,7 +41,7 @@ PathWalker is entirely **static**. It simulates keyboard input (forward, sprint,
 ### Important concepts
 
 - **`gap`** = `Math.max(abs(target.X - playerX), abs(target.Z - playerZ))` — includes both endpoints. gap=5 means 4 air blocks ("4-block jump" in parkour terms)
-- **`longRangeJump`** = gap ≥ 3 || distance ≥ 2.5. Uses collision-based edge detection instead of simulation
+- **`longRangeJump`** = effectiveGap ≥ 5. Uses collision-based edge detection instead of simulation. Gap=4 uses simulation (collision-edge overshoots single-block platforms at that distance)
 - **Node arrival**: sphere check (distance < 0.18) OR box check within block bounds with 0.15 margin
 - **Target offset**: random X/Z offset (0.05–0.25) added for natural-looking movement, suppressed for long jumps
 
@@ -55,10 +55,21 @@ Decision paths in priority order:
 3. **Landing validation**: check forward air and landing block solidity
 4. **Drop check**: no jump for small drops (gap ≤ 1, target lower)
 5. **Step-up** (gap ≤ 1): jump if target higher or block in front, only when close
-6. **Long-range** (gap ≥ 3 or distance ≥ 2.5): collision-based edge detection, preserves sprint
-7. **Simulation** (short-range, gap < 3): physics simulation to predict landing
+6. **Long-range** (effectiveGap ≥ 5): collision-based edge detection with direction-aware AABB shrinking, preserves sprint
+7. **Simulation** (short-range, effectiveGap < 5): physics simulation to predict landing
 8. **Edge-distance**: fractional block position checks for when to fire/hold
 9. **Fallback**: block-edge position check
+
+### Key mechanics
+
+- **Retreat phase** (gap ≥ 5): Player walks backward to back edge of block to maximize sprint runway. Uses a fixed origin reference (recorded when retreat starts) to prevent backProgress from resetting when crossing block boundaries on single-block platforms
+- **Sprint suppression** (gap = 2): Sprint set to false on jump tick to prevent overshooting single-block platforms. This creates a sprint-sim mismatch (simulation predicts with sprint boost, actual jump has none)
+- **Landing brake**: Activates when transitioning from larger-gap to smaller-gap segments. Releases all keys until speed drops below threshold. Targets: gap≤1→0.03, gap≤2→0.04, gap≥3→0.08
+- **Post-brake air release**: After a landing brake + gap=2 jump, releases forward key within 1.0 blocks of target to prevent air acceleration overshoot
+- **Pre-landing air deceleration**: When airborne approaching an intermediate platform from a gap≥3 jump with a smaller gap ahead, releases forward key within 1.5 blocks to reduce overshoot
+- **Jump facing tolerance**: Gap=2 uses tighter tolerance (18°) than gap≥3 (36°) because single-block landing platforms have no margin for angular error
+- **Direction-aware collision-edge**: Only shrinks AABB in the gap axis direction, preventing false triggers from perpendicular drift on single-block platforms
+- **Skip-retreat threshold**: 0.14 — below this speed, the player retreats; above, they sprint straight through. Prevents players from attempting collision-edge jumps without enough speed
 
 ### Config system
 

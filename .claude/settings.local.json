@@ -1,12 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./gradlew runMinecraftTests.*)",
-      "Bash(./gradlew :modules:([^:]*):build.*)",
-      "Bash(./gradlew :modules:([^:]*):compileJava.*)",
-      "Bash(ls .*)",
-      "Bash(javap .*)",
-      "Bash(\"$JAVA_HOME/bin/javap.exe\" .*)"
+      "Bash(./gradlew runMinecraftTests*)",
+      "Bash(./gradlew *build*)",
+      "Bash(./gradlew *compileJava*)",
+      "Bash(ls *)",
+      "Bash(javap *)",
+      "Bash(\"$JAVA_HOME/bin/javap.exe\" *)",
+      "Bash(cd \"D:\\\\Users\\\\Sebastian\\\\IdeaProjects\\\\stracciatella\" && for i in 1 2 3; do ./gradlew runMinecraftTests 2>&1 | grep \"Total:\"; done)",
+      "Bash(./gradlew --stop 2>&1; sleep 5 && ./gradlew runMinecraftTests 2>&1 | grep -E \"\\\\[FAIL\\\\]|Total:|BUILD FAILED\")",
+      "Bash(cd D:/Users/Sebastian/IdeaProjects/stracciatella && for i in 1 2 3; do ./gradlew runMinecraftTests 2>&1 | grep -E \"Total:\" | tail -1; done)"
     ]
   }
 }

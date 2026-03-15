@@ -65,6 +65,21 @@ public class PathWalker {
     // of the block before sprinting forward, maximizing runway distance.
     // Phase 0 = not started, 1 = retreating to back edge, 2 = retreat done.
     private static int maxJumpPhase = 0;
+    // Block center at the start of retreat — used as fixed reference to prevent
+    // backProgress from resetting when the player crosses a block boundary.
+    private static double retreatOriginX = 0.0;
+    private static double retreatOriginZ = 0.0;
+    // Landing deceleration: when transitioning from a large-gap jump to a smaller-gap
+    // jump, brake until velocity drops below a safe threshold. Without this, residual
+    // sprint momentum from the first jump causes overshoot on single-block platforms.
+    private static boolean landingBrakeActive = false;
+    private static double landingBrakeMaxSpeed = 0.0;
+    // Set when landing brake deactivates, cleared on next jump.
+    private static boolean justBraked = false;
+    // Set when a gap=2 jump fires after a landing brake. Forward key is
+    // released when close to target to prevent air acceleration from causing
+    // overshoot on the narrow landing platform.
+    private static boolean postBrakeAirRelease = false;
 
     public static void start(List<MeshNode> path) {
         if (path == null || path.isEmpty()) {
@@ -92,6 +107,9 @@ public class PathWalker {
         lastDistance = -1.0;
         offCourseTicks = 0;
         maxJumpPhase = 0;
+        landingBrakeActive = false;
+        justBraked = false;
+        postBrakeAirRelease = false;
         updateTargetOffset();
     }
 
@@ -192,11 +210,69 @@ public class PathWalker {
                 stop();
                 return;
             }
-            return;
+            // Recalculate for the new target and fall through to process movement
+            // immediately. Returning early would leave the previous tick's keys pressed
+            // (sprint+forward), causing the player to slide off single-block platforms
+            // before the jump system can react on the next tick.
+            target = currentPath.get(index);
+            targetX = target.getX() + 0.5 + targetOffsetX;
+            targetY = target.getY() + 1.0;
+            targetZ = target.getZ() + 0.5 + targetOffsetZ;
+            dx = targetX - player.getX();
+            dz = targetZ - player.getZ();
+            dy = targetY - player.getEyeY();
+            distanceSq = dx * dx + dz * dz;
+            distance = Math.sqrt(distanceSq);
+            sharpTurn = isSharpTurnAhead();
+            // Reset off-course tracking so the sudden distance jump to the new
+            // target doesn't falsely increment the off-course counter.
+            lastDistance = distance;
+            offCourseTicks = 0;
+
+            // Detect gap transition where residual momentum could cause overshoot:
+            // if the segment we just completed was a jump (gap >= 2) and the
+            // upcoming segment is shorter, brake until velocity drops to a safe
+            // level. Without this, residual sprint momentum causes overshoot on
+            // single-block platforms.
+            if (index >= 2) {
+                MeshNode prev2 = currentPath.get(index - 2);
+                MeshNode prev1 = currentPath.get(index - 1);
+                int prevSegGap = Math.max(Math.abs(prev1.getX() - prev2.getX()), Math.abs(prev1.getZ() - prev2.getZ()));
+                int currSegGap = computeNodeGap();
+                if (prevSegGap >= 2 && currSegGap < prevSegGap && currSegGap > 0) {
+                    landingBrakeActive = true;
+                    // Smaller gaps need lower velocity to avoid overshoot.
+                    // Gap 1 (adjacent): very tight, need to almost stop.
+                    // Gap 2 (1 air block): low speed to pair with sprint suppression.
+                    // Gap 3 (2 air blocks): sprint jump, moderate speed OK.
+                    landingBrakeMaxSpeed = currSegGap <= 1 ? 0.03 : (currSegGap <= 2 ? 0.04 : 0.08);
+                }
+            }
         }
 
         boolean sprint = true;
         int nodeGap = computeNodeGap();
+
+        // Landing deceleration: suppress all input and let ground friction decay
+        // sprint momentum until velocity drops below the safe threshold.
+        if (landingBrakeActive && player.onGround()) {
+            Vec3 brakeVel = player.getDeltaMovement();
+            double brakeSpeed = Math.sqrt(brakeVel.x * brakeVel.x + brakeVel.z * brakeVel.z);
+            if (brakeSpeed > landingBrakeMaxSpeed) {
+                float desiredYaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
+                float newYaw = updateAim(desiredYaw);
+                player.setYRot(newYaw);
+                player.setXRot(computeDesiredPitch(dy, distance));
+                applyMovement(client, false, false, false, false);
+                if (debug) {
+                    System.out.println(String.format(Locale.US,
+                            "[PathWalker] Landing brake: speed=%.3f target=%.3f", brakeSpeed, landingBrakeMaxSpeed));
+                }
+                return;
+            }
+            landingBrakeActive = false;
+            justBraked = true;
+        }
 
         // For max-range jumps (gap >= 5), retreat to the back edge of the block first
         // to maximize sprint runway. A 4-block jump requires near-terminal sprint speed
@@ -217,17 +293,39 @@ public class PathWalker {
             }
 
             if (maxJumpPhase == 0) {
-                maxJumpPhase = 1;
+                Vec3 vel = player.getDeltaMovement();
+                double forwardVel = (vel.x * dx + vel.z * dz) / distance;
+                // For gap >= 5, the collision-edge jump requires minSpeed 0.14.
+                // Only skip retreat if the player already has enough speed to
+                // reach that threshold with the remaining runway. At low speeds
+                // (e.g. 0.096 from a gap=2 landing), the player can't accelerate
+                // to 0.14 in half a block and walks off the edge without jumping.
+                double skipRetreatThreshold = 0.14;
+                if (forwardVel > skipRetreatThreshold) {
+                    // Player has enough forward velocity to reach collision-edge
+                    // minSpeed. Retreating would risk falling off the back edge
+                    // due to momentum reversal on a single-block platform.
+                    maxJumpPhase = 2;
+                    if (debug) {
+                        System.out.println(String.format(Locale.US,
+                                "[PathWalker] Skipping retreat: forward speed=%.3f", forwardVel));
+                    }
+                } else {
+                    maxJumpPhase = 1;
+                    // Record the block center at retreat start as fixed reference.
+                    // Using Math.floor each tick would shift the reference when
+                    // crossing block boundaries, causing infinite retreat.
+                    retreatOriginX = Math.floor(player.getX()) + 0.5;
+                    retreatOriginZ = Math.floor(player.getZ()) + 0.5;
+                }
             }
 
             if (maxJumpPhase == 1) {
-                // Calculate how far back we are from block center (away from target)
+                // Calculate how far back we are from the retreat origin (away from target)
                 double awayX = -dx / distance;
                 double awayZ = -dz / distance;
-                double blockCenterX = Math.floor(player.getX()) + 0.5;
-                double blockCenterZ = Math.floor(player.getZ()) + 0.5;
-                double localX = player.getX() - blockCenterX;
-                double localZ = player.getZ() - blockCenterZ;
+                double localX = player.getX() - retreatOriginX;
+                double localZ = player.getZ() - retreatOriginZ;
                 double backProgress = localX * awayX + localZ * awayZ;
 
                 if (backProgress >= 0.4) {
@@ -301,7 +399,15 @@ public class PathWalker {
         boolean jumpFacing = facing;
         if (!jumpFacing && jumpDecision.jump) {
             if (jumpDecision.gap > 1) {
-                float gapTolerance = CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg;
+                // Gap=2 (1 air block) lands on single-block platforms with tight margins.
+                // A wide tolerance causes the player to jump while off-angle, and the
+                // trajectory veers sideways, missing the narrow landing. Tighter tolerance
+                // delays the jump by 1-2 ticks until properly aimed. For gap >= 3, the
+                // extra tolerance is safe because the landing platform is wider or the
+                // sprint-jump has enough forward speed to absorb angular error.
+                float gapTolerance = jumpDecision.gap == 2
+                        ? CONFIG.jumpFacingToleranceDeg
+                        : CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg;
                 jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
             } else if (jumpDecision.gap <= 1) {
                 // For step-up jumps (gap 0-1), be more lenient with facing
@@ -461,15 +567,57 @@ public class PathWalker {
             sprint = true;
         }
 
+        // After a landing brake, gap=2 jumps start from very low velocity (~0.04 b/t).
+        // Air acceleration (0.02/tick) rebuilds speed over the jump arc, causing
+        // overshoot on the narrow landing platform. Release forward when close to
+        // target to let drag decay velocity during descent.
+        if (postBrakeAirRelease && !player.onGround()) {
+            if (distance < 1.0) {
+                canMoveForward = false;
+                sprint = false;
+            }
+        }
+        if (postBrakeAirRelease && player.onGround()) {
+            postBrakeAirRelease = false;
+        }
+
+        // Pre-landing air deceleration: when airborne approaching an intermediate
+        // single-block platform that's followed by a smaller gap, release forward
+        // key early to reduce air acceleration. Without this, the sprint-jump arc
+        // overshoots the 1-block platform — the player flies over it (onGround
+        // flickers true briefly), the node advances mid-flight, and they fall in
+        // the next gap. Releasing forward within 1.5 blocks lets air drag slow the
+        // player enough to actually land on the platform.
+        if (!player.onGround() && !jump && index + 1 < currentPath.size() && index >= 1) {
+            int currSegGap = computeNodeGap();
+            MeshNode prev = currentPath.get(index - 1);
+            int prevSegGap = Math.max(Math.abs(target.getX() - prev.getX()), Math.abs(target.getZ() - prev.getZ()));
+            if (prevSegGap >= 3 && currSegGap > 0 && currSegGap < prevSegGap && distance < 1.5) {
+                canMoveForward = false;
+                sprint = false;
+            }
+        }
+
         // If jump is committed, override any braking or movement suppression that occurred above.
         // For long-range gaps this preserves the sprint speed needed to clear the gap.
         // For step-up jumps this ensures the player moves into the block while jumping.
         if (jump) {
             canMoveForward = true;
             shouldBrake = false;
-            if (jumpDecision.gap > 1) {
+            if (jumpDecision.gap >= 3) {
+                // 2+ air block gaps need sprint-jump boost to clear the distance.
                 sprint = true;
+            } else if (jumpDecision.gap == 2) {
+                // 1 air block: suppress sprint to prevent overshooting single-block
+                // platforms. Regular jump covers ~1.8 blocks, plenty for gap=2.
+                // Sprint-jump covers ~2.6 blocks, causing the player to land past
+                // the far edge and slide off.
+                sprint = false;
+                if (justBraked) {
+                    postBrakeAirRelease = true;
+                }
             }
+            justBraked = false;
         }
 
         if (debug) {
@@ -540,14 +688,26 @@ public class PathWalker {
     }
 
     private static boolean hasReachedNode(LocalPlayer player, MeshNode target, double distanceSq) {
-        // Nodes represent walkable positions — only count as reached when on the ground.
-        // Without this, the player can "reach" a node while flying over it mid-jump,
-        // causing PathWalker to advance or stop before the player has actually landed.
-        if (!player.onGround()) {
+        // For intermediate nodes on a straight path, allow advancing the node
+        // while airborne. This enables fluid chain jumps — the player arcs over
+        // the intermediate block and continues toward the next target without
+        // needing to land, stop, and re-jump (which risks sliding off single-block
+        // platforms). Only allowed when the path continues without a sharp turn
+        // and the player is within the node's horizontal bounds at a reasonable height.
+        boolean isFinalNode = index + 1 >= currentPath.size();
+        boolean allowAirborne = canAdvanceAirborne();
+        if (!player.onGround() && !allowAirborne) {
             return false;
         }
-        if (distanceSq <= ARRIVAL_RADIUS * ARRIVAL_RADIUS) {
+        if (player.onGround() && distanceSq <= ARRIVAL_RADIUS * ARRIVAL_RADIUS) {
             return true;
+        }
+        // For the final node, only use the sphere check. The box check (block
+        // bounds + ARRIVAL_MARGIN) can trigger at block edges where the player
+        // is up to 0.65 blocks from center, which may exceed downstream
+        // arrival radius checks. The sphere check ensures a centered stop.
+        if (isFinalNode) {
+            return false;
         }
         double px = player.getX();
         double pz = player.getZ();
@@ -562,6 +722,40 @@ public class PathWalker {
         double minY = target.getY() - 0.25;
         double maxY = target.getY() + 1.75;
         return py >= minY && py <= maxY;
+    }
+
+    /**
+     * Returns true if the current target node can be advanced while airborne.
+     * Only allowed for intermediate nodes (not the last in the path) where the
+     * path continues in roughly the same direction (no sharp turn). This enables
+     * seamless chain jumping over single-block waypoints.
+     */
+    private static boolean canAdvanceAirborne() {
+        // Must be an intermediate node (not the final destination)
+        if (index + 1 >= currentPath.size()) {
+            return false;
+        }
+        // Need a previous node to check direction continuity
+        if (index <= 0) {
+            return false;
+        }
+        MeshNode prev = currentPath.get(index - 1);
+        MeshNode current = currentPath.get(index);
+        MeshNode next = currentPath.get(index + 1);
+        // Only allow airborne pass-through for nearly straight paths (< 45°)
+        int dxPrev = current.getX() - prev.getX();
+        int dzPrev = current.getZ() - prev.getZ();
+        int dxNext = next.getX() - current.getX();
+        int dzNext = next.getZ() - current.getZ();
+        double angle = angleBetween(dxPrev, dzPrev, dxNext, dzNext);
+        if (angle >= 45.0) {
+            return false;
+        }
+        // Only allow when the total gap from prev to next is within one sprint
+        // jump's reach (~4.5 blocks). Beyond that the player must land on the
+        // intermediate block to set up the next jump.
+        int totalGap = Math.max(Math.abs(next.getX() - prev.getX()), Math.abs(next.getZ() - prev.getZ()));
+        return totalGap <= 4;
     }
 
     private static boolean shouldCancelOffCourse(double distance, LocalPlayer player, MeshNode target, boolean canMoveForward, boolean shouldBrake) {
@@ -735,7 +929,13 @@ public class PathWalker {
             // Gap 3 (2 air blocks) uses simulation — collision-edge sprint-jump overshoots.
             int effectiveGap = Math.max(gap, nodeGap);
             decidedGap = effectiveGap;
-            boolean longRangeJump = effectiveGap >= 4 || distance >= 3.5;
+            boolean longRangeJump = effectiveGap >= 5;
+            // After a landing brake, the player's speed is very low (~0.04 b/t).
+            // The simulation predicts with sprint boost (+0.2) and fires immediately,
+            // but gap=2 jumps suppress sprint on the jump tick. The actual non-sprint
+            // jump from 0.04 only travels ~0.75 blocks — way too short. Gate the
+            // simulation until speed recovers to near-terminal sprint so the actual
+            // no-boost trajectory can reach the target.
             if (!longRangeJump) {
                 JumpDecision simDecision = decideJumpBySimulation(player, target, sprint, gap);
                 if (simDecision != null) {
@@ -832,7 +1032,7 @@ public class PathWalker {
             // Guard against this by also requiring the directional edge distance toward the
             // target to be small (< 0.35). This ensures we only fire when near the gap edge.
             double currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
-            boolean atCollisionEdge = isAtCollisionEdge(player);
+            boolean atCollisionEdge = isAtCollisionEdge(player, stepX, stepZ);
             // Predictive check: if current position isn't at the edge, check if NEXT tick's
             // position would be. Since key inputs are processed on the following tick, we need
             // to fire the jump while the player is still on the block. Without this, on small
@@ -842,7 +1042,7 @@ public class PathWalker {
             // an extra tick of ground sprint acceleration, and at terminal sprint speed
             // (~0.153 b/t) the player cannot skip past the collision edge in a single tick.
             if (!atCollisionEdge && gap < 5 && currentSpeed > 0.05) {
-                atCollisionEdge = isAtCollisionEdgePredictive(player, velocity);
+                atCollisionEdge = isAtCollisionEdgePredictive(player, velocity, stepX, stepZ);
             }
             // Guard: require minimum sprint speed to prevent firing after a diagonal landing
             // where the player hasn't built momentum yet. Full post-drag sprint is ~0.153;
@@ -1180,22 +1380,31 @@ public class PathWalker {
         CALIBRATION.update(client, player);
     }
 
-    private static boolean isAtCollisionEdge(LocalPlayer player) {
+    private static boolean isAtCollisionEdge(LocalPlayer player, int stepX, int stepZ) {
         // Collision-based edge detection inspired by Meteor Client's parkour module.
         // Shrink the player's bounding box by a tiny amount and shift it down 0.5 blocks.
         // If there are no block collisions in this adjusted box, the player's feet are at
         // the very edge of the block — the last possible frame to jump for maximum distance.
+        //
+        // Direction-aware: only shrink in the axis where the gap exists. On single-block
+        // platforms, direction-agnostic shrinking fires from the wrong edge (e.g., Z-drift
+        // triggers the check while the gap is in X). Shrinking only in the gap axis ensures
+        // the check fires from the correct edge.
         AABB box = player.getBoundingBox();
-        AABB shrunk = box.deflate(0.001, 0.0, 0.001).move(0.0, -0.5, 0.0);
+        double shrinkX = stepX != 0 ? 0.001 : 0.0;
+        double shrinkZ = stepZ != 0 ? 0.001 : 0.0;
+        AABB shrunk = box.deflate(shrinkX, 0.0, shrinkZ).move(0.0, -0.5, 0.0);
         return player.level().noCollision(player, shrunk);
     }
 
-    private static boolean isAtCollisionEdgePredictive(LocalPlayer player, Vec3 velocity) {
+    private static boolean isAtCollisionEdgePredictive(LocalPlayer player, Vec3 velocity, int stepX, int stepZ) {
         // Project the bounding box forward by one tick's velocity, then apply the same
         // edge check. This fires the jump one tick earlier — essential on small platforms
         // (e.g. single block) where discrete movement steps can skip past the edge.
         AABB box = player.getBoundingBox().move(velocity.x, 0.0, velocity.z);
-        AABB shrunk = box.deflate(0.001, 0.0, 0.001).move(0.0, -0.5, 0.0);
+        double shrinkX = stepX != 0 ? 0.001 : 0.0;
+        double shrinkZ = stepZ != 0 ? 0.001 : 0.0;
+        AABB shrunk = box.deflate(shrinkX, 0.0, shrinkZ).move(0.0, -0.5, 0.0);
         return player.level().noCollision(player, shrunk);
     }
 
