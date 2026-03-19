@@ -11,6 +11,7 @@
 - Try to avoid doing a text search across all files
 - **Never modify tests to make them pass.** If a test fails, fix the production code, not the test. Tests define the expected behavior.
 - **Always question the usefulness of a given command and if it is deemed a bad idea give reasons for that decision and dont implement it**. Be a critic and play devils advocate.
+- if things are unclear ask questions
 
 ## Coordinates
 - The minecraft coordinate format: **Y is height**, Z is forward/back. **Z IS NOT THE HEIGHT, Y IS**
