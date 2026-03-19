@@ -253,20 +253,34 @@ public class PathWalker {
         boolean sprint = true;
         int nodeGap = computeNodeGap();
 
-        // Landing deceleration: suppress all input and let ground friction decay
-        // sprint momentum until velocity drops below the safe threshold.
+        // Landing deceleration: face the direction of travel and press backward
+        // to actively counter momentum when speed is high. At lower speeds,
+        // release all keys and let ground friction handle the rest to avoid
+        // overshooting backward off narrow platforms.
         if (landingBrakeActive && player.onGround()) {
             Vec3 brakeVel = player.getDeltaMovement();
             double brakeSpeed = Math.sqrt(brakeVel.x * brakeVel.x + brakeVel.z * brakeVel.z);
             if (brakeSpeed > landingBrakeMaxSpeed) {
-                float desiredYaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
-                float newYaw = updateAim(desiredYaw);
-                player.setYRot(newYaw);
+                // Above 0.1 b/t: actively brake backward facing velocity direction.
+                // Below 0.1 b/t: just release all keys, friction handles the rest safely.
+                boolean activeBackward = brakeSpeed > 0.1;
+                if (activeBackward) {
+                    float velocityYaw = (float) (Math.toDegrees(Math.atan2(-brakeVel.x, brakeVel.z)));
+                    aimYaw = velocityYaw;
+                    aimYawVelocity = 0;
+                    aimYawAccel = 0;
+                    player.setYRot(velocityYaw);
+                } else {
+                    float desiredYaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
+                    float newYaw = updateAim(desiredYaw);
+                    player.setYRot(newYaw);
+                }
                 player.setXRot(computeDesiredPitch(dy, distance));
-                applyMovement(client, false, false, false, false);
+                applyMovement(client, false, activeBackward, false, false);
                 if (debug) {
                     System.out.println(String.format(Locale.US,
-                            "[PathWalker] Landing brake: speed=%.3f target=%.3f", brakeSpeed, landingBrakeMaxSpeed));
+                            "[PathWalker] Landing brake (%s): speed=%.3f target=%.3f",
+                            activeBackward ? "backward" : "release", brakeSpeed, landingBrakeMaxSpeed));
                 }
                 return;
             }
