@@ -64,7 +64,7 @@ Decision paths in priority order:
 
 - **Retreat phase** (gap ≥ 5): Player walks backward to back edge of block to maximize sprint runway. Uses a fixed origin reference (recorded when retreat starts) to prevent backProgress from resetting when crossing block boundaries on single-block platforms
 - **Sprint suppression** (gap = 2): Sprint set to false on jump tick to prevent overshooting single-block platforms. This creates a sprint-sim mismatch (simulation predicts with sprint boost, actual jump has none)
-- **Landing brake**: Activates when transitioning from larger-gap to smaller-gap segments. Releases all keys until speed drops below threshold. Targets: gap≤1→0.03, gap≤2→0.04, gap≥3→0.08
+- **Landing brake**: Activates when transitioning from larger-gap to smaller-gap segments. At high speed (>0.1 b/t), faces velocity direction and presses backward to actively decelerate. At low speed (≤0.1 b/t), releases all keys and lets friction handle it. Targets: gap≤1→0.03, gap≤2→0.04, gap≥3→0.08
 - **Post-brake air release**: After a landing brake + gap=2 jump, releases forward key within 1.0 blocks of target to prevent air acceleration overshoot
 - **Pre-landing air deceleration**: When airborne approaching an intermediate platform from a gap≥3 jump with a smaller gap ahead, releases forward key within 1.5 blocks to reduce overshoot
 - **Jump facing tolerance**: Gap=2 uses tighter tolerance (18°) than gap≥3 (36°) because single-block landing platforms have no margin for angular error
