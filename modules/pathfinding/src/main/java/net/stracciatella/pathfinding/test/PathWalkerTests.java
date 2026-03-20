@@ -54,6 +54,43 @@ public class PathWalkerTests {
                 new BlockPos(0, 0, -5));
     }
 
+    // === Diagonal tests: jump forward+sideways (forward Z, side X) ===
+
+    @MinecraftTest(name = "Diagonal 2x1", timeoutTicks = 800, order = -90, repeat = 3)
+    public void diagonal_2x1(TestContext ctx) {
+        runCourse(ctx, new BlockPos(300, 30, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(1, 0, -2));
+    }
+
+    @MinecraftTest(name = "Diagonal 2x2", timeoutTicks = 800, order = -89, repeat = 3)
+    public void diagonal_2x2(TestContext ctx) {
+        runCourse(ctx, new BlockPos(330, 30, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(2, 0, -2));
+    }
+
+    @MinecraftTest(name = "Diagonal 2x3", timeoutTicks = 800, order = -88, repeat = 3)
+    public void diagonal_2x3(TestContext ctx) {
+        runCourse(ctx, new BlockPos(360, 30, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(3, 0, -2));
+    }
+
+    @MinecraftTest(name = "Diagonal 3x1", timeoutTicks = 800, order = -87, repeat = 3)
+    public void diagonal_3x1(TestContext ctx) {
+        runCourse(ctx, new BlockPos(390, 30, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(1, 0, -3));
+    }
+
+    @MinecraftTest(name = "Diagonal 3x2", timeoutTicks = 800, order = -86, repeat = 3)
+    public void diagonal_3x2(TestContext ctx) {
+        runCourse(ctx, new BlockPos(420, 30, 100),
+                new BlockPos(0, 0, 0),
+                new BlockPos(2, 0, -3));
+    }
+
     // === Chain tests: gap1 followed by gap2 in a straight line ===
 
     @MinecraftTest(name = "Chain 1→1", timeoutTicks = 1200, order = -80, repeat = 3)
