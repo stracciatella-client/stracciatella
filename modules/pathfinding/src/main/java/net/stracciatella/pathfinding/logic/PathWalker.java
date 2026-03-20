@@ -626,7 +626,13 @@ public class PathWalker {
                 // platforms. Regular jump covers ~1.8 blocks, plenty for gap=2.
                 // Sprint-jump covers ~2.6 blocks, causing the player to land past
                 // the far edge and slide off.
-                sprint = false;
+                // Exception: diagonal gap=2 jumps (both dx and dz non-zero) have a
+                // longer euclidean distance (~2.83 blocks for (2,2)) and need sprint.
+                MeshNode prev = index > 0 ? currentPath.get(index - 1) : null;
+                boolean diagonal = prev != null
+                        && target.getX() != prev.getX()
+                        && target.getZ() != prev.getZ();
+                sprint = diagonal;
                 if (justBraked) {
                     postBrakeAirRelease = true;
                 }
