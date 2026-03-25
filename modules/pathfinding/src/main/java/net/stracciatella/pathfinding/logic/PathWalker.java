@@ -239,12 +239,18 @@ public class PathWalker {
                 MeshNode prev1 = currentPath.get(index - 1);
                 int prevSegGap = Math.max(Math.abs(prev1.getX() - prev2.getX()), Math.abs(prev1.getZ() - prev2.getZ()));
                 int currSegGap = computeNodeGap();
-                if (prevSegGap >= 2 && currSegGap < prevSegGap && currSegGap > 0) {
+                // Brake when transitioning from a larger gap to a smaller gap,
+                // OR when chaining same-size sprint jumps (gap >= 3) on a single-
+                // block platform — residual sprint momentum from the landing can
+                // carry the player off the block before the next jump fires.
+                boolean needsBrake = (prevSegGap >= 2 && currSegGap < prevSegGap && currSegGap > 0)
+                        || (prevSegGap >= 3 && currSegGap == prevSegGap);
+                if (needsBrake) {
                     landingBrakeActive = true;
                     // Smaller gaps need lower velocity to avoid overshoot.
                     // Gap 1 (adjacent): very tight, need to almost stop.
                     // Gap 2 (1 air block): low speed to pair with sprint suppression.
-                    // Gap 3 (2 air blocks): sprint jump, moderate speed OK.
+                    // Gap 3+ (2+ air blocks): sprint jump, moderate speed OK.
                     landingBrakeMaxSpeed = currSegGap <= 1 ? 0.03 : (currSegGap <= 2 ? 0.04 : 0.08);
                 }
             }
@@ -309,11 +315,11 @@ public class PathWalker {
             if (maxJumpPhase == 0) {
                 Vec3 vel = player.getDeltaMovement();
                 double forwardVel = (vel.x * dx + vel.z * dz) / distance;
-                // For gap >= 5, the collision-edge jump requires minSpeed 0.14.
-                // Only skip retreat if the player already has enough speed to
-                // reach that threshold with the remaining runway. At low speeds
-                // (e.g. 0.096 from a gap=2 landing), the player can't accelerate
-                // to 0.14 in half a block and walks off the edge without jumping.
+                // Skip retreat only when the player already has near-terminal sprint speed.
+                // The threshold must stay high (0.14) because skipping retreat means
+                // the player only has ~0.5 blocks of runway from block center to edge.
+                // At 0.14 the remaining runway is enough to maintain collision-edge
+                // speed. Lower thresholds cause retreat skips at insufficient speed.
                 double skipRetreatThreshold = 0.14;
                 if (forwardVel > skipRetreatThreshold) {
                     // Player has enough forward velocity to reach collision-edge
@@ -335,6 +341,28 @@ public class PathWalker {
             }
 
             if (maxJumpPhase == 1) {
+                // Before retreating, check for lateral velocity (perpendicular to jump
+                // direction) that could carry the player off a narrow platform. This
+                // happens after 90° corners where residual momentum from the previous
+                // segment is still decaying. Release all keys until lateral velocity
+                // drops below threshold, then start the actual retreat.
+                Vec3 retreatVel = player.getDeltaMovement();
+                double jumpDirX = dx / distance;
+                double jumpDirZ = dz / distance;
+                double fwdComp = retreatVel.x * jumpDirX + retreatVel.z * jumpDirZ;
+                double latVelX = retreatVel.x - fwdComp * jumpDirX;
+                double latVelZ = retreatVel.z - fwdComp * jumpDirZ;
+                double lateralSpeed = Math.sqrt(latVelX * latVelX + latVelZ * latVelZ);
+                if (lateralSpeed > 0.04) {
+                    applyMovement(client, false, false, false, false);
+                    if (debug && System.currentTimeMillis() - lastDebugMs > 200) {
+                        lastDebugMs = System.currentTimeMillis();
+                        System.out.println(String.format(Locale.US,
+                                "[PathWalker] Retreat waiting for lateral decay: latSpeed=%.3f", lateralSpeed));
+                    }
+                    return;
+                }
+
                 // Calculate how far back we are from the retreat origin (away from target)
                 double awayX = -dx / distance;
                 double awayZ = -dz / distance;
@@ -342,7 +370,7 @@ public class PathWalker {
                 double localZ = player.getZ() - retreatOriginZ;
                 double backProgress = localX * awayX + localZ * awayZ;
 
-                if (backProgress >= 0.4) {
+                if (backProgress >= 0.45) {
                     // At back edge — transition to sprint approach
                     maxJumpPhase = 2;
                     if (debug) {
@@ -447,8 +475,18 @@ public class PathWalker {
         if (isMovingAway(player, targetX, targetZ)) {
             canMoveForward = false;
         }
+        // For straight gap=2 jumps, hold position to time the simulation precisely.
+        // For long-diagonal gap=2 (both axes >= 2), skip the hold — the simulation
+        // needs the player to build velocity by walking forward, and the hold would
+        // deadlock the player at zero speed in the block center.
         if (jumpDecision.holdBeforeJump && jumpDecision.gap <= 2) {
-            canMoveForward = false;
+            MeshNode holdPrev = index > 0 ? currentPath.get(index - 1) : null;
+            boolean holdLongDiag = holdPrev != null
+                    && Math.abs(target.getX() - holdPrev.getX()) >= 2
+                    && Math.abs(target.getZ() - holdPrev.getZ()) >= 2;
+            if (!holdLongDiag) {
+                canMoveForward = false;
+            }
         }
 
         // Check if we're about to overshoot due to velocity at a turn/edge
@@ -618,6 +656,22 @@ public class PathWalker {
         if (jump) {
             canMoveForward = true;
             shouldBrake = false;
+            if (jumpDecision.gap >= 5 && jumpDecision.reason.equals("collision-edge:fire")
+                    && index > 0 && index < currentPath.size()) {
+                // Max-range jumps (4 air blocks) after 90° turns have limited sprint runway
+                // (~0.95 blocks on a single-block platform). Tick discretization causes the
+                // collision-edge to fire at varying positions (0.20–0.45 blocks past the edge),
+                // sometimes leaving the player too far from the target for MC's collision
+                // resolution to push them on top (hits the SIDE instead). A small velocity
+                // nudge in the gap direction adds ~0.07 blocks of extra distance over the
+                // 12-tick jump arc, compensating for the worst-case launch positions.
+                // Analogous to MC's own sprint-jump boost (+0.2 velocity).
+                MeshNode prev = currentPath.get(index - 1);
+                int gapStepX = Integer.compare(target.getX(), prev.getX());
+                int gapStepZ = Integer.compare(target.getZ(), prev.getZ());
+                Vec3 vel = player.getDeltaMovement();
+                player.setDeltaMovement(vel.x + gapStepX * 0.015, vel.y, vel.z + gapStepZ * 0.015);
+            }
             if (jumpDecision.gap >= 3) {
                 // 2+ air block gaps need sprint-jump boost to clear the distance.
                 sprint = true;
@@ -626,13 +680,15 @@ public class PathWalker {
                 // platforms. Regular jump covers ~1.8 blocks, plenty for gap=2.
                 // Sprint-jump covers ~2.6 blocks, causing the player to land past
                 // the far edge and slide off.
-                // Exception: diagonal gap=2 jumps (both dx and dz non-zero) have a
-                // longer euclidean distance (~2.83 blocks for (2,2)) and need sprint.
+                // Exception: diagonal gap=2 jumps where both axes span >= 2 blocks
+                // (euclidean ~2.83 for (2,2)) need sprint to cover the distance.
+                // Asymmetric diagonals like (1,2) have euclidean ~2.24, close enough
+                // to straight gap=2 that sprint still overshoots.
                 MeshNode prev = index > 0 ? currentPath.get(index - 1) : null;
-                boolean diagonal = prev != null
-                        && target.getX() != prev.getX()
-                        && target.getZ() != prev.getZ();
-                sprint = diagonal;
+                boolean longDiagonal = prev != null
+                        && Math.abs(target.getX() - prev.getX()) >= 2
+                        && Math.abs(target.getZ() - prev.getZ()) >= 2;
+                sprint = longDiagonal;
                 if (justBraked) {
                     postBrakeAirRelease = true;
                 }
@@ -1058,18 +1114,17 @@ public class PathWalker {
             // to fire the jump while the player is still on the block. Without this, on small
             // platforms (single block) the player can go from "on block" to "past block" in one
             // tick, missing the jump window entirely.
-            // Skip predictive for max-range jumps (gap >= 5): jumping one tick later gives
-            // an extra tick of ground sprint acceleration, and at terminal sprint speed
-            // (~0.153 b/t) the player cannot skip past the collision edge in a single tick.
             if (!atCollisionEdge && gap < 5 && currentSpeed > 0.05) {
                 atCollisionEdge = isAtCollisionEdgePredictive(player, velocity, stepX, stepZ);
             }
             // Guard: require minimum sprint speed to prevent firing after a diagonal landing
             // where the player hasn't built momentum yet. Full post-drag sprint is ~0.153;
             // 0.12 allows slightly below peak sprint but blocks walking speed (~0.09).
-            // For max-range jumps (gap >= 5), require near-terminal sprint speed — the
-            // +0.2 sprint-jump boost only clears 4 blocks with sufficient initial velocity.
-            double minSpeed = gap >= 5 ? 0.14 : 0.12;
+            // For max-range jumps (gap >= 5), use a lower threshold of 0.10 because
+            // after 90° turns the retreat only provides ~0.95 blocks of sprint runway,
+            // which may not reach 0.12. The +0.2 sprint-jump boost at 0.10 gives launch
+            // velocity 0.30, covering ~3.8 blocks (need 3.7 for a 4-air-block gap).
+            double minSpeed = gap >= 5 ? 0.10 : 0.12;
             boolean hasSpeed = currentSpeed >= minSpeed;
             boolean atEdge = atCollisionEdge && hasSpeed;
             // For max-range jumps (gap >= 5), the retreat phase positions the player at

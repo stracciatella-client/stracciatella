@@ -208,6 +208,9 @@ public class PathWalkerTests {
     }
 
     private void runMultiCourse(TestContext ctx, BlockPos origin, BlockPos... relPositions) {
+        // Stop any residual PathWalker from a previous timed-out test
+        ctx.runOnClient(mc -> PathWalker.stop());
+
         BlockPos[] world = new BlockPos[relPositions.length];
         for (int i = 0; i < relPositions.length; i++) {
             world[i] = origin.offset(relPositions[i]);
@@ -308,6 +311,9 @@ public class PathWalkerTests {
     }
 
     private void runCourse(TestContext ctx, BlockPos origin, BlockPos relStart, BlockPos relEnd) {
+        // Stop any residual PathWalker from a previous timed-out test
+        ctx.runOnClient(mc -> PathWalker.stop());
+
         BlockPos worldStart = origin.offset(relStart);
         BlockPos worldEnd = origin.offset(relEnd);
 
