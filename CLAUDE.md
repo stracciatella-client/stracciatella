@@ -1,17 +1,8 @@
 # Stracciatella — Project Instructions
 
 ## General Rules
-- Whenever you are changing something in a module, review and update that module's CLAUDE.md so it stays current
-- Document all relevant (Big picture) design decisions that you make in a desing.md in the modules with pro and cons
-  - sort it by decision
-- Use your tools in simple ways — always only read 1 file at a time
-- Only modify code that needs to be changed. Keep changes as small as possible
-- If code for a specific thing already exists, edit it instead of adding new code
-- Always fix the logic: if a certain use case is given, assume other same cases are also to be fixed
-- Try to avoid doing a text search across all files
-- **Never modify tests to make them pass.** If a test fails, fix the production code, not the test. Tests define the expected behavior.
-- **Always question the usefulness of a given command and if it is deemed a bad idea give reasons for that decision and dont implement it**. Be a critic and play devils advocate.
-- if things are unclear ask questions
+
+See [AGENTS.md](AGENTS.md) for generic coding instructions that apply to all AI agents.
 
 ## Coordinates
 - The minecraft coordinate format: **Y is height**, Z is forward/back. **Z IS NOT THE HEIGHT, Y IS**
