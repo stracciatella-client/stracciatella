@@ -1,9 +1,5 @@
 # Stracciatella — Project Instructions
 
-## General Rules
-
-See [AGENTS.md](AGENTS.md) for generic coding instructions that apply to all AI agents.
-
 ## Coordinates
 - The minecraft coordinate format: **Y is height**, Z is forward/back. **Z IS NOT THE HEIGHT, Y IS**
 
