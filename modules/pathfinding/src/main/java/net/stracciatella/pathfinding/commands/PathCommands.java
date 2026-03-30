@@ -234,46 +234,6 @@ public class PathCommands {
                                                     context.getSource().sendFeedback(Component.literal("Edge jump range set to " + min + " - " + max));
                                                     return 1;
                                                 }))))
-                        .then(literal("turnaccel")
-                                .then(argument("accel", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float accel = FloatArgumentType.getFloat(context, "accel");
-                                            PathWalker.setTurnAccel(accel);
-                                            context.getSource().sendFeedback(Component.literal("Turn acceleration set to " + accel + " deg/tick^2"));
-                                            return 1;
-                                        })))
-                        .then(literal("jumptolerance")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setJumpTolerance(deg);
-                                            context.getSource().sendFeedback(Component.literal("Jump facing tolerance set to " + deg + " deg"));
-                                            return 1;
-                                        })))
-                        .then(literal("walkturn")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setWalkTurnThreshold(deg);
-                                            context.getSource().sendFeedback(Component.literal("Walk turn threshold set to " + deg + " deg"));
-                                            return 1;
-                                        })))
-                        .then(literal("sharpturn")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setSharpTurnDeg(deg);
-                                            context.getSource().sendFeedback(Component.literal("Sharp turn threshold set to " + deg + " deg"));
-                                            return 1;
-                                        })))
-                        .then(literal("turnstop")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setTurnStopThreshold(deg);
-                                            context.getSource().sendFeedback(Component.literal("Turn stop threshold set to " + deg + " deg"));
-                                            return 1;
-                                        })))
                         .then(literal("edgejumpscale")
                                 .then(argument("value", DoubleArgumentType.doubleArg(0.0))
                                         .executes(context -> {
@@ -366,14 +326,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Alignment hold set to " + ms + " ms"));
                                             return 1;
                                         })))
-                        .then(literal("walkturnmax")
-                                .then(argument("deg", FloatArgumentType.floatArg(0.0f))
-                                        .executes(context -> {
-                                            float deg = FloatArgumentType.getFloat(context, "deg");
-                                            PathWalker.setWalkTurnMaxDeg(deg);
-                                            context.getSource().sendFeedback(Component.literal("Walk turn max set to " + deg + " deg"));
-                                            return 1;
-                                        })))
                         .then(literal("jumpcooldown")
                                 .then(argument("ticks", IntegerArgumentType.integer(0))
                                         .executes(context -> {
@@ -382,16 +334,6 @@ public class PathCommands {
                                             context.getSource().sendFeedback(Component.literal("Jump cooldown set to " + ticks + " ticks"));
                                             return 1;
                                         })))
-                        .then(literal("jumpaimyaw")
-                                .then(argument("min", FloatArgumentType.floatArg(0.0f))
-                                        .then(argument("max", FloatArgumentType.floatArg(0.0f))
-                                                .executes(context -> {
-                                                    float min = FloatArgumentType.getFloat(context, "min");
-                                                    float max = FloatArgumentType.getFloat(context, "max");
-                                                    PathWalker.setJumpAimYawRange(min, max);
-                                                    context.getSource().sendFeedback(Component.literal("Jump aim yaw range set to " + min + " - " + max + " deg"));
-                                                    return 1;
-                                                }))))
                         .then(literal("jumpsimticks")
                                 .then(argument("ticks", IntegerArgumentType.integer(5))
                                         .executes(context -> {
@@ -475,11 +417,6 @@ public class PathCommands {
         sendMenuHeader(player, "Path Walker Config");
         sendMenuLine(player, rangeLine("offset", PathWalker.CONFIG.offsetMin, PathWalker.CONFIG.offsetMax, 0.05, "/path walkconfig offset", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("edgejump", PathWalker.CONFIG.edgeJumpMin, PathWalker.CONFIG.edgeJumpMax, 0.01, "/path walkconfig edgejump", 0.0, 1.0));
-        sendMenuLine(player, valueLine("turnaccel", PathWalker.CONFIG.turnAccel, 0.1, "/path walkconfig turnaccel", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, valueLine("jumptolerance", PathWalker.CONFIG.jumpFacingToleranceDeg, 1.0, "/path walkconfig jumptolerance", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, valueLine("walkturn", PathWalker.CONFIG.walkTurnThresholdDeg, 1.0, "/path walkconfig walkturn", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, valueLine("sharpturn", PathWalker.CONFIG.sharpTurnDeg, 2.0, "/path walkconfig sharpturn", 0.0, Double.POSITIVE_INFINITY));
-        sendMenuLine(player, valueLine("turnstop", PathWalker.CONFIG.turnStopThresholdDeg, 1.0, "/path walkconfig turnstop", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("edgejumpscale", PathWalker.CONFIG.edgeJumpScale, 0.005, "/path walkconfig edgejumpscale", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, rangeLine("edgejumpshort", PathWalker.CONFIG.edgeJumpShortMin, PathWalker.CONFIG.edgeJumpShortMax, 0.01, "/path walkconfig edgejumpshort", 0.0, 1.0));
         sendMenuLine(player, rangeLine("edgejumpmid", PathWalker.CONFIG.edgeJumpMidMin, PathWalker.CONFIG.edgeJumpMidMax, 0.01, "/path walkconfig edgejumpmid", 0.0, 1.0));
@@ -491,9 +428,7 @@ public class PathCommands {
         sendMenuLine(player, valueLine("edgejumptrigger", PathWalker.CONFIG.edgeJumpTriggerDistance, 0.1, "/path walkconfig edgejumptrigger", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLine("edgejumptriggeredge", PathWalker.CONFIG.edgeJumpTriggerEdge, 0.01, "/path walkconfig edgejumptriggeredge", 0.0, 0.5));
         sendMenuLine(player, valueLineInt("alignhold", PathWalker.CONFIG.alignmentHoldMs, 50, "/path walkconfig alignhold", 0));
-        sendMenuLine(player, valueLine("walkturnmax", PathWalker.CONFIG.walkTurnMaxDeg, 2.0, "/path walkconfig walkturnmax", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLineInt("jumpcooldown", PathWalker.CONFIG.jumpCooldownTicks, 1, "/path walkconfig jumpcooldown", 0));
-        sendMenuLine(player, rangeLine("jumpaimyaw", PathWalker.CONFIG.jumpAimYawMinDeg, PathWalker.CONFIG.jumpAimYawMaxDeg, 0.5, "/path walkconfig jumpaimyaw", 0.0, Double.POSITIVE_INFINITY));
         sendMenuLine(player, valueLineInt("jumpsimticks", PathWalker.CONFIG.jumpSimTicks, 1, "/path walkconfig jumpsimticks", 5));
         sendMenuLine(player, valueLine("jumplanding", PathWalker.CONFIG.jumpLandingMargin, 0.05, "/path walkconfig jumplanding", 0.0, Double.POSITIVE_INFINITY));
     }

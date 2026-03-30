@@ -10,6 +10,7 @@ fun module(path: String) {
 }
 // declare all modules here
 module("core")
+module("camera")
 module("fullscreen")
 module("anonymous-modlist")
 module("pathfinding")

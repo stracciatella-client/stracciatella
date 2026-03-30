@@ -37,6 +37,7 @@ stracciatella {
 
 dependencies {
     compileOnly(projects.loader)
+    compileOnly(project(":modules:camera"))
     compileOnly(project(":modules:testing"))
     modCompileOnly(mods.sodium)
 }

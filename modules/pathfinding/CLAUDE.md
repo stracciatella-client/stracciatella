@@ -36,7 +36,7 @@ net.stracciatella.pathfinding
 
 ## PathWalker — the core component
 
-PathWalker is entirely **static**. It simulates keyboard input (forward, sprint, jump keys) — it does NOT teleport or set position directly.
+PathWalker is entirely **static**. It simulates keyboard input (forward, sprint, jump keys) — it does NOT teleport or set position directly. Camera control (yaw/pitch smoothing) is delegated to `CameraController` from the **camera** module.
 
 ### Important concepts
 
@@ -77,7 +77,7 @@ Decision paths in priority order:
 - Stored in `pathwalker.json`, loaded/saved via `PathWalker.loadConfig()`/`saveConfig()`
 - `PathWalker.CONFIG` is the public static Config object
 - All parameters tunable via `/path walkconfig` commands
-- Key parameter groups: turn/aim, edge jump thresholds, jump simulation, physics, off-course detection
+- Key parameter groups: edge jump thresholds, jump simulation, physics, off-course detection
 
 ### Learning and calibration
 
@@ -130,7 +130,7 @@ PathWalker has extensive debug logging. **Always read the logs when editing Path
 
 ## Build configuration
 
-- Dependencies: loader (compileOnly), testing module (compileOnly), sodium (modCompileOnly, optional)
+- Dependencies: loader (compileOnly), camera module (compileOnly), testing module (compileOnly), sodium (modCompileOnly, optional)
 - Mixin config: `pathfinding.mixins.json` (client: LevelChunkMixin)
 - Access widener: `pathfinding.accesswidener`
 

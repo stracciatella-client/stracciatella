@@ -52,6 +52,7 @@ modules/<name>/
 
 | Module | Purpose | Has CLAUDE.md |
 |--------|---------|---------------|
+| **camera** | Human-like camera movement (yaw/pitch smoothing, angle utilities) | Yes |
 | **core** | Shared state management, core mixins | No |
 | **pathfinding** | Autonomous player movement, mesh generation, A* pathfinding, parkour | Yes |
 | **testing** | In-game integration test framework with annotations and test runner | Yes |

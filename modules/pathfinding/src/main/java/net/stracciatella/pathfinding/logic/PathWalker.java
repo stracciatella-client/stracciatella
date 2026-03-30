@@ -11,6 +11,8 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.stracciatella.camera.AngleUtil;
+import net.stracciatella.camera.CameraController;
 import net.stracciatella.pathfinding.logic.mesh.MeshNode;
 
 import java.io.BufferedReader;
@@ -39,10 +41,7 @@ public class PathWalker {
     private static final double JUMP_FORWARD_AXIS_RATIO = 1.5;
     private static final int LEARN_MAX_GAP = 4;
     private static final int JUMP_SIM_HOLD_TICKS = 2;
-    private static float aimYaw;
-    private static float aimYawVelocity;
-    private static float aimYawAccel;
-    private static float aimPitch;
+    private static CameraController camera;
     private static int jumpCooldownTicks = 0;
     private static int currentGapForJump = 0;
     private static double currentEdgeThreshold = 0.0;
@@ -90,16 +89,12 @@ public class PathWalker {
         index = 0;
         active = true;
         LocalPlayer player = Minecraft.getInstance().player;
+        camera = new CameraController();
         if (player != null) {
-            aimYaw = player.getYRot();
-            aimPitch = player.getXRot();
+            camera.initialize(player.getYRot(), player.getXRot());
         } else {
-            aimYaw = 0.0f;
-            aimPitch = 0.0f;
+            camera.initialize(0.0f, 0.0f);
         }
-
-        aimYawVelocity = 0.0f;
-        aimYawAccel = 0.0f;
         jumpCooldownTicks = 0;
         edgeThresholdInitialized = false;
         jumpAimOffsetInitialized = false;
@@ -272,16 +267,14 @@ public class PathWalker {
                 boolean activeBackward = brakeSpeed > 0.1;
                 if (activeBackward) {
                     float velocityYaw = (float) (Math.toDegrees(Math.atan2(-brakeVel.x, brakeVel.z)));
-                    aimYaw = velocityYaw;
-                    aimYawVelocity = 0;
-                    aimYawAccel = 0;
+                    camera.snapYaw(velocityYaw);
                     player.setYRot(velocityYaw);
                 } else {
                     float desiredYaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
-                    float newYaw = updateAim(desiredYaw);
+                    float newYaw = camera.updateYaw(desiredYaw);
                     player.setYRot(newYaw);
                 }
-                player.setXRot(computeDesiredPitch(dy, distance));
+                player.setXRot(AngleUtil.computeDesiredPitch(dy, distance));
                 applyMovement(client, false, activeBackward, false, false);
                 if (debug) {
                     System.out.println(String.format(Locale.US,
@@ -301,10 +294,10 @@ public class PathWalker {
         // Walking backward to the far edge provides ~1.0 block of runway.
         if (nodeGap >= 5 && player.onGround() && maxJumpPhase < 2) {
             float desiredYaw = (float) (Math.toDegrees(Math.atan2(-dx, dz)));
-            float newYaw = updateAim(desiredYaw);
+            float newYaw = camera.updateYaw(desiredYaw);
             player.setYRot(newYaw);
-            player.setXRot(computeDesiredPitch(dy, distance));
-            boolean facing = isFacingTarget(newYaw, desiredYaw);
+            player.setXRot(AngleUtil.computeDesiredPitch(dy, distance));
+            boolean facing = AngleUtil.isFacingTarget(newYaw, desiredYaw, CameraController.JUMP_FACING_TOLERANCE_DEG);
 
             if (!facing) {
                 // Turn to face target first before retreating
@@ -406,7 +399,7 @@ public class PathWalker {
                 // deviations translate to large lateral drift over 3+ blocks.
                 jumpAimYawOffsetDeg = randomRange(0.5f, 1.5f);
             } else {
-                jumpAimYawOffsetDeg = randomRange(CONFIG.jumpAimYawMinDeg, CONFIG.jumpAimYawMaxDeg);
+                jumpAimYawOffsetDeg = randomRange(CameraController.JUMP_AIM_YAW_MIN_DEG, CameraController.JUMP_AIM_YAW_MAX_DEG);
             }
             if (ThreadLocalRandom.current().nextBoolean()) {
                 jumpAimYawOffsetDeg = -jumpAimYawOffsetDeg;
@@ -429,15 +422,15 @@ public class PathWalker {
         if (stabilizeForJump) {
             desiredYaw += jumpAimYawOffsetDeg;
         }
-        float newYaw = updateAim(desiredYaw);
-        float desiredPitch = computeDesiredPitch(dy, distance);
-        float newPitch = updatePitch(desiredPitch);
+        float newYaw = camera.updateYaw(desiredYaw);
+        float desiredPitch = AngleUtil.computeDesiredPitch(dy, distance);
+        float newPitch = camera.updatePitch(desiredPitch);
 
         player.setYRot(newYaw);
         player.setXRot(newPitch);
 
-        float angleDeltaAfter = Math.abs(wrapDegrees(desiredYaw - newYaw));
-        boolean facing = isFacingTarget(newYaw, desiredYaw);
+        float angleDeltaAfter = Math.abs(AngleUtil.wrapDegrees(desiredYaw - newYaw));
+        boolean facing = AngleUtil.isFacingTarget(newYaw, desiredYaw, CameraController.JUMP_FACING_TOLERANCE_DEG);
         boolean jumpFacing = facing;
         if (!jumpFacing && jumpDecision.jump) {
             if (jumpDecision.gap > 1) {
@@ -448,25 +441,25 @@ public class PathWalker {
                 // extra tolerance is safe because the landing platform is wider or the
                 // sprint-jump has enough forward speed to absorb angular error.
                 float gapTolerance = jumpDecision.gap == 2
-                        ? CONFIG.jumpFacingToleranceDeg
-                        : CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg;
-                jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
+                        ? CameraController.JUMP_FACING_TOLERANCE_DEG
+                        : CameraController.JUMP_FACING_TOLERANCE_DEG + CameraController.JUMP_FACING_EXTRA_GAP_DEG;
+                jumpFacing = Math.abs(AngleUtil.wrapDegrees(desiredYaw - newYaw)) <= gapTolerance;
             } else if (jumpDecision.gap <= 1) {
                 // For step-up jumps (gap 0-1), be more lenient with facing
-                jumpFacing = Math.abs(wrapDegrees(desiredYaw - newYaw)) <= 45.0f;
+                jumpFacing = Math.abs(AngleUtil.wrapDegrees(desiredYaw - newYaw)) <= 45.0f;
             }
         }
         boolean jump = jumpFacing && jumpDecision.jump;
         if (jump) {
             jumpCooldownTicks = CONFIG.jumpCooldownTicks;
         }
-        float moveThreshold = sharpTurn ? CONFIG.turnStopThresholdDeg : CONFIG.walkTurnThresholdDeg;
+        float moveThreshold = sharpTurn ? CameraController.TURN_STOP_THRESHOLD_DEG : CameraController.WALK_TURN_THRESHOLD_DEG;
         long nowMs = System.currentTimeMillis();
         if (angleDeltaAfter <= moveThreshold) {
             alignedUntilMs = nowMs + CONFIG.alignmentHoldMs;
         }
         boolean canMoveForward = angleDeltaAfter <= moveThreshold || nowMs < alignedUntilMs;
-        if (angleDeltaAfter >= CONFIG.walkTurnMaxDeg) {
+        if (angleDeltaAfter >= CameraController.WALK_TURN_MAX_DEG) {
             canMoveForward = false;
         }
         if (distance <= BRAKE_RADIUS && shouldBrakeForNextTurn()) {
@@ -705,9 +698,9 @@ public class PathWalker {
             logFallDiagnostics(player, target, dy, distance, jumpDecision);
             if (jumpDecision.jump && !jump) {
                 System.out.println(
-                        "[PathWalker] jump blocked: angleDelta=" + fmt(Math.abs(wrapDegrees(desiredYaw - newYaw)))
-                                + " facingTol=" + fmt(CONFIG.jumpFacingToleranceDeg)
-                                + " gapTol=" + fmt(CONFIG.jumpFacingToleranceDeg + CONFIG.jumpFacingExtraGapDeg)
+                        "[PathWalker] jump blocked: angleDelta=" + fmt(Math.abs(AngleUtil.wrapDegrees(desiredYaw - newYaw)))
+                                + " facingTol=" + fmt(CameraController.JUMP_FACING_TOLERANCE_DEG)
+                                + " gapTol=" + fmt(CameraController.JUMP_FACING_TOLERANCE_DEG + CameraController.JUMP_FACING_EXTRA_GAP_DEG)
                                 + " gap=" + jumpDecision.gap
                 );
             }
@@ -723,30 +716,6 @@ public class PathWalker {
         }
 
         applyMovement(client, canMoveForward, shouldBrake, jump, sprint);
-    }
-
-    private static float updateAim(float targetYaw) {
-        float delta = wrapDegrees(targetYaw - aimYaw);
-        aimYawAccel = delta * CONFIG.turnAccel - aimYawVelocity * CONFIG.turnFriction;
-        aimYawVelocity += aimYawAccel;
-        aimYaw += aimYawVelocity;
-        return aimYaw;
-    }
-
-    private static float updatePitch(float targetPitch) {
-        // Use exponential smoothing instead of spring physics to avoid oscillation
-        // Smoothly interpolate towards target with heavy damping for human-like movement
-        float delta = targetPitch - aimPitch;
-        if (Math.abs(delta) < 0.5f) {
-            // Close enough, just set it to avoid micro-adjustments
-            aimPitch = targetPitch;
-            return aimPitch;
-        }
-        // Move a fraction of the distance each tick (exponential smoothing)
-        aimPitch += delta * 0.15f;
-        // Clamp to valid Minecraft range
-        aimPitch = Math.max(-90.0f, Math.min(90.0f, aimPitch));
-        return aimPitch;
     }
 
     private static void logFallDiagnostics(LocalPlayer player, MeshNode target, double dy, double distance, JumpDecision jumpDecision) {
@@ -1587,34 +1556,6 @@ public class PathWalker {
         return randomRange(min, max);
     }
 
-    private static float wrapDegrees(float angle) {
-        float wrapped = angle % 360.0f;
-        if (wrapped >= 180.0f) {
-            wrapped -= 360.0f;
-        }
-        if (wrapped < -180.0f) {
-            wrapped += 360.0f;
-        }
-        return wrapped;
-    }
-
-    private static boolean isFacingTarget(float currentYaw, float targetYaw) {
-        float delta = Math.abs(wrapDegrees(targetYaw - currentYaw));
-        return delta <= CONFIG.jumpFacingToleranceDeg;
-    }
-
-    private static float computeDesiredPitch(double dy, double distance) {
-        // Keep pitch more neutral for human-like movement
-        // Only look significantly up/down for large vertical differences
-        if (distance > 0.1 && Math.abs(dy) > 1.0) {
-            // dy = targetY - eyeY, so positive dy means look up (negative pitch in MC)
-            float pitch = (float) -Math.toDegrees(Math.atan(dy / distance));
-            // Clamp pitch to reasonable range for walking
-            return Math.max(-15.0f, Math.min(15.0f, pitch));
-        }
-        return 0f;
-    }
-
     private static void updateTargetOffset() {
         if (!active || index >= currentPath.size()) {
             targetOffsetX = 0.0;
@@ -1721,7 +1662,7 @@ public class PathWalker {
         int dxNext = next.getX() - current.getX();
         int dzNext = next.getZ() - current.getZ();
         double angle = angleBetween(dxPrev, dzPrev, dxNext, dzNext);
-        return angle >= CONFIG.sharpTurnDeg;
+        return angle >= CameraController.SHARP_TURN_DEG;
     }
 
     private static double angleBetween(int ax, int az, int bx, int bz) {
@@ -1787,31 +1728,6 @@ public class PathWalker {
         saveConfig();
     }
 
-    public static void setTurnAccel(float accel) {
-        CONFIG.turnAccel = accel;
-        saveConfig();
-    }
-
-    public static void setJumpTolerance(float deg) {
-        CONFIG.jumpFacingToleranceDeg = deg;
-        saveConfig();
-    }
-
-    public static void setWalkTurnThreshold(float deg) {
-        CONFIG.walkTurnThresholdDeg = deg;
-        saveConfig();
-    }
-
-    public static void setSharpTurnDeg(float deg) {
-        CONFIG.sharpTurnDeg = deg;
-        saveConfig();
-    }
-
-    public static void setTurnStopThreshold(float deg) {
-        CONFIG.turnStopThresholdDeg = deg;
-        saveConfig();
-    }
-
     public static void setEdgeJumpScale(double scale) {
         CONFIG.edgeJumpScale = scale;
         saveConfig();
@@ -1836,12 +1752,6 @@ public class PathWalker {
 
     public static void setJumpCooldownTicks(int ticks) {
         CONFIG.jumpCooldownTicks = ticks;
-        saveConfig();
-    }
-
-    public static void setJumpAimYawRange(float min, float max) {
-        CONFIG.jumpAimYawMinDeg = min;
-        CONFIG.jumpAimYawMaxDeg = max;
         saveConfig();
     }
 
@@ -1890,11 +1800,6 @@ public class PathWalker {
         saveConfig();
     }
 
-    public static void setWalkTurnMaxDeg(float deg) {
-        CONFIG.walkTurnMaxDeg = deg;
-        saveConfig();
-    }
-
     public static void setDebug(boolean enabled) {
         debug = enabled;
         CONFIG.debugEnabled = enabled;
@@ -1903,12 +1808,6 @@ public class PathWalker {
 
     public static class Config {
         public boolean debugEnabled = false;
-        public float turnAccel = 0.8f;
-        public float jumpFacingToleranceDeg = 18.0f;
-        public float jumpFacingExtraGapDeg = 18.0f;
-        public float walkTurnThresholdDeg = 25.0f;
-        public float sharpTurnDeg = 60.0f;
-        public float turnStopThresholdDeg = 12.0f;
         public double offsetMin = 0.05;
         public double offsetMax = 0.25;
         public double edgeJumpMin = 0.9;
@@ -1926,12 +1825,9 @@ public class PathWalker {
         public double edgeJumpHoldEdge = 0.22;
         public double edgeJumpTriggerEdge = 0.08;
         public int jumpCooldownTicks = 4;
-        public float jumpAimYawMinDeg = 1.5f;
-        public float jumpAimYawMaxDeg = 4.0f;
         public int jumpSimTicks = 40;
         public double jumpLandingMargin = 0.3;
         public int alignmentHoldMs = 250;
-        public float walkTurnMaxDeg = 60.0f;
         public double offCourseDistance = 3.5;
         public int offCourseTicks = 10;
         public double stepUpJumpDistance = 2.0;
@@ -1947,18 +1843,8 @@ public class PathWalker {
         public double physicsGroundAccelFactorWalk = 1.0;
         public double physicsGroundAccelFactorSprint = 1.3;
 
-        // Friction values are tuned for critical damping (fastest response without overshooting).
-        // The formula is friction = 2 * sqrt(acceleration).
-        public float turnFriction = 1.8f; // 2 * sqrt(0.8) approx 1.79
-
         public void applyFrom(Config other) {
             debugEnabled = other.debugEnabled;
-            turnAccel = other.turnAccel;
-            jumpFacingToleranceDeg = other.jumpFacingToleranceDeg;
-            jumpFacingExtraGapDeg = other.jumpFacingExtraGapDeg;
-            walkTurnThresholdDeg = other.walkTurnThresholdDeg;
-            sharpTurnDeg = other.sharpTurnDeg;
-            turnStopThresholdDeg = other.turnStopThresholdDeg;
             offsetMin = other.offsetMin;
             offsetMax = other.offsetMax;
             edgeJumpMin = other.edgeJumpMin;
@@ -1976,12 +1862,9 @@ public class PathWalker {
             edgeJumpHoldEdge = other.edgeJumpHoldEdge;
             edgeJumpTriggerEdge = other.edgeJumpTriggerEdge;
             jumpCooldownTicks = other.jumpCooldownTicks;
-            jumpAimYawMinDeg = other.jumpAimYawMinDeg;
-            jumpAimYawMaxDeg = other.jumpAimYawMaxDeg;
             jumpSimTicks = other.jumpSimTicks;
             jumpLandingMargin = other.jumpLandingMargin;
             alignmentHoldMs = other.alignmentHoldMs;
-            walkTurnMaxDeg = other.walkTurnMaxDeg;
             offCourseDistance = other.offCourseDistance;
             offCourseTicks = other.offCourseTicks;
             stepUpJumpDistance = other.stepUpJumpDistance;
@@ -1996,7 +1879,6 @@ public class PathWalker {
             physicsMaxSprintSpeedFactor = other.physicsMaxSprintSpeedFactor;
             physicsGroundAccelFactorWalk = other.physicsGroundAccelFactorWalk;
             physicsGroundAccelFactorSprint = other.physicsGroundAccelFactorSprint;
-            turnFriction = other.turnFriction;
         }
 
         public void normalize() {
@@ -2012,14 +1894,8 @@ public class PathWalker {
             if (edgeJumpForwardAirBias < 0.0) {
                 edgeJumpForwardAirBias = 0.0;
             }
-            if (walkTurnMaxDeg <= 0.0) {
-                walkTurnMaxDeg = 60.0f;
-            }
             if (alignmentHoldMs < 0) {
                 alignmentHoldMs = 0;
-            }
-            if (jumpFacingExtraGapDeg < 0.0f) {
-                jumpFacingExtraGapDeg = 0.0f;
             }
             if (offCourseDistance <= 0.0) {
                 offCourseDistance = 3.5;
@@ -2063,9 +1939,6 @@ public class PathWalker {
             }
             if (physicsGroundAccelFactorSprint <= 0.0) {
                 physicsGroundAccelFactorSprint = 1.3;
-            }
-            if (turnFriction <= 0.0f) {
-                turnFriction = 1.8f;
             }
         }
     }
@@ -2278,7 +2151,7 @@ public class PathWalker {
                 if (lastOnGround && !onGround && velocity.y > 0.0) {
                     jumpVelocity.add(velocity.y);
                 }
-                boolean yawStable = Math.abs(wrapDegrees(yaw - lastYaw)) <= 5.0f;
+                boolean yawStable = Math.abs(AngleUtil.wrapDegrees(yaw - lastYaw)) <= 5.0f;
                 if (!onGround && yawStable && forwardSpeed >= 0.0 && lastForwardSpeed >= 0.0) {
                     if (lastForwardDown && forwardDown) {
                         airInputReg.add(lastForwardSpeed, forwardSpeed);
