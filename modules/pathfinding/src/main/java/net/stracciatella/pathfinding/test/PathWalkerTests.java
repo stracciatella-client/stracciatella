@@ -26,28 +26,28 @@ public class PathWalkerTests {
     private static final int CLEAR_RADIUS = 5;
     private static final double ARRIVAL_RADIUS = 0.6;
 
-    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 600, order = -100, repeat = 5)
+    @MinecraftTest(name = "PathWalker 1-block gap", timeoutTicks = 80, order = -100, repeat = 5)
     public void gap1(TestContext ctx) {
         runCourse(ctx, new BlockPos(100, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -2));
     }
 
-    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 600, order = -99, repeat = 5)
+    @MinecraftTest(name = "PathWalker 2-block gap", timeoutTicks = 80, order = -99, repeat = 5)
     public void gap2(TestContext ctx) {
         runCourse(ctx, new BlockPos(150, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -3));
     }
 
-    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 800, order = -98, repeat = 5)
+    @MinecraftTest(name = "PathWalker 3-block gap", timeoutTicks = 80, order = -98, repeat = 5)
     public void gap3(TestContext ctx) {
         runCourse(ctx, new BlockPos(200, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(0, 0, -4));
     }
 
-    @MinecraftTest(name = "PathWalker 4-block gap", timeoutTicks = 800, order = -97, repeat = 5)
+    @MinecraftTest(name = "PathWalker 4-block gap", timeoutTicks = 80, order = -97, repeat = 5)
     public void gap4(TestContext ctx) {
         runCourse(ctx, new BlockPos(250, 30, 100),
                 new BlockPos(0, 0, 0),
@@ -56,35 +56,35 @@ public class PathWalkerTests {
 
     // === Diagonal tests: jump forward+sideways (forward Z, side X) ===
 
-    @MinecraftTest(name = "Diagonal 2x1", timeoutTicks = 800, order = -90, repeat = 3)
+    @MinecraftTest(name = "Diagonal 2x1", timeoutTicks = 80, order = -90, repeat = 3)
     public void diagonal_2x1(TestContext ctx) {
         runCourse(ctx, new BlockPos(300, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(1, 0, -2));
     }
 
-    @MinecraftTest(name = "Diagonal 2x2", timeoutTicks = 800, order = -89, repeat = 3)
+    @MinecraftTest(name = "Diagonal 2x2", timeoutTicks = 80, order = -89, repeat = 3)
     public void diagonal_2x2(TestContext ctx) {
         runCourse(ctx, new BlockPos(330, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(2, 0, -2));
     }
 
-    @MinecraftTest(name = "Diagonal 2x3", timeoutTicks = 800, order = -88, repeat = 3)
+    @MinecraftTest(name = "Diagonal 2x3", timeoutTicks = 80, order = -88, repeat = 3)
     public void diagonal_2x3(TestContext ctx) {
         runCourse(ctx, new BlockPos(360, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(3, 0, -2));
     }
 
-    @MinecraftTest(name = "Diagonal 3x1", timeoutTicks = 800, order = -87, repeat = 3)
+    @MinecraftTest(name = "Diagonal 3x1", timeoutTicks = 80, order = -87, repeat = 3)
     public void diagonal_3x1(TestContext ctx) {
         runCourse(ctx, new BlockPos(390, 30, 100),
                 new BlockPos(0, 0, 0),
                 new BlockPos(1, 0, -3));
     }
 
-    @MinecraftTest(name = "Diagonal 3x2", timeoutTicks = 800, order = -86, repeat = 3)
+    @MinecraftTest(name = "Diagonal 3x2", timeoutTicks = 80, order = -86, repeat = 3)
     public void diagonal_3x2(TestContext ctx) {
         runCourse(ctx, new BlockPos(420, 30, 100),
                 new BlockPos(0, 0, 0),
@@ -93,102 +93,102 @@ public class PathWalkerTests {
 
     // === Chain tests: gap1 followed by gap2 in a straight line ===
 
-    @MinecraftTest(name = "Chain 1→1", timeoutTicks = 1200, order = -80, repeat = 3)
+    @MinecraftTest(name = "Chain 1→1", timeoutTicks = 80, order = -80, repeat = 3)
     public void chain_1_1(TestContext ctx) { runChain(ctx, 0, 1, 1); }
 
-    @MinecraftTest(name = "Chain 1→2", timeoutTicks = 1200, order = -80, repeat = 3)
+    @MinecraftTest(name = "Chain 1→2", timeoutTicks = 80, order = -80, repeat = 3)
     public void chain_1_2(TestContext ctx) { runChain(ctx, 1, 1, 2); }
 
-    @MinecraftTest(name = "Chain 1→3", timeoutTicks = 1200, order = -80, repeat = 3)
+    @MinecraftTest(name = "Chain 1→3", timeoutTicks = 80, order = -80, repeat = 3)
     public void chain_1_3(TestContext ctx) { runChain(ctx, 2, 1, 3); }
 
-    @MinecraftTest(name = "Chain 1→4", timeoutTicks = 1200, order = -80, repeat = 3)
+    @MinecraftTest(name = "Chain 1→4", timeoutTicks = 80, order = -80, repeat = 3)
     public void chain_1_4(TestContext ctx) { runChain(ctx, 3, 1, 4); }
 
-    @MinecraftTest(name = "Chain 2→1", timeoutTicks = 1200, order = -79, repeat = 3)
+    @MinecraftTest(name = "Chain 2→1", timeoutTicks = 80, order = -79, repeat = 3)
     public void chain_2_1(TestContext ctx) { runChain(ctx, 4, 2, 1); }
 
-    @MinecraftTest(name = "Chain 2→2", timeoutTicks = 1200, order = -79, repeat = 3)
+    @MinecraftTest(name = "Chain 2→2", timeoutTicks = 80, order = -79, repeat = 3)
     public void chain_2_2(TestContext ctx) { runChain(ctx, 5, 2, 2); }
 
-    @MinecraftTest(name = "Chain 2→3", timeoutTicks = 1200, order = -79, repeat = 3)
+    @MinecraftTest(name = "Chain 2→3", timeoutTicks = 80, order = -79, repeat = 3)
     public void chain_2_3(TestContext ctx) { runChain(ctx, 6, 2, 3); }
 
-    @MinecraftTest(name = "Chain 2→4", timeoutTicks = 1200, order = -79, repeat = 3)
+    @MinecraftTest(name = "Chain 2→4", timeoutTicks = 80, order = -79, repeat = 3)
     public void chain_2_4(TestContext ctx) { runChain(ctx, 7, 2, 4); }
 
-    @MinecraftTest(name = "Chain 3→1", timeoutTicks = 1200, order = -78, repeat = 3)
+    @MinecraftTest(name = "Chain 3→1", timeoutTicks = 80, order = -78, repeat = 3)
     public void chain_3_1(TestContext ctx) { runChain(ctx, 8, 3, 1); }
 
-    @MinecraftTest(name = "Chain 3→2", timeoutTicks = 1200, order = -78, repeat = 3)
+    @MinecraftTest(name = "Chain 3→2", timeoutTicks = 80, order = -78, repeat = 3)
     public void chain_3_2(TestContext ctx) { runChain(ctx, 9, 3, 2); }
 
-    @MinecraftTest(name = "Chain 3→3", timeoutTicks = 1200, order = -78, repeat = 3)
+    @MinecraftTest(name = "Chain 3→3", timeoutTicks = 80, order = -78, repeat = 3)
     public void chain_3_3(TestContext ctx) { runChain(ctx, 10, 3, 3); }
 
-    @MinecraftTest(name = "Chain 3→4", timeoutTicks = 1200, order = -78, repeat = 3)
+    @MinecraftTest(name = "Chain 3→4", timeoutTicks = 80, order = -78, repeat = 3)
     public void chain_3_4(TestContext ctx) { runChain(ctx, 11, 3, 4); }
 
-    @MinecraftTest(name = "Chain 4→1", timeoutTicks = 1200, order = -77, repeat = 3)
+    @MinecraftTest(name = "Chain 4→1", timeoutTicks = 80, order = -77, repeat = 3)
     public void chain_4_1(TestContext ctx) { runChain(ctx, 12, 4, 1); }
 
-    @MinecraftTest(name = "Chain 4→2", timeoutTicks = 1200, order = -77, repeat = 3)
+    @MinecraftTest(name = "Chain 4→2", timeoutTicks = 80, order = -77, repeat = 3)
     public void chain_4_2(TestContext ctx) { runChain(ctx, 13, 4, 2); }
 
-    @MinecraftTest(name = "Chain 4→3", timeoutTicks = 1200, order = -77, repeat = 3)
+    @MinecraftTest(name = "Chain 4→3", timeoutTicks = 80, order = -77, repeat = 3)
     public void chain_4_3(TestContext ctx) { runChain(ctx, 14, 4, 3); }
 
-    @MinecraftTest(name = "Chain 4→4", timeoutTicks = 1200, order = -77, repeat = 3)
+    @MinecraftTest(name = "Chain 4→4", timeoutTicks = 80, order = -77, repeat = 3)
     public void chain_4_4(TestContext ctx) { runChain(ctx, 15, 4, 4); }
 
     // === Corner tests: gap1 straight, then 90° left turn + gap2 ===
 
-    @MinecraftTest(name = "Corner 1→1", timeoutTicks = 1200, order = -70, repeat = 3)
+    @MinecraftTest(name = "Corner 1→1", timeoutTicks = 80, order = -70, repeat = 3)
     public void corner_1_1(TestContext ctx) { runCorner(ctx, 0, 1, 1); }
 
-    @MinecraftTest(name = "Corner 1→2", timeoutTicks = 1200, order = -70, repeat = 3)
+    @MinecraftTest(name = "Corner 1→2", timeoutTicks = 80, order = -70, repeat = 3)
     public void corner_1_2(TestContext ctx) { runCorner(ctx, 1, 1, 2); }
 
-    @MinecraftTest(name = "Corner 1→3", timeoutTicks = 1200, order = -70, repeat = 3)
+    @MinecraftTest(name = "Corner 1→3", timeoutTicks = 80, order = -70, repeat = 3)
     public void corner_1_3(TestContext ctx) { runCorner(ctx, 2, 1, 3); }
 
-    @MinecraftTest(name = "Corner 1→4", timeoutTicks = 1200, order = -70, repeat = 3)
+    @MinecraftTest(name = "Corner 1→4", timeoutTicks = 80, order = -70, repeat = 3)
     public void corner_1_4(TestContext ctx) { runCorner(ctx, 3, 1, 4); }
 
-    @MinecraftTest(name = "Corner 2→1", timeoutTicks = 1200, order = -69, repeat = 3)
+    @MinecraftTest(name = "Corner 2→1", timeoutTicks = 80, order = -69, repeat = 3)
     public void corner_2_1(TestContext ctx) { runCorner(ctx, 4, 2, 1); }
 
-    @MinecraftTest(name = "Corner 2→2", timeoutTicks = 1200, order = -69, repeat = 3)
+    @MinecraftTest(name = "Corner 2→2", timeoutTicks = 80, order = -69, repeat = 3)
     public void corner_2_2(TestContext ctx) { runCorner(ctx, 5, 2, 2); }
 
-    @MinecraftTest(name = "Corner 2→3", timeoutTicks = 1200, order = -69, repeat = 3)
+    @MinecraftTest(name = "Corner 2→3", timeoutTicks = 80, order = -69, repeat = 3)
     public void corner_2_3(TestContext ctx) { runCorner(ctx, 6, 2, 3); }
 
-    @MinecraftTest(name = "Corner 2→4", timeoutTicks = 1200, order = -69, repeat = 3)
+    @MinecraftTest(name = "Corner 2→4", timeoutTicks = 80, order = -69, repeat = 3)
     public void corner_2_4(TestContext ctx) { runCorner(ctx, 7, 2, 4); }
 
-    @MinecraftTest(name = "Corner 3→1", timeoutTicks = 1200, order = -68, repeat = 3)
+    @MinecraftTest(name = "Corner 3→1", timeoutTicks = 80, order = -68, repeat = 3)
     public void corner_3_1(TestContext ctx) { runCorner(ctx, 8, 3, 1); }
 
-    @MinecraftTest(name = "Corner 3→2", timeoutTicks = 1200, order = -68, repeat = 3)
+    @MinecraftTest(name = "Corner 3→2", timeoutTicks = 80, order = -68, repeat = 3)
     public void corner_3_2(TestContext ctx) { runCorner(ctx, 9, 3, 2); }
 
-    @MinecraftTest(name = "Corner 3→3", timeoutTicks = 1200, order = -68, repeat = 3)
+    @MinecraftTest(name = "Corner 3→3", timeoutTicks = 80, order = -68, repeat = 3)
     public void corner_3_3(TestContext ctx) { runCorner(ctx, 10, 3, 3); }
 
-    @MinecraftTest(name = "Corner 3→4", timeoutTicks = 1200, order = -68, repeat = 3)
+    @MinecraftTest(name = "Corner 3→4", timeoutTicks = 80, order = -68, repeat = 3)
     public void corner_3_4(TestContext ctx) { runCorner(ctx, 11, 3, 4); }
 
-    @MinecraftTest(name = "Corner 4→1", timeoutTicks = 1200, order = -67, repeat = 3)
+    @MinecraftTest(name = "Corner 4→1", timeoutTicks = 80, order = -67, repeat = 3)
     public void corner_4_1(TestContext ctx) { runCorner(ctx, 12, 4, 1); }
 
-    @MinecraftTest(name = "Corner 4→2", timeoutTicks = 1200, order = -67, repeat = 3)
+    @MinecraftTest(name = "Corner 4→2", timeoutTicks = 80, order = -67, repeat = 3)
     public void corner_4_2(TestContext ctx) { runCorner(ctx, 13, 4, 2); }
 
-    @MinecraftTest(name = "Corner 4→3", timeoutTicks = 1200, order = -67, repeat = 3)
+    @MinecraftTest(name = "Corner 4→3", timeoutTicks = 80, order = -67, repeat = 3)
     public void corner_4_3(TestContext ctx) { runCorner(ctx, 14, 4, 3); }
 
-    @MinecraftTest(name = "Corner 4→4", timeoutTicks = 1200, order = -67, repeat = 3)
+    @MinecraftTest(name = "Corner 4→4", timeoutTicks = 80, order = -67, repeat = 3)
     public void corner_4_4(TestContext ctx) { runCorner(ctx, 15, 4, 4); }
 
     private void runChain(TestContext ctx, int index, int gap1, int gap2) {
