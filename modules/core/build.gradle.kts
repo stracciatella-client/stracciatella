@@ -34,5 +34,7 @@ stracciatella {
 }
 
 dependencies {
+    minecraft(rootProject.libs.minecraft)
+    compileOnly(rootProject.libs.fabric.loader)
     compileOnly(projects.loader)
 }

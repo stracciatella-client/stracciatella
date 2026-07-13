@@ -18,7 +18,7 @@ public abstract class TestMixin {
     private Path resourcePackDirectory;
 
     @Shadow
-    public abstract ChatListener getChatListener();
+    protected abstract boolean isLevelRunningNormally();
 
     @Inject(method = "run", at = @At("HEAD"))
     public void test(CallbackInfo ci) {

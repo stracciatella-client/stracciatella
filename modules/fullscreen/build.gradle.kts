@@ -32,10 +32,12 @@ stracciatella {
     name = "Borderless Fullscreen"
     group = "net.stracciatella"
     mixin("fullscreen.mixins.json")
-    accessWidener("fullscreen.accesswidener")
+    accessWidener("fullscreen.classtweaker")
 }
 
 dependencies {
+    minecraft(rootProject.libs.minecraft)
+    compileOnly(rootProject.libs.fabric.loader)
     compileOnly(projects.loader)
-    modCompileOnly(mods.sodium)
+    compileOnly(mods.sodium)
 }

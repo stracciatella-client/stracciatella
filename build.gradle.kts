@@ -5,7 +5,7 @@ import stracciatella.modlist.ModListGenerator
 
 plugins {
     alias(libs.plugins.stracciatella.fabric) apply false
-    id("fabric-loom") version "1.14.0-alpha.50002"
+    id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
     alias(libs.plugins.stracciatella) apply false
     alias(libs.plugins.stracciatella.base)
     `version-catalog`
@@ -26,16 +26,16 @@ group = providers.gradleProperty("group").get()
 val modListLight = configurations.register("modlistLight")
 val modList = configurations.register("modlist") { extendsFrom(modListLight.get()) }
 val includeInCreator = configurations.detachedConfiguration(projects.loader.apply {
-    targetConfiguration = "finalJar"
+    targetConfiguration = "shadow"
 })
 
-configurations.modLightRuntimeOnly.configure { extendsFrom(modListLight.get()) }
-configurations.modFullRuntimeOnly.configure { extendsFrom(modList.get()) }
+configurations.lightRuntimeOnly.configure { extendsFrom(modListLight.get()) }
+configurations.fullRuntimeOnly.configure { extendsFrom(modList.get()) }
 configurations.lightRuntimeClasspath.configure { extendsFrom(configurations.runtimeClasspath.get()) }
 configurations.fullRuntimeClasspath.configure { extendsFrom(configurations.runtimeClasspath.get()) }
 
 dependencies {
-    modListLight(mods.fabric.api)
+//    modListLight(mods.fabric.api)
     modListLight(mods.sodium)
     modListLight(mods.reeses.sodium.options)
     modListLight(mods.modmenu)
@@ -45,7 +45,7 @@ dependencies {
     lightRuntimeOnly(libs.fabric.loader)
 
     modList(mods.bundles.mods) { isTransitive = false }
-    implementation(projects.loader) { targetConfiguration = "mergedJar" }
+    implementation(projects.loader) { targetConfiguration = "shadow" }
     stracciatellaModule(projects.modules)
 }
 
@@ -55,31 +55,29 @@ tasks {
     }
     register<ModListCreator>("createModList") {
         modFiles.from(modList)
-        modFiles.from(includeInCreator)
+//        modFiles.from(includeInCreator)
     }
 }
 
 allprojects {
-    tasks {
-        withType<RunGameTask>().configureEach {
-            maxHeapSize = "8G"
-            workingDir(rootProject.projectDir)
-        }
-    }
+    if (this.rootProject != this) return@allprojects
+//    tasks {
+//        withType<RunGameTask>().configureEach {
+//            maxHeapSize = "8G"
+//            workingDir(rootProject.projectDir)
+//        }
+//    }
     pluginManager.apply {
-        withPlugin("fabric-loom") {
-            extensions.findByType<LoomGradleExtensionAPI>()?.apply {
-                dependencies {
-                    "minecraft"(rootProject.libs.minecraft)
-                    "mappings"(officialMojangMappings())
-                    "modImplementation"(rootProject.libs.fabric.loader)
+        withPlugin("net.fabricmc.fabric-loom") {
+            dependencies {
+                "minecraft"(rootProject.libs.minecraft)
+                "implementation"(rootProject.libs.fabric.loader)
 
-                    // Fabric API. This is technically optional, but you probably want it anyway.
-                    "modImplementation"(rootProject.libs.fabric.api)
+                // Fabric API. This is technically optional, but you probably want it anyway.
+                "implementation"(rootProject.libs.fabric.api)
 
-                    "testImplementation"(rootProject.libs.junit.jupiter)
-                    "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
-                }
+                "testImplementation"(rootProject.libs.junit.jupiter)
+                "testRuntimeOnly"(rootProject.libs.junit.platform.launcher)
             }
         }
         withPlugin("checkstyle") {

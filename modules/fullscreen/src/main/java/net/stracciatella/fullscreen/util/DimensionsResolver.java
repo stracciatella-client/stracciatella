@@ -3,7 +3,7 @@ package net.stracciatella.fullscreen.util;
 import java.nio.IntBuffer;
 
 import com.mojang.blaze3d.platform.Monitor;
-import com.mojang.blaze3d.platform.ScreenManager;
+import com.mojang.blaze3d.platform.MonitorManager;
 import com.mojang.blaze3d.platform.VideoMode;
 import com.mojang.blaze3d.platform.Window;
 import net.stracciatella.fullscreen.config.ConfigHandler;
@@ -22,21 +22,21 @@ public class DimensionsResolver {
     public int width;
     public int height;
 
-    public boolean resolve(Window window, ScreenManager screenManager) {
+    public boolean resolve(Window window, MonitorManager monitorManager) {
         if (ConfigHandler.getInstance().customWindowDimensions != null && ConfigHandler.getInstance().customWindowDimensions.enabled && !ConfigHandler.getInstance().customWindowDimensions.useMonitorCoordinates) {
             posX = 0;
             posY = 0;
             width = 0;
             height = 0;
         } else if (ConfigHandler.getInstance().forceWindowMonitor < 0) {
-            Monitor monitor = screenManager.findBestMonitor(window);
+            Monitor monitor = monitorManager.findBestMonitor(window);
             if (monitor == null) {
                 LOGGER.error("Failed to get a valid monitor for determining fullscreen size!");
                 return false;
             }
-            VideoMode mode = monitor.getCurrentMode();
-            posX = monitor.getX();
-            posY = monitor.getY();
+            VideoMode mode = monitor.currentMode();
+            posX = monitor.x();
+            posY = monitor.y();
             width = mode.getWidth();
             height = mode.getHeight();
         } else {

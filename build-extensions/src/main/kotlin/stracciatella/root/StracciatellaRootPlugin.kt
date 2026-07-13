@@ -2,7 +2,6 @@ package stracciatella.root
 
 import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RunGameTask
-import net.fabricmc.loom.util.Constants
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.SourceSetContainer
@@ -27,20 +26,20 @@ class StracciatellaRootPlugin : Plugin<Project> {
             val source = sourceSets.register("full")
 
             extensions.getByType<LoomGradleExtensionAPI>().apply {
-                createRemapConfigurations(sourceLight.get())
-                createRemapConfigurations(source.get())
+//                createRemapConfigurations(sourceLight.get())
+//                createRemapConfigurations(source.get())
                 runs {
                     val light = this.register("stracciatellaLight") {
                         inherit(getByName("client"))
-                        this.source(sourceLight.get())
+                        this.sourceSet = "light"
                     }
                     this.register("stracciatella") {
                         this.inherit(light.get())
-                        this.source(source.get())
+                        this.sourceSet = "full"
                     }
                 }
                 runConfigs.configureEach {
-                    ideConfigGenerated(false)
+                    generateRunConfig = false
                 }
             }
 

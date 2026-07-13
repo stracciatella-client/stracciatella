@@ -13,7 +13,7 @@ repositories {
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
 }
 
 val curseApi = configurations.register("curseApi") {
@@ -24,7 +24,7 @@ configurations.compileClasspath.extendsFrom(curseApi)
 dependencies {
     curseApi(project("curse-api-generator", "curseApi"))
 
-    api(libs.stracciatella)
+    compileOnly(libs.stracciatella)
     api("org.tomlj:tomlj:1.1.1")
     api("com.github.DasBabyPixel:Modrinth4J:bc79cbed95")
     api("com.google.code.gson:gson:2.10.1")

@@ -25,6 +25,7 @@ plugins {
 include("loader")
 include("loader:injected")
 include("loader:test3module")
+include("modules")
 includeModule("core")
 includeModule("fullscreen")
 includeModule("anonymous-modlist")

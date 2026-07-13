@@ -1,7 +1,7 @@
 package net.stracciatella.fullscreen.mixin;
 
 import com.mojang.blaze3d.platform.Monitor;
-import com.mojang.blaze3d.platform.ScreenManager;
+import com.mojang.blaze3d.platform.MonitorManager;
 import com.mojang.blaze3d.platform.Window;
 import net.stracciatella.fullscreen.config.ConfigHandler;
 import net.stracciatella.fullscreen.util.DimensionsResolver;
@@ -51,7 +51,7 @@ public abstract class WindowMixin implements WindowHooks {
 
     @Shadow
     @Final
-    private ScreenManager screenManager;
+    private MonitorManager monitorManager;
 
     @Shadow
     protected abstract void setMode();
@@ -89,7 +89,7 @@ public abstract class WindowMixin implements WindowHooks {
 
             // Monitor monitor = findBestMonitor();
             DimensionsResolver res = new DimensionsResolver();
-            if (res.resolve((Window) (Object) this, screenManager)) {
+            if (res.resolve((Window) (Object) this, monitorManager)) {
 
                 // if (monitor != null) {
                 // Note: x/y/width/height can change between any GLFW call

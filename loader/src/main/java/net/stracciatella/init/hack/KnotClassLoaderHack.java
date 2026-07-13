@@ -18,6 +18,7 @@ import net.stracciatella.init.hack.classloader.Transformer;
 import net.stracciatella.internal.unsafe.UnsafeHelper;
 import net.stracciatella.module.classloader.StracciatellaClassLoader;
 import org.objectweb.asm.commons.SimpleRemapper;
+import org.spongepowered.asm.util.asm.ASM;
 
 public class KnotClassLoaderHack {
     public static final String INJECTED_PATH = "injected.jar";
@@ -89,7 +90,7 @@ public class KnotClassLoaderHack {
     }
 
     private static byte[] custom(Transformer transformer, String className) throws IOException {
-        var remapper = new SimpleRemapper(remapperMapping);
+        var remapper = new SimpleRemapper(ASM.API_VERSION, remapperMapping);
         var node = ClassCopyHack.createCopyRemapped(className, remapper);
         if (transformer != null) transformer.transform(node);
         return ClassCopyHack.toByteArray(node);

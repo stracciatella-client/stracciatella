@@ -1,4 +1,4 @@
-version = "1.21.11"
+version = "26.2"
 
 curse = [
 #        256717, # clumps
@@ -12,43 +12,44 @@ modrinth = [
     "sodium-extra",
     "continuity",
     "modmenu",
-    "cull-leaves",
+    "cull-fewer-leaves",
     "reeses-sodium-options",
     "entityculling",
     "advanced-chat",
     "appleskin",
-#    "carpet", maintained, but not updated in modrinth
-#    "carpet-extra",
+##    "carpet", maintained, but not updated in modrinth
+##    "carpet-extra",
     "dynamic-fps",
-#    "ebe",
-#    "exordium",
-#    "gadget",
-    "gamma-utils",
+    "obe",
+##    "exordium",
+##    "gadget",
+#    "gamma-utils",
     "in-game-account-switcher",
     "iris",
     "item-scroller",
     "jade",
     "jei",
+#    "journeymap", # no vulkan
     "forcecloseworldloadingscreen",
     "lambdynamiclights",
-    "lighty",
-#    "modernfix",
+#    "lighty",
+##    "modernfix",
     "mouse-tweaks",
-#    "obsidianui",
+##    "obsidianui",
     "rrls",
-#    "rei",
-#    "roughly-enough-professions-rep",
+##    "rei",
+##    "roughly-enough-professions-rep",
     "simple-voice-chat",
-#    "threadtweak",
-#    "tooltipfix",
-    "viafabricplus",
-    "xaeros-minimap",
-#    "xaeros-world-map", not yet updated
-#    "yacl",
-#    "zoomify",
-#    "fabric-language-kotlin",
-#    "tweakeroo",
-#    "minihud",
-#    "litematica",
-#    "clumps"
+##    "threadtweak",
+##    "tooltipfix",
+#    "viafabricplus",
+#    "xaeros-minimap",
+##    "xaeros-world-map", not yet updated
+##    "yacl",
+##    "zoomify",
+##    "fabric-language-kotlin",
+##    "tweakeroo",
+##    "minihud",
+##    "litematica",
+##    "clumps"
 ]

@@ -2,7 +2,9 @@ import net.stracciatella.gradle.plugin.SourceSetDependency
 import net.stracciatella.gradle.plugin.StracciatellaExtension
 
 plugins {
-    id(libs.plugins.stracciatella.fabric.get().pluginId)
+    alias(libs.plugins.stracciatella.fabric)
+    id("net.fabricmc.fabric-loom")
+    alias(libs.plugins.stracciatella) apply false
     alias(libs.plugins.shadow)
 }
 
@@ -32,23 +34,25 @@ sourceSets {
     }
 }
 
+val includeInJar = configurations.dependencyScope("includeInJar")
+val includeInJarResolvable = configurations.resolvable("includeInJarResolvable") { extendsFrom(includeInJar) }
+
 configurations {
     val injected = register("injected")
     compileOnly.configure {
         extendsFrom(injected.get())
     }
-    resolvable("includeInJar") {
-        extendsFrom(include.get())
-    }
     consumable("mergedJar")
 }
 
 dependencies {
+    minecraft(rootProject.libs.minecraft)
+    implementation(rootProject.libs.fabric.loader)
     for (testModuleName in testModuleNames) {
         "${testModuleName}Implementation"(project)
     }
-    modApi(libs.fabric.api)
-    include(libs.jol.core)
+    api(libs.fabric.api)
+    includeInJar(libs.jol.core)
     implementation(libs.jol.core)
     "injected"(project("injected"))
     // TODO
@@ -79,51 +83,55 @@ tasks {
         }
     }
     jar.configure {
-        from(configurations.named("injected")) {
-            rename { "injected.jar" }
-        }
+        archiveBaseName = "stracciatella"
+        archiveClassifier = "dev"
     }
     shadowJar.configure {
-        archiveClassifier.convention("shadow")
-        configurations = listOf(project.configurations["includeInJar"])
-        destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
-    }
-    remapJar.configure {
-        this.archiveBaseName = "stracciatella"
-    }
-    val mergeJar = register<Jar>("mergeJar") {
-        destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
-        archiveClassifier.convention("merged")
-        from(shadowJar.map { it.outputs.files.map { it2 -> zipTree(it2) } })
-        from(configurations.named("injected")) {
+        archiveBaseName = "stracciatella"
+        archiveClassifier = ""
+        from(project.configurations.named("injected")) {
             rename { "injected.jar" }
         }
+        configurations.set(includeInJarResolvable.map { listOf(it) })
+        destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
     }
-    artifacts.add("mergedJar", mergeJar)
-    project("test3module").afterEvaluate {
-        val test3moduleJar = this.tasks.named<AbstractArchiveTask>("remapJar")
-        val classpath = ArrayList<String>()
-        testModules.forEach { classpath.add(it.get().archiveFile.get().asFile.canonicalPath) }
-        classpath.add(test3moduleJar.get().archiveFile.get().asFile.canonicalPath)
-        this@tasks.named<Test>("test") {
-            inputs.files(testModules)
-            inputs.files(test3moduleJar)
-            systemProperty(
-                "stracciatellaClasspath",
-                classpath.joinToString(separator = File.pathSeparator)
-            )
-        }
-    }
+    assemble { dependsOn(shadowJar) }
+//    remapJar.configure {
+//        this.archiveBaseName = "stracciatella"
+//    }
+//    val mergeJar = register<Jar>("mergeJar") {
+//        destinationDirectory.convention(jar.flatMap { it.destinationDirectory })
+//        archiveClassifier.convention("merged")
+//        from(shadowJar.map { it.outputs.files.map { it2 -> zipTree(it2) } })
+//        from(configurations.named("injected")) {
+//            rename { "injected.jar" }
+//        }
+//    }
+//    artifacts.add("mergedJar", mergeJar)
+//    project("test3module").afterEvaluate {
+//        val test3moduleJar = this.tasks.named<AbstractArchiveTask>("remapJar")
+//        val classpath = ArrayList<String>()
+//        testModules.forEach { classpath.add(it.get().archiveFile.get().asFile.canonicalPath) }
+//        classpath.add(test3moduleJar.get().archiveFile.get().asFile.canonicalPath)
+//        this@tasks.named<Test>("test") {
+//            inputs.files(testModules)
+//            inputs.files(test3moduleJar)
+//            systemProperty(
+//                "stracciatellaClasspath",
+//                classpath.joinToString(separator = File.pathSeparator)
+//            )
+//        }
+//    }
 }
 
-configurations.consumable("finalJar") {
-    outgoing.artifact(tasks.remapJar) {
-        name = "stracciatella-loader"
-    }
-}
+//configurations.consumable("finalJar") {
+//    outgoing.artifact(tasks.remapJar) {
+//        name = "stracciatella-loader"
+//    }
+//}
 
 loom {
-    accessWidenerPath = file("src/main/resources/stracciatella.accesswidener")
+    accessWidenerPath = file("src/main/resources/stracciatella.classtweaker")
     mods {
         register("stracciatella") {
             sourceSet(sourceSets.getByName("main"))
